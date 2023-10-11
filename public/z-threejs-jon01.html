@@ -13,10 +13,10 @@
     </style>
 </head>
 <body>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/FBXLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/FBXLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.min.js"></script>
 
 
 <script>
@@ -24,7 +24,7 @@
 const scene = new THREE.Scene();
 
     // Create the camera
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
 
 
 // Create a directional light
@@ -98,7 +98,7 @@ const loader1 = new THREE.FBXLoader();
 
 loader1.load('t1a06-armature-jeremy.fbx', function (object) {
     gun = object;
-    gun.scale.set(0.003, 0.003, 0.003); // Set the scale of the gun model
+    gun.scale.set(0.03, 0.03, 0.03); // Set the scale of the gun model
     scene.add(gun); // Add the loaded model to the scene
     // Set the position of the camera behind the gun
 const cameraDistance = 5; // Adjust the distance as needed
