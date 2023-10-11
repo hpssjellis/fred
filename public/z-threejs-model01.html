@@ -16,6 +16,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/FBXLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/controls/PointerLockControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.min.js"></script>
 
     <script>
@@ -36,7 +37,7 @@
 
         // Create a point light for localized illumination (e.g., spotlight)
         const pointLight = new THREE.PointLight(0xff0000, 1, 10); // Color, intensity, distance
-        pointLight.position set(0, 1, 0); // Adjust the position
+        pointLight.position.set(0, 1, 0); // Adjust the position
         scene.add(pointLight);
 
         directionalLight.position.set(1, 1, 1);
@@ -87,6 +88,33 @@
             }
         });
 
+        let controls; // Declare the controls variable
+
+        // Function to initialize the pointer lock
+        function initPointerLock() {
+            const canvas = document.querySelector('canvas');
+
+            // Check if PointerLockControls are supported
+            if ('PointerLockControls' in THREE) {
+                controls = new THREE.PointerLockControls(camera, canvas);
+                scene.add(controls.getObject());
+
+                controls.lock();
+
+                // Event listener to detect when the pointer is locked or unlocked
+                controls.addEventListener('lock', () => {
+                    // Mouse control is now active
+                });
+
+                controls.addEventListener('unlock', () => {
+                    // Mouse control is deactivated
+                });
+            }
+        }
+
+        // Call the pointer lock initialization function
+        initPointerLock();
+
         // Set up animation
         const animate = () => {
             requestAnimationFrame(animate);
@@ -114,4 +142,3 @@
     </script>
 </body>
 </html>
-
