@@ -99,8 +99,6 @@
                 controls = new THREE.PointerLockControls(camera, canvas);
                 scene.add(controls.getObject());
 
-                controls.lock();
-
                 // Event listener to detect when the pointer is locked or unlocked
                 controls.addEventListener('lock', () => {
                     // Mouse control is now active
@@ -112,8 +110,10 @@
             }
         }
 
-        // Call the pointer lock initialization function
-        initPointerLock();
+        // Add a click event listener to enable Pointer Lock
+        document.querySelector('canvas').addEventListener('click', () => {
+            initPointerLock();
+        });
 
         // Set up animation
         const animate = () => {
