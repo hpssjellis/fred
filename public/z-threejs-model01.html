@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Spinning 3D Model</title>
+    <style>
+        body {
+            margin: 0;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/FBXLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/controls/PointerLockControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.min.js"></script>
+
+    <script>
+        // Create a scene
+        const scene = new THREE.Scene();
+
+        // Create the camera
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+
+        // ... Your other scene setup code ...
+
+        let model; // Initialize model variable
+        const loader1 = new THREE.FBXLoader();
+
+        loader1.load('t1a06-armature-jeremy.fbx', function (object) {
+            model = object;
+            model.scale.set(0.3, 0.3, 0.3);
+            scene.add(model);
+
+            // ... Your model positioning and shadow configuration code ...
+
+            // Introduce a delay before enabling mouse control
+            setTimeout(() => {
+                initPointerLock();
+            }, 3000); // Adjust the delay time (in milliseconds) as needed
+
+            animate();
+        });
+
+        // ... Your other code ...
+
+        function initPointerLock() {
+            const canvas = document.querySelector('canvas');
+
+            if ('PointerLockControls' in THREE) {
+                controls = new THREE.PointerLockControls(camera, canvas);
+                scene.add(controls.getObject());
+                controls.lock();
+
+                controls.addEventListener('lock', () => {
+                    // Mouse control is now active
+                });
+
+                controls.addEventListener('unlock', () => {
+                    // Mouse control is deactivated
+                });
+            }
+        }
+
+        // ... Your animation and window resize code ...
+
+    </script>
+</body>
+</html>
