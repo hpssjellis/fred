@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <body>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-	  <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/FBXLoader.js"></script>		
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
-	  <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
-    <script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/FBXLoader.js"></script>		
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+
+<script>
 
 function loadModel(x, y, z, scale, modelPath) {
   loader.load(
@@ -39,7 +40,8 @@ controls.dampingFactor = 1; // Adjust the damping factor for smoother movement
 controls.rotateSpeed = 0.2; // Adjust the rotation speed
 
 const loader = new THREE.GLTFLoader();
-const pathCarModel = './car.gltf';
+//const pathCarModel = './car.gltf';
+const pathCarModel = './crap.glb';
   loadModel(5, 0, 5, 1, pathCarModel);
       
 let model; //init model variable
