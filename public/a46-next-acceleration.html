@@ -1,3 +1,4 @@
+
 .<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -46,8 +47,13 @@
 </head>
 <body>
 
-<h6> Version 0.45.3-188 Note: works on Chrome or Edge for Mac, Android (pixel Phones) or Windows, only on Edge for Linux</h6>
-<h1>tinyMLjs </h1>
+<h6> Version 0.46.1-191 Note: works on Chrome or Edge for Mac, Android (pixel Phones) or Windows, only on Edge for Linux</h6>
+<h1 align=center>tinyMLjs </h1>
+
+This website makes Machine Learning models from microcontroller sensors using Javascript then uploaded to the microcontroller using Gitpod, RocksettaTinyML and The Arduino IDE.<br><br>
+
+Presently for complex Camera or Sound data use EdgeImpulse.com as the needed compression is at a much better level. <br><br>
+   
 Upload from a raw CSV file or an Arduino style microcontroller using webSerial (Android Pixel phones also work) or your cell phone motion sensor.
 Keep the raw sensor data then Machine Learning train a tensorflowJS model for export or for live classification all on this single 
 vanilla Javascript webpage! <br><br>
@@ -816,7 +822,37 @@ mySaveTxt(document.getElementById('myExportFileName').value+'Labels')   // save 
    
 async function uploadModel() {
    myModelWasUploaded = true
+   let labelsInput3
 
+   
+        async function loadLabelsFile() {
+            const labelsFileInput = document.getElementById("labelsFile");
+
+            if (labelsFileInput.files.length === 0) {
+                console.error('Please select a text file.');
+                return;
+            }
+
+            const file = labelsFileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = async function () {
+                try {
+                    const labelsInput3 = await reader.result;
+                    document.getElementById('myNewLabels').value = labelsInput3;
+                    const labelsArray3 = labelsInput3.split(',').map((label) => label.trim());
+                    uniqueLabels = [...new Set(labelsArray3)];
+                    console.log('uniqueLabels');
+                    console.log(uniqueLabels);
+                } catch (error) {
+                    console.error('An error occurred:', error);
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+   loadLabelsFile()
 // presently txt file reader is not working. perhaps should be a csv file reader anyway
    // the issue is the code is not waiting for the labelsInput3
    /*
@@ -832,13 +868,7 @@ async function uploadModel() {
   reader.readAsText(document.getElementById("modelFile").files[0]);  // grab the .txt file
 
 */
-   
-  // set labels first  this is a repeat of the re-set labels button ~line 120
-   const labelsInput3 = document.getElementById('myNewLabels').value  
-   const labelsArray3 =  labelsInput3.split(',').map((label) => label.trim());
-   uniqueLabels =   [...new Set(labelsArray3)];
-   console.log('uniqueLabels')
-   console.log(uniqueLabels)
+
    
    // get the model
    const modelFile = document.getElementById("modelFile").files[0];
