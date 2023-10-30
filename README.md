@@ -58,11 +58,13 @@ There are simple rules to check if a number is divisible by another number witho
 
 ### Exponent rules:
 There are basic rules for simplifying expressions involving exponents:
-<img width="105" alt="image" src="https://github.com/hpssjellis/fred/assets/5605614/aa9c571a-77d1-4499-842d-a7b438949b6d">
+
+<img width="600" alt="image" src="https://github.com/hpssjellis/fred/assets/5605614/aa9c571a-77d1-4499-842d-a7b438949b6d">
 
 
 ### Series formulas:
-<img width="412" alt="image" src="https://github.com/hpssjellis/fred/assets/5605614/2a6cc65b-92b8-4128-84a4-66af9ba318ff">
+
+<img width="600" alt="image" src="https://github.com/hpssjellis/fred/assets/5605614/2a6cc65b-92b8-4128-84a4-66af9ba318ff">
 
 
 And then ChatGPT added
