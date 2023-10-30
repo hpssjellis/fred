@@ -58,16 +58,11 @@ There are simple rules to check if a number is divisible by another number witho
 
 ### Exponent rules:
 There are basic rules for simplifying expressions involving exponents:
-- \(x^a \times x^b = x^{a+b}\)
-- \(x^a / x^b = x^{a-b}\)
-- \((x^a)^b = x^{ab}\)
-- \(x^{-a} = \frac{1}{x^a}\)
-- \(x^{\frac{1}{a}} = \sqrt[a]{x}\)
-- \(x^{\frac{a}{b}} = \sqrt[b]{x^a}\)
+<img width="105" alt="image" src="https://github.com/hpssjellis/fred/assets/5605614/aa9c571a-77d1-4499-842d-a7b438949b6d">
+
 
 ### Series formulas:
-- Arithmetic series sum formula: \(S = \frac{n \times (a + l)}{2}\), where \(n\) is the number of terms, \(a\) is the first term, and \(l\) is the last term.
-- Geometric series sum formula: \(S = \frac{a \times (1 - r^n)}{1 - r}\), where \(n\) is the number of terms, \(a\) is the first term, and \(r\) is the common ratio.
+<img width="412" alt="image" src="https://github.com/hpssjellis/fred/assets/5605614/2a6cc65b-92b8-4128-84a4-66af9ba318ff">
 
 
 And then ChatGPT added
