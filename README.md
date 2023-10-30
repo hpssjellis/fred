@@ -29,15 +29,81 @@ For both test the math portion has a few very difficult questions that expect pe
 -----
 
 
-Sure, I can put my reply in markdown format. Here is the same list of math tricks in a more structured way:
+Here is bingChat's answer:
 
-Squaring numbers ending in 5: To square a two-digit number ending in 5, multiply the first digit by itself plus one, and then append 25 to the result. For example, to square 35, multiply 3 by 4 and get 12, and then add 25 to get 1225. This works for any two-digit number ending in 5.
-Multiplying by 11: To multiply a two-digit number by 11, add the two digits and place the sum between them. If the sum is greater than 9, carry over the extra digit to the left. For example, to multiply 47 by 11, add 4 and 7 and get 11, and then place it between 4 and 7 to get 4117. Since the sum is greater than 9, carry over the extra 1 to the left and get 517 as the final answer.
-Divisibility rules: There are some simple rules to check whether a number is divisible by another number without doing long division. For example, a number is divisible by 2 if it ends in an even digit, by 3 if the sum of its digits is divisible by 3, by 4 if the last two digits form a number divisible by 4, by 5 if it ends in 0 or 5, by 6 if it is divisible by both 2 and 3, by 9 if the sum of its digits is divisible by 9, and by 10 if it ends in 0.
-Exponent rules: There are some basic rules for simplifying expressions involving exponents. For example, xa * xb = x(a+b), xa / xb = x(a-b), (xa)b = x(ab), x-a = 1 / xa, x(1/a) = root(a)(x), and x(a/b) = root(b)(x)a.
-Series formulas: There are some formulas for finding the sum of arithmetic and geometric series. An arithmetic series is a sequence of numbers with a constant difference between consecutive terms, such as 2, 5, 8, ... A geometric series is a sequence of numbers with a constant ratio between consecutive terms, such as 2, 6, 18, ... The formula for the sum of an arithmetic series is S = n * (a + l) / 2, where n is the number of terms, a is the first term, and l is the last term. The formula for the sum of a geometric series is S = a * (1 - r^n^) / (1 - r), where n is the number of terms, a is the first term, and r is the common ratio.
-I hope this markdown format helps you read the list better. 😊
 
+
+
+Certainly! Here are the helpful math tricks formatted in markdown:
+
+### Squaring numbers ending in 5:
+To square a two-digit number ending in 5, follow this rule:  
+For a number like \(35^2\), multiply the first digit (3) by itself plus one (3 * (3 + 1)), and then append 25 to the result.  
+Example: \(35^2 = 3 \times 4 = 12\), append 25 to get \(1225\). This works for any two-digit number ending in 5.
+
+### Multiplying by 11:
+To multiply a two-digit number by 11, follow this rule:  
+Add the two digits and place the sum between them. If the sum is greater than 9, carry over the extra digit to the left.  
+Example: \(47 \times 11 = 4 + 7 = 11\), so place 11 between 4 and 7 to get \(517\).
+
+### Divisibility rules:
+There are simple rules to check if a number is divisible by another number without doing long division:  
+- Divisible by 2 if it ends in an even digit
+- Divisible by 3 if the sum of its digits is divisible by 3
+- Divisible by 4 if the last two digits form a number divisible by 4
+- Divisible by 5 if it ends in 0 or 5
+- Divisible by 6 if it is divisible by both 2 and 3
+- Divisible by 9 if the sum of its digits is divisible by 9
+- Divisible by 10 if it ends in 0
+
+### Exponent rules:
+There are basic rules for simplifying expressions involving exponents:
+- \(x^a \times x^b = x^{a+b}\)
+- \(x^a / x^b = x^{a-b}\)
+- \((x^a)^b = x^{ab}\)
+- \(x^{-a} = \frac{1}{x^a}\)
+- \(x^{\frac{1}{a}} = \sqrt[a]{x}\)
+- \(x^{\frac{a}{b}} = \sqrt[b]{x^a}\)
+
+### Series formulas:
+- Arithmetic series sum formula: \(S = \frac{n \times (a + l)}{2}\), where \(n\) is the number of terms, \(a\) is the first term, and \(l\) is the last term.
+- Geometric series sum formula: \(S = \frac{a \times (1 - r^n)}{1 - r}\), where \(n\) is the number of terms, \(a\) is the first term, and \(r\) is the common ratio.
+
+
+And then ChatGPT added
+
+
+Certainly! Here are a few additional math tricks in markdown format:
+
+### Square of Any Number:
+To square a number close to a base number \(b\), you can use this formula: 
+For example, to find \(42^2\), which is 2 more than 40 (a nice round number), use the formula: \((b + c) \times (b - c) + c^2\), where \(c\) is the difference between the number and the base. For \(42^2\), it's \((40 + 2) \times (40 - 2) + 2^2 = 1681\).
+
+### Percentage Calculations:
+To quickly find percentages of numbers, use shortcuts:
+- To find 10% of a number, move the decimal point one place to the left.
+- To find 1% of a number, move the decimal point two places to the left.
+- To find 50% of a number, simply divide the number by 2.
+- To find 25% of a number, divide it by 4.
+
+### Finding Multiples:
+For finding multiples of numbers:
+- To find multiples of 5, take the last digit and double it.
+- To find multiples of 9, the sum of the digits should be divisible by 9.
+
+### Checking Prime Numbers:
+To quickly check if a number is a prime number:
+- Check divisibility by numbers up to the square root of the number. If it's not divisible by any of these numbers, it's likely prime.
+
+### Divisibility by 11:
+If the difference between the sum of the digits at odd places and the sum of the digits at even places is 0 or divisible by 11, the number is divisible by 11.
+
+### Square Root Approximation:
+To approximate the square root of a number, start with an initial guess and then refine it using the formula:
+\(x_{n+1} = \frac{1}{2} \times (x_n + \frac{number}{x_n})\).
+Iterate this formula, where \(x_0\) is the initial guess and \(x_{n+1}\) is the refined approximation.
+
+These tricks can help make mental math and problem-solving more efficient across various mathematical operations.
 
 
 
