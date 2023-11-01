@@ -45,11 +45,11 @@ async function evaluatePython() {
         captured_output = "";
 
         // Run the Python code
-        pyodide.runPython(myPython);
-
+        let myReturn = pyodide.runPython(myPython);
+        myOutput.innerHTML += "<br><br>Your answer is: " + myReturn + "<br>";
         // Get the captured output
-        const result = pyodide.globals.get("a");
-        addToOutput(result);
+        const myA = pyodide.globals.get("a");  
+        myOutput.innerHTML += "<br>The variable a is : " + myA + "<br>";
     } catch (err) {
         addToOutput(err);
     }
