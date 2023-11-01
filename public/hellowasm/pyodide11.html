@@ -51,7 +51,7 @@ async function evaluatePython() {
         const result = pyodide.globals.get("a");
         addToOutput(result);
     } catch (err) {
-        addToOutput(err));
+        addToOutput(err);
     }
 }
 
