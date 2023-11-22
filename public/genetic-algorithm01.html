@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Genetic Algorithm for Bin Packing</title>
+    <style>
+        .bin {
+            border: 1px solid #000;
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="myBins"></div>
+<div id="myResults"></div>
+
+<script>
+    const binCapacity = 10;
+    const items = [2, 5, 4, 7, 1, 3, 8];
+    const populationSize = 20;
+    const generations = 50;
+    const mutationRate = 0.05;
+
+    function createIndividual() {
+        return items.map(() => Math.floor(Math.random() * populationSize));
+    }
+
+    function createInitialPopulation(size) {
+        return new Array(size).fill(null).map(createIndividual);
+    }
+
+    function fitness(individual) {
+        let bins = new Array(populationSize).fill(0);
+        individual.forEach((binIndex, itemIndex) => {
+            bins[binIndex] += items[itemIndex];
+        });
+        return bins.filter(bin => bin <= binCapacity).length;
+    }
+
+    function select(population) {
+        return population.sort((a, b) => fitness(a) - fitness(b)).slice(0, populationSize / 2);
+    }
+
+    function crossover(parent1, parent2) {
+        const cutPoint = Math.floor(Math.random() * parent1.length);
+        return [...parent1.slice(0, cutPoint), ...parent2.slice(cutPoint)];
+    }
+
+    function mutate(individual) {
+        if (Math.random() < mutationRate) {
+            const index = Math.floor(Math.random() * individual.length);
+            individual[index] = Math.floor(Math.random() * populationSize);
+        }
+        return individual;
+    }
+
+    function runGeneticAlgorithm() {
+        let population = createInitialPopulation(populationSize);
+
+        for (let gen = 0; gen < generations; gen++) {
+            const selected = select(population);
+            let newPopulation = [];
+
+            while (newPopulation.length < populationSize) {
+                const [parent1, parent2] = [selected[Math.floor(Math.random() * selected.length)], selected[Math.floor(Math.random() * selected.length)]];
+                let child = crossover(parent1, parent2);
+                child = mutate(child);
+                newPopulation.push(child);
+                document.getElementById('myResults').innerHTML += `${child} <br>`
+            }
+
+            population = newPopulation;
+        }
+
+        return population[0];
+    }
+
+    function displayBins(bins) {
+        const binsContainer = document.getElementById('myBins');
+        binsContainer.innerHTML = '';
+        bins.forEach((bin, index) => {
+            const binElem = document.createElement('div');
+            binElem.className = 'bin';
+            binElem.innerText = 'Bin ' + (index + 1) + ': ' + bin + ' units';
+            binsContainer.appendChild(binElem);
+        });
+    }
+
+    // Running the genetic algorithm
+    const bestSolution = runGeneticAlgorithm();
+    displayBins(bestSolution);
+</script>
+
+</body>
+</html>
