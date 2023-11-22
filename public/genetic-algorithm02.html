@@ -1,1 +1,146 @@
-dfzdaf
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Genetic Algorithm for Bin Packing</title>
+    <style>
+        .bin {
+            border: 1px solid #000;
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+
+binCapacity: <input id="myBinCapacity" type=text value="7"><br>
+items: <input id="myItems" type=text value="2,5,4,7,1,3,8"><br>
+populationSize: <input id="myPopulationSize" type=text value="20"><br>
+generations: <input id="myGenerations" type=text value="50"><br>
+mutationRate: <input id="myMutationRate" type=text value="0.05"><br>
+
+<input id="myButton" type=button value= "run" onclick="{
+document.getElementById('myButton').style.backgroundColor = 'red'
+
+
+binCapacity = parseInt(document.getElementById('myBinCapacity').value);
+
+const itemsInput = document.getElementById('myItems').value;
+items = itemsInput.split(',').map(item => parseInt(item.trim()));
+
+populationSize = parseInt(document.getElementById('myPopulationSize').value);
+generations = parseInt(document.getElementById('myGenerations').value);
+mutationRate = parseFloat(document.getElementById('myMutationRate').value);
+
+
+
+
+    // Running the genetic algorithm after a slight delay
+const myTimeout = setTimeout(function(){
+   const bestSolution = runGeneticAlgorithm();
+   displayBins(bestSolution);
+   document.getElementById('myButton').style.backgroundColor = 'grey'
+}, 10);
+
+}"> <br>
+
+
+
+<div id="myBins"></div>
+<div id="myResults"></div>
+
+<script>
+    let binCapacity = 10;
+    let items = [2, 5, 4, 7, 1, 3, 8];
+    let populationSize = 20;
+    let generations = 50;
+    let mutationRate = 0.05;
+
+    function createIndividual() {
+    return items.map(() => Math.floor(Math.random() * items.length));
+    }
+
+    function createInitialPopulation(size) {
+        return new Array(size).fill(null).map(createIndividual);
+    }
+
+function fitness(individual) {
+    let bins = new Array(items.length).fill(0);
+    let penalty = 0;
+
+    individual.forEach((binIndex, itemIndex) => {
+        bins[binIndex] += items[itemIndex];
+        if (bins[binIndex] > binCapacity) {
+            penalty++;
+        }
+    });
+
+    return bins.length - penalty; // More bins and penalties reduce fitness
+}
+
+    function select(population) {
+        return population.sort((a, b) => fitness(a) - fitness(b)).slice(0, populationSize / 2);
+    }
+
+    function crossover(parent1, parent2) {
+        const cutPoint = Math.floor(Math.random() * parent1.length);
+        return [...parent1.slice(0, cutPoint), ...parent2.slice(cutPoint)];
+    }
+
+    function mutate(individual) {
+        if (Math.random() < mutationRate) {
+            const index = Math.floor(Math.random() * individual.length);
+            individual[index] = Math.floor(Math.random() * populationSize);
+        }
+        return individual;
+    }
+
+    function runGeneticAlgorithm() {
+        let population = createInitialPopulation(populationSize);
+
+        for (let gen = 0; gen < generations; gen++) {
+            document.getElementById('myResults').innerHTML += `<br>Generation: ${gen} <br>`
+            const selected = select(population);
+            let newPopulation = [];
+
+            while (newPopulation.length < populationSize) {
+                const [parent1, parent2] = [selected[Math.floor(Math.random() * selected.length)], selected[Math.floor(Math.random() * selected.length)]];
+                let child = crossover(parent1, parent2);
+                child = mutate(child);
+                newPopulation.push(child);
+                document.getElementById('myResults').innerHTML += `${child} <br>`
+            }
+
+            population = newPopulation;
+
+        }
+
+        return population[0];
+    }
+
+function displayBins(individual) {
+    let bins = new Array(items.length).fill(0);
+    individual.forEach((binIndex, itemIndex) => {
+        bins[binIndex] += items[itemIndex];
+    });
+
+    const binsContainer = document.getElementById('myBins');
+    binsContainer.innerHTML = '';
+
+    bins.forEach((bin, index) => {
+        const binElem = document.createElement('div');
+        binElem.className = 'bin';
+        binElem.innerText = 'Bin ' + (index + 1) + ': ' + bin + ' units';
+        binElem.style.backgroundColor = bin > binCapacity ? 'red' : 'green';
+        binsContainer.appendChild(binElem);
+    });
+}
+
+
+</script>
+
+
+
+
+</body>
+</html>
