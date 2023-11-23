@@ -18,10 +18,41 @@ const myPeople = new Array(20).fill(null).map(() => ({
     distance: Math.random() * 100 // Random distance for simplicity
 }));
 
+
+
 function myFitness(plan) {
-    // Calculate fitness based on interests and distances
-    return Math.random(); // Placeholder for actual fitness calculation
+    let interestScore = 0;
+    let distanceScore = 0;
+
+    // Calculate interest alignment score
+    plan.forEach(activity => {
+        myPeople.forEach(person => {
+            if (person.interests.includes(activity)) {
+                interestScore += 1; // Increase score for each interest match
+            }
+        });
+    });
+
+    // Calculate distance score (simplified example)
+    // Assuming each activity has a 'distance' value for simplicity
+    plan.forEach(activity => {
+        let totalDistance = myPeople.reduce((acc, person) => acc + Math.abs(person.distance - activity.distance), 0);
+        distanceScore += 1 / (1 + totalDistance); // Higher score for lower distance
+    });
+
+    // Normalize and combine scores
+    // Assuming equal weighting for simplicity, but can be adjusted
+    let normalizedInterestScore = interestScore / (myPeople.length * plan.length);
+    let normalizedDistanceScore = distanceScore / plan.length;
+
+    return (normalizedInterestScore + normalizedDistanceScore) / 2;
 }
+
+
+
+
+
+        
 
 function myCrossover(plan1, plan2) {
     // Combine two plans to create a new one
