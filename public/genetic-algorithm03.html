@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Activity Planner</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #myOutput { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <input type="button" value="Generate Plan" onclick="myGeneratePlan()">
+    <div id="myOutput"></div>
+
+    <script>
+const myInterests = ['sports', 'movies', 'games', 'reading', 'music'];
+const myPeople = new Array(20).fill(null).map(() => ({
+    interests: [myInterests[Math.floor(Math.random() * myInterests.length)]],
+    distance: Math.random() * 100 // Random distance for simplicity
+}));
+
+function myFitness(plan) {
+    // Calculate fitness based on interests and distances
+    return Math.random(); // Placeholder for actual fitness calculation
+}
+
+function myCrossover(plan1, plan2) {
+    // Combine two plans to create a new one
+    return [...plan1.slice(0, plan1.length / 2), ...plan2.slice(plan2.length / 2)];
+}
+
+function myMutate(plan) {
+    // Randomly change a part of the plan
+    const mutatedPlan = [...plan];
+    mutatedPlan[Math.floor(Math.random() * mutatedPlan.length)] = myInterests[Math.floor(Math.random() * myInterests.length)];
+    return mutatedPlan;
+}
+
+async function myGeneratePlan() {
+    let population = new Array(10).fill(null).map(() => myPeople.map(() => myInterests[Math.floor(Math.random() * myInterests.length)]));
+    for (let generation = 0; generation < 100; generation++) {
+        // Genetic algorithm iteration
+    }
+
+    // Output the best plan
+    document.getElementById('myOutput').innerText = 'Best Plan: ' + JSON.stringify(population[0]);
+}
+
+// JavaScript code ends
+    </script>
+</body>
+</html>
+
+    </script>
+</body>
+</html>
