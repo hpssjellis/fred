@@ -1,25 +1,27 @@
 
 
 
- https://smogzzz.github.io/game-dev-2023/public/index.html
+ https://smogzzz.github.io/game-dev-2023/public/final-game.html
 
- https://gamedev.alsteria.net/
+not yet  L  https://gamedev.alsteria.net/
 
  https://bobthenerd10.github.io/GameDev2023/public/index.html
 
- https://2l8iwin.github.io/gamedev2023/public/index.html
+ https://2l8iwin.github.io/gamedev2023/public/first%20game.html
 
+ 
  https://lil-toasty.github.io/GameDev2023/public
 
  https://y1rd.github.io/gamedevmess/public/
 
- https://bobman76.github.io/gamedev2023-10/
+ https://bobman76.github.io/gamedev2023-10/T2a20-Game-Template-Matthew.Html
 
 
 
  https://therealzenald.github.io/GameDev2024Daniel/public/
 
-https://treybertram06.github.io/gamedev12trey/public/index.html
+https://treybertram06.github.io/GameDevFinal/index.html
+
 
  https://j-0-e.github.io/gamedev2023joe/public/
 
