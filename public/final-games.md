@@ -3,7 +3,7 @@
 
  https://smogzzz.github.io/game-dev-2023/public/final-game.html
 
-not yet  L  https://gamedev.alsteria.net/
+ https://gamedev.alsteria.net/game.html
 
  https://bobthenerd10.github.io/GameDev2023/public/index.html
 
