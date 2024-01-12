@@ -5,7 +5,7 @@
 
  https://gamedev.alsteria.net/game.html
 
- https://bobthenerd10.github.io/GameDev2023/public/index.html
+ https://bobthenerd10.github.io/GameDev2023/public/zFinalProject/platformer.html
 
  https://2l8iwin.github.io/gamedev2023/public/first%20game.html
 
