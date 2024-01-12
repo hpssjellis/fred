@@ -5,7 +5,7 @@
 
  https://gamedev.alsteria.net/game.html
 
- https://bobthenerd10.github.io/GameDev2023/public/game.html
+ https://bobthenerd10.github.io/GameDev2023/public/index.html
 
  https://2l8iwin.github.io/gamedev2023/public/first%20game.html
 
@@ -49,7 +49,7 @@ https://treybertram06.github.io/GameDevFinal/index.html
 
  https://kaidenemeterio.github.io/game-dev-2024/public/t2a20-game-template-Kaiden.html
 
- https://brendenhooper.github.io/brenden/gamedev2023/game.html
+ https://brendenhooper.github.io/brenden/gamedev2023/FullGame.html
 
 https://powbaby.github.io/game-dev-2023/public/final-game-startpage-Lincoln.html
 
