@@ -14,7 +14,7 @@
 
  https://y1rd.github.io/gamedevmess/public/pages/gametemplate.html
 
- https://bobman76.github.io/gamedev2023-10/T2a20-Game-Template-Matthew.Html
+ https://bobman76.github.io/gamedev2023-10/
 
 
 
