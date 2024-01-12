@@ -69,6 +69,6 @@ https://powbaby.github.io/game-dev-2023/public/final-game-startpage-Lincoln.html
 
  https://lukemcrae7.github.io/gameDev12/public/FinalGame/level1.html
 
- https://matthewnuspl.github.io/game-dev-2023/public/Game.html
+ https://matthewnuspl.github.io/game-dev-2023/public/finalgame.html
 
 
