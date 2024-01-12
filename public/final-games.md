@@ -3,7 +3,7 @@
 
  https://smogzzz.github.io/game-dev-2023/public/final-game.html
 
- https://gamedev.alsteria.net/game.html
+ https://gamedev.alsteria.net/
 
  https://bobthenerd10.github.io/GameDev2023/public/zFinalProject/platformer.html
 
@@ -40,7 +40,7 @@ https://treybertram06.github.io/GameDevFinal/index.html
 
  
 
- https://haunting.alsteria.net/gamedev2023/where
+ https://haunting.alsteria.net/gamedev2023/
 
  https://tribbalibba.github.io/Game-dev-2024/public/game-template-Tommy.html
 
