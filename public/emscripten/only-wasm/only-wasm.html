@@ -17,7 +17,7 @@
       }
 
       async function sayHello() {
-        const instance = await loadWasm('hello_world.wasm');
+        const instance = await loadWasm('only-wasm.wasm');
         instance.exports._hello();  // Calling the exported 'hello' function
       }
     </script>

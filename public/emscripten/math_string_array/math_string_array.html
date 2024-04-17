@@ -9,19 +9,19 @@
     <h1>WebAssembly Module Examples</h1>
     
     <h2>Arithmetic Operations</h2>
-    <input type="number" id="numberA" placeholder="Enter number A">
-    <input type="number" id="numberB" placeholder="Enter number B">
+    <input type="number" id="numberA" placeholder="Enter number A" value="5">
+    <input type="number" id="numberB" placeholder="Enter number B" value="2">
     <input type="button" value="Add" onclick="performAddition()">
     <input type="button" value="Subtract" onclick="performSubtraction()">
     <div id="arithResult"></div>
 
     <h2>String Manipulation</h2>
-    <input type="text" id="inputString" placeholder="Enter a string">
+    <input type="text" id="inputString" placeholder="Enter a string" value="Emscripten is cool">
     <input type="button" value="Get Length" onclick="getStringLength()">
     <div id="stringResult"></div>
 
     <h2>Array Handling</h2>
-    <input type="text" id="inputArray" placeholder="Enter numbers separated by commas">
+    <input type="text" id="inputArray" placeholder="Enter numbers separated by commas" value="3,4,5,6">
     <input type="button" value="Sum Array" onclick="sumArray()">
     <div id="arrayResult"></div>
 
@@ -50,28 +50,12 @@
       }
 
 
-        /*
-      async function sumArray() {
-        await Module.ready;
-        let numbers = document.getElementById('inputArray').value.split(',').map(Number);
-        const arrayPtr = Module._malloc(numbers.length * 4); // Allocate memory for the array
-        Module.HEAP32.set(numbers, arrayPtr / 4); // Copy array to Emscripten heap
-        const result = Module.ccall('sum_array', 'number', ['number', 'number'], [arrayPtr, numbers.length]);
-        Module._free(arrayPtr); // Free the allocated memory
-        document.getElementById('arrayResult').innerText = 'Sum: ' + result;
-      }
-
-
-
-        */
-
-
  async function sumArray() {
         await Module.ready;
         let numbers = document.getElementById('inputArray').value.split(',').map(Number);
         console.log("Parsed numbers:", numbers); // Debug the parsed array
 
-        const arrayPtr = Module._malloc(numbers.length * 4);
+        const arrayPtr = Module.malloc(numbers.length * 4);
         console.log("Memory allocated at:", arrayPtr); // Debug memory allocation
 
         Module.HEAP32.set(numbers, arrayPtr / 4); // Set array in WASM memory
