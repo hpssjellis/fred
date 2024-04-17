@@ -56,4 +56,11 @@
 
       async function countToN() {
         await Module.ready;
-        const n = parseInt(document.getElementById
+        const n = parseInt(document.getElementById('countInput').value, 10);
+        const result = Module.ccall('countToN', 'number', ['number'], [n]);
+        document.getElementById('countResult').innerText = 'Count: ' + result;
+      }
+    </script>
+</body>
+</html>
+

@@ -49,6 +49,8 @@
         document.getElementById('stringResult').innerText = 'Length: ' + length;
       }
 
+
+        /*
       async function sumArray() {
         await Module.ready;
         let numbers = document.getElementById('inputArray').value.split(',').map(Number);
@@ -58,6 +60,28 @@
         Module._free(arrayPtr); // Free the allocated memory
         document.getElementById('arrayResult').innerText = 'Sum: ' + result;
       }
+
+
+
+        */
+
+
+ async function sumArray() {
+        await Module.ready;
+        let numbers = document.getElementById('inputArray').value.split(',').map(Number);
+        console.log("Parsed numbers:", numbers); // Debug the parsed array
+
+        const arrayPtr = Module._malloc(numbers.length * 4);
+        console.log("Memory allocated at:", arrayPtr); // Debug memory allocation
+
+        Module.HEAP32.set(numbers, arrayPtr / 4); // Set array in WASM memory
+        const result = Module.ccall('sum_array', 'number', ['number', 'number'], [arrayPtr, numbers.length]);
+        console.log("Computed sum:", result); // Debug the computation result
+
+        Module._free(arrayPtr); // Free the allocated memory
+        document.getElementById('arrayResult').innerText = 'Sum: ' + result;
+      }
+        
     </script>
 </body>
 </html>
