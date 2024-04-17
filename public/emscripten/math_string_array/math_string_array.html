@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Combined Math, String, and Array Example</title>
+    <script src="math_string_array.js"></script>
+</head>
+<body>
+    <h1>WebAssembly Module Examples</h1>
+    
+    <h2>Arithmetic Operations</h2>
+    <input type="number" id="numberA" placeholder="Enter number A">
+    <input type="number" id="numberB" placeholder="Enter number B">
+    <input type="button" value="Add" onclick="performAddition()">
+    <input type="button" value="Subtract" onclick="performSubtraction()">
+    <div id="arithResult"></div>
+
+    <h2>String Manipulation</h2>
+    <input type="text" id="inputString" placeholder="Enter a string">
+    <input type="button" value="Get Length" onclick="getStringLength()">
+    <div id="stringResult"></div>
+
+    <h2>Array Handling</h2>
+    <input type="text" id="inputArray" placeholder="Enter numbers separated by commas">
+    <input type="button" value="Sum Array" onclick="sumArray()">
+    <div id="arrayResult"></div>
+
+    <script>
+      async function performAddition() {
+        await Module.ready;
+        const a = parseInt(document.getElementById('numberA').value);
+        const b = parseInt(document.getElementById('numberB').value);
+        const result = Module.ccall('add', 'number', ['number', 'number'], [a, b]);
+        document.getElementById('arithResult').innerText = 'Result: ' + result;
+      }
+
+      async function performSubtraction() {
+        await Module.ready;
+        const a = parseInt(document.getElementById('numberA').value);
+        const b = parseInt(document.getElementById('numberB').value);
+        const result = Module.ccall('subtract', 'number', ['number', 'number'], [a, b]);
+        document.getElementById('arithResult').innerText = 'Result: ' + result;
+      }
+
+      async function getStringLength() {
+        await Module.ready;
+        const str = document.getElementById('inputString').value;
+        const length = Module.ccall('get_length', 'number', ['string'], [str]);
+        document.getElementById('stringResult').innerText = 'Length: ' + length;
+      }
+
+      async function sumArray() {
+        await Module.ready;
+        let numbers = document.getElementById('inputArray').value.split(',').map(Number);
+        const arrayPtr = Module._malloc(numbers.length * 4); // Allocate memory for the array
+        Module.HEAP32.set(numbers, arrayPtr / 4); // Copy array to Emscripten heap
+        const result = Module.ccall('sum_array', 'number', ['number', 'number'], [arrayPtr, numbers.length]);
+        Module._free(arrayPtr); // Free the allocated memory
+        document.getElementById('arrayResult').innerText = 'Sum: ' + result;
+      }
+    </script>
+</body>
+</html>

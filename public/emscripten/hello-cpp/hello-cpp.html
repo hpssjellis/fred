@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hello World C++ WebAssembly</title>
+    <script src="hello-cpp.js"></script>
+</head>
+<body>
+    <h1>C++ WebAssembly Hello World Example</h1>
+    <input type="button" value="Say Hello" onclick="sayHello()">
+
+    <script>
+      async function sayHello() {
+        await Module.ready;  // Wait for the WebAssembly module to be ready
+        Module._hello();     // Call the exported 'hello' function
+      }
+    </script>
+</body>
+</html>

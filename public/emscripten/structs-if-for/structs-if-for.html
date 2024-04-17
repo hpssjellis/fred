@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Structs, Decisions, and Loops with WebAssembly</title>
+    <script src="structs-if-for.js"></script>
+</head>
+<body>
+    <h1>WebAssembly Examples: Structs, If-Else, and Loops</h1>
+    
+    <h2>Struct Example</h2>
+    <input type="text" id="personId" placeholder="Enter Person ID">
+    <input type="text" id="personName" placeholder="Enter Person Name">
+    <input type="button" value="Create Person" onclick="createPerson()">
+
+    <h2>Decision Example</h2>
+    <input type="number" id="gradeInput" placeholder="Enter a grade">
+    <input type="button" value="Classify Grade" onclick="classifyGrade()">
+    <div id="gradeResult"></div>
+
+    <h2>For Loop Example</h2>
+    <input type="number" id="limitInput" placeholder="Sum numbers up to">
+    <input type="button" value="Calculate Sum" onclick="calculateSum()">
+    <div id="sumResult"></div>
+
+    <h2>While Loop Example</h2>
+    <input type="number" id="countInput" placeholder="Count to N">
+    <input type="button" value="Count to N" onclick="countToN()">
+    <div id="countResult"></div>
+
+    <script>
+      async function createPerson() {
+        await Module.ready;
+        const id = parseInt(document.getElementById('personId').value, 10);
+        const name = document.getElementById('personName').value;
+        const personPtr = Module._malloc(104); // Allocate memory for struct
+        Module.setValue(personPtr, id, 'i32'); // Set ID
+        Module.stringToUTF8(name, personPtr + 4, 100); // Set name
+        Module._printPerson(personPtr);
+        Module._free(personPtr); // Free memory
+      }
+
+      async function classifyGrade() {
+        await Module.ready;
+        const grade = parseInt(document.getElementById('gradeInput').value, 10);
+        const result = Module.ccall('classifyGrade', 'string', ['number'], [grade]);
+        document.getElementById('gradeResult').innerText = 'Result: ' + result;
+      }
+
+      async function calculateSum() {
+        await Module.ready;
+        const limit = parseInt(document.getElementById('limitInput').value, 10);
+        const result = Module.ccall('sumOfNumbers', 'number', ['number'], [limit]);
+        document.getElementById('sumResult').innerText = 'Sum: ' + result;
+      }
+
+      async function countToN() {
+        await Module.ready;
+        const n = parseInt(document.getElementById
