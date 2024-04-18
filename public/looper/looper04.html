@@ -12,7 +12,7 @@
         document.getElementById('myStop1').style.backgroundColor  = 'gray'
         startRecording(1)
     }">
-    <input type="button" id="myStop1"value="Stop Channel 1" onclick="{
+    <input id="myStop1"  type="button"value="Stop Channel 1" onclick="{
         document.getElementById('myStart1').style.backgroundColor = 'gray'
         document.getElementById('myStop1').style.backgroundColor  = 'red'
         stopRecording(1)
@@ -21,12 +21,12 @@
     <a id="download1" style="display: none;">Download Channel 1</a>
 </div>
 <div>
-    <input type="button" value="Record Channel 2" onclick="{
+    <input id="myStart2"  type="button" value="Record Channel 2" onclick="{
         document.getElementById('myStart2').style.backgroundColor = 'red'
         document.getElementById('myStop2').style.backgroundColor  = 'gray'
         startRecording(2)
     }">
-    <input type="button" value="Stop Channel 2" onclick="{
+    <input id="myStop3"  type="button" value="Stop Channel 2" onclick="{
         document.getElementById('myStart2').style.backgroundColor = 'gray'
         document.getElementById('myStop2').style.backgroundColor  = 'red'
         stopRecording(2)
@@ -35,12 +35,12 @@
     <a id="download2" style="display: none;">Download Channel 2</a>
 </div>
 <div>
-    <input type="button" value="Record Channel 3" onclick="{
+    <input id="myStart3"  type="button" value="Record Channel 3" onclick="{
         document.getElementById('myStart3').style.backgroundColor = 'red'
         document.getElementById('myStop3').style.backgroundColor  = 'gray'
         startRecording(3)
     }">
-    <input type="button" value="Stop Channel 3" onclick="{
+    <input id="myStop3"  type="button" value="Stop Channel 3" onclick="{
         document.getElementById('myStart3').style.backgroundColor = 'gray'
         document.getElementById('myStop3').style.backgroundColor  = 'red'
         stopRecording(3)
