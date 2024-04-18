@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Simple 3-Channel Looper</title>
+</head>
+<body>
+<h2>3-Channel Looper</h2>
+<div>
+    <input type="button" value="Record on Channel 1" onclick="myStartRecording(1)">
+    <input type="button" value="Stop Recording on Channel 1" onclick="myStopRecording(1)">
+    <input type="button" value="Play Channel 1" onclick="myPlayChannel(1)">
+</div>
+<div>
+    <input type="button" value="Record on Channel 2" onclick="myStartRecording(2)">
+    <input type="button" value="Stop Recording on Channel 2" onclick="myStopRecording(2)">
+    <input type="button" value="Play Channel 2" onclick="myPlayChannel(2)">
+</div>
+<div>
+    <input type="button" value="Record on Channel 3" onclick="myStartRecording(3)">
+    <input type="button" value="Stop Recording on Channel 3" onclick="myStopRecording(3)">
+    <input type="button" value="Play Channel 3" onclick="myPlayChannel(3)">
+</div>
+
+<script>
+// Basic structure for the looper functionality (to be expanded with actual Web Audio API code)
+function myStartRecording(channel) {
+    console.log("Start recording on channel " + channel);
+    // Add media recorder start logic here
+}
+
+function myStopRecording(channel) {
+    console.log("Stop recording on channel " + channel);
+    // Add media recorder stop logic here
+}
+
+function myPlayChannel(channel) {
+    console.log("Play channel " + channel);
+    // Add playback logic here
+}
+</script>
+</body>
+</html>
