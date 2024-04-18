@@ -42,18 +42,18 @@
 </div>
 
 
-    <div>
+<div>
     <input id="myStart3" type="button" value="Record Channel 3" onclick="{
         document.getElementById('myStart3').style.backgroundColor = 'red';
         document.getElementById('myStop3').style.backgroundColor  = 'gray';
-        startRecording(1);
+        startRecording(3);
     }">
     <input id="myStop3"  type="button"value="Stop Channel 3" onclick="{
         document.getElementById('myStart3').style.backgroundColor = 'gray';
         document.getElementById('myStop3').style.backgroundColor  = 'green';
-        stopRecording(1, 'myName3');
+        stopRecording(3, 'myName3');
     }">
-    <input type="text" id="myName3" value="Channel13.mp3">
+    <input type="text" id="myName3" value="Channel3.mp3">
     <input type="file" accept="audio/mp3" onchange="loadFile(3, event)">
     <audio id="audio3" controls></audio>
     <a id="download3" style="display: none;">Download Channel 3</a>
