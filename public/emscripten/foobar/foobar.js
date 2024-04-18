@@ -991,6 +991,8 @@ function dbg(...args) {
       }
     };
 
+  var _emscripten_date_now = () => Date.now();
+
   
   var runtimeKeepaliveCounter = 0;
   var keepRuntimeAlive = () => noExitRuntime || runtimeKeepaliveCounter > 0;
@@ -1036,6 +1038,17 @@ function dbg(...args) {
       quit_(1, e);
     };
 
+  var getCFunc = (ident) => {
+      var func = Module['_' + ident]; // closure exported function
+      assert(func, 'Cannot call unknown function ' + ident + ', make sure it is exported');
+      return func;
+    };
+  
+  var writeArrayToMemory = (array, buffer) => {
+      assert(array.length >= 0, 'writeArrayToMemory array must have a length (should be an array or typed array)')
+      HEAP8.set(array, buffer);
+    };
+  
   var lengthBytesUTF8 = (str) => {
       var len = 0;
       for (var i = 0; i < str.length; ++i) {
@@ -1116,18 +1129,6 @@ function dbg(...args) {
       stringToUTF8(str, ret, size);
       return ret;
     };
-
-  var getCFunc = (ident) => {
-      var func = Module['_' + ident]; // closure exported function
-      assert(func, 'Cannot call unknown function ' + ident + ', make sure it is exported');
-      return func;
-    };
-  
-  var writeArrayToMemory = (array, buffer) => {
-      assert(array.length >= 0, 'writeArrayToMemory array must have a length (should be an array or typed array)')
-      HEAP8.set(array, buffer);
-    };
-  
   
   
   
@@ -1278,13 +1279,15 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp('fetchSettings');
 }
 var wasmImports = {
-  
+  /** @export */
+  emscripten_date_now: _emscripten_date_now
 };
 var wasmExports = createWasm();
 var ___wasm_call_ctors = createExportWrapper('__wasm_call_ctors', 0);
 var _foo = Module['_foo'] = createExportWrapper('foo', 0);
 var _bar = Module['_bar'] = createExportWrapper('bar', 0);
-var _main = Module['_main'] = createExportWrapper('main', 0);
+var ___original_main = Module['___original_main'] = createExportWrapper('__original_main', 0);
+var _main = Module['_main'] = createExportWrapper('main', 2);
 var _fflush = createExportWrapper('fflush', 1);
 var _emscripten_stack_init = () => (_emscripten_stack_init = wasmExports['emscripten_stack_init'])();
 var _emscripten_stack_get_free = () => (_emscripten_stack_get_free = wasmExports['emscripten_stack_get_free'])();
@@ -1589,22 +1592,14 @@ dependenciesFulfilled = function runCaller() {
   if (!calledRun) dependenciesFulfilled = runCaller; // try this again later, after new deps are fulfilled
 };
 
-function callMain(args = []) {
+function callMain() {
   assert(runDependencies == 0, 'cannot call main when async dependencies remain! (listen on Module["onRuntimeInitialized"])');
   assert(__ATPRERUN__.length == 0, 'cannot call main when preRun functions remain to be called');
 
   var entryFunction = _main;
 
-  args.unshift(thisProgram);
-
-  var argc = args.length;
-  var argv = stackAlloc((argc + 1) * 4);
-  var argv_ptr = argv;
-  args.forEach((arg) => {
-    HEAPU32[((argv_ptr)>>2)] = stringToUTF8OnStack(arg);
-    argv_ptr += 4;
-  });
-  HEAPU32[((argv_ptr)>>2)] = 0;
+  var argc = 0;
+  var argv = 0;
 
   try {
 
@@ -1628,7 +1623,7 @@ function stackCheckInit() {
   writeStackCookie();
 }
 
-function run(args = arguments_) {
+function run() {
 
   if (runDependencies > 0) {
     return;
@@ -1658,7 +1653,7 @@ function run(args = arguments_) {
 
     if (Module['onRuntimeInitialized']) Module['onRuntimeInitialized']();
 
-    if (shouldRunNow) callMain(args);
+    if (shouldRunNow) callMain();
 
     postRun();
   }

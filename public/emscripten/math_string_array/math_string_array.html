@@ -58,7 +58,7 @@
         const arrayPtr = Module._malloc(numbers.length * 4);
         console.log("Memory allocated at:", arrayPtr); // Debug memory allocation
 
-        Module.HEAP32.set(numbers, arrayPtr / 4); // Set array in WASM memory
+        Module._HEAP32.set(numbers, arrayPtr / 4); // Set array in WASM memory
         const result = Module.ccall('sum_array', 'number', ['number', 'number'], [arrayPtr, numbers.length]);
         console.log("Computed sum:", result); // Debug the computation result
 

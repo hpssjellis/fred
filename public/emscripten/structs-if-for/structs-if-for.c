@@ -35,9 +35,12 @@ int sumOfNumbers(int limit) {
 
 EMSCRIPTEN_KEEPALIVE
 int countToN(int n) {
-    int count = 0;
-    while (count < n) {
-        printf("%d ", ++count);
+    int myCount = 0;
+    int myTotal = 0;
+    while (myCount < n) {
+        myCount += 1;    // add count to the old count
+        myTotal += myCount;
+        printf("%d ", myCount);
     }
-    return count;
+    return myTotal;
 }

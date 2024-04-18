@@ -1,20 +1,21 @@
 #include <emscripten.h>
+#include <stdlib.h> // Include standard library for rand()
+#include <time.h>   // Include time library to seed random number generator
 
-// Function that returns a constant string
 EMSCRIPTEN_KEEPALIVE
 const char* foo() {
     return "foo";
 }
 
-// Function that returns another constant string
 EMSCRIPTEN_KEEPALIVE
 const char* bar() {
     return "bar";
 }
 
-// Main function remains the same, but it's not necessary unless specifically called
 EMSCRIPTEN_KEEPALIVE
-const char* main() {
-    return "hello, world!";
+int main() {
+    // Seed the random number generator
+    srand(time(NULL));
+    // Return a random number
+    return rand();
 }
-
