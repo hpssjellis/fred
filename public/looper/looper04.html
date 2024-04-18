@@ -7,11 +7,14 @@
 <body>
 <h2>Music Multi Channel Javascript Looper</h2>
 <div>
-    <input id="myButton1" type="button" value="Record Channel 1" onclick="{
-        document.getElementById('myButton1').style.backgroundColor = 'red'
+    <input id="myStart1" type="button" value="Record Channel 1" onclick="{
+        document.getElementById('myStart1').style.backgroundColor = 'red'
+        document.getElementById('myStop1').style.backgroundColor = 'gray'
         startRecording(1)
     }">
-    <input type="button" value="Stop Channel 1" onclick="{
+    <input type="button" id="myStop1"value="Stop Channel 1" onclick="{
+        document.getElementById('myStart1').style.backgroundColor = 'gray'
+        document.getElementById('myStop1').style.backgroundColor = 'red'
         stopRecording(1)
     }">
     <audio id="audio1" controls></audio>
