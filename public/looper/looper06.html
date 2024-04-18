@@ -22,37 +22,12 @@
     <audio id="audio1" controls></audio>
     <a id="download1" style="display: none;">Download Channel 1</a>
 </div>
+<!-- Similar structure for Channel 2 and Channel 3 -->
+<!-- Add the rest of your channel divs here -->
+
+<!-- Play All Button -->
 <div>
-    <input id="myStart2"  type="button" value="Record Channel 2" onclick="{
-        document.getElementById('myStart2').style.backgroundColor = 'red';
-        document.getElementById('myStop2').style.backgroundColor  = 'gray';
-        startRecording(2);
-    }">
-    <input id="myStop2"  type="button" value="Stop Channel 2" onclick="{
-        document.getElementById('myStart2').style.backgroundColor = 'gray';
-        document.getElementById('myStop2').style.backgroundColor  = 'green';
-        stopRecording(2, 'myName2');
-    }">
-    <input type="text" id="myName2" value="Channel2.mp3">
-    <input type="file" accept="audio/mp3" onchange="loadFile(2, event)">
-    <audio id="audio2" controls></audio>
-    <a id="download2" style="display: none;">Download Channel 2</a>
-</div>
-<div>
-    <input id="myStart3"  type="button" value="Record Channel 3" onclick="{
-        document.getElementById('myStart3').style.backgroundColor = 'red';
-        document.getElementById('myStop3').style.backgroundColor  = 'gray';
-        startRecording(3,'myName3');
-    }">
-    <input id="myStop3"  type="button" value="Stop Channel 3" onclick="{
-        document.getElementById('myStart3').style.backgroundColor = 'gray';
-        document.getElementById('myStop3').style.backgroundColor  = 'green';
-        stopRecording(3);
-    }">
-    <input type="text" id="myName3" value="Channel3.mp3">
-    <input type="file" accept="audio/mp3" onchange="loadFile(3, event)">
-    <audio id="audio3" controls></audio>
-    <a id="download3" style="display: none;">Download Channel 3</a>
+    <input type="button" value="Play All Channels" onclick="playAllChannels()">
 </div>
 
 <script>
@@ -93,19 +68,16 @@ function stopRecording(channel, myFileName) {
         const audioUrl = URL.createObjectURL(audioBlob);
         audioElements[channel].src = audioUrl;
 
-        // Setup download link using the value from the text input for naming the file
-        const fileName = document.getElementById(myFileName).value;  // Get the file name from the input box
+        const fileName = document.getElementById(myFileName).value;
         downloadLinks[channel].href = audioUrl;
-        downloadLinks[channel].download = fileName; // Use the text input value for the file name
+        downloadLinks[channel].download = fileName;
         downloadLinks[channel].style.display = 'inline';
         downloadLinks[channel].textContent = `Download Channel ${channel}`;
 
-        // Cleanup
         delete mediaRecorders[channel];
         delete audioChunks[channel];
     };
 }
-
 
 function loadFile(channel, event) {
     const file = event.target.files[0];
@@ -113,13 +85,24 @@ function loadFile(channel, event) {
         const fileUrl = URL.createObjectURL(file);
         audioElements[channel].src = fileUrl;
 
-        // Optionally setup download link for the uploaded file as well
         downloadLinks[channel].href = fileUrl;
         downloadLinks[channel].download = file.name;
         downloadLinks[channel].style.display = 'inline';
         downloadLinks[channel].textContent = `Download Channel ${channel} Uploaded File`;
     }
 }
+
+function playAllChannels() {
+    Object.values(audioElements).forEach(audio => {
+        if (!audio.paused) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+        audio.play();
+    });
+}
 </script>
 </body>
 </html>
+
+
