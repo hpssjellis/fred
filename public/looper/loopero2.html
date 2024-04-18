@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Track Recorder</title>
+</head>
+<body>
+<h2>Track Recorder</h2>
+<div>
+    <input type="button" value="Start Recording" onclick="startRecording()">
+    <input type="button" value="Stop and Save Recording" onclick="stopRecording()">
+</div>
+<audio controls></audio>
+<script>
+let mediaRecorder;
+let audioChunks = [];
+
+function startRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.start();
+        mediaRecorder.ondataavailable = event => {
+            audioChunks.push(event.data);
+        };
+    });
+}
+
+function stopRecording() {
+    mediaRecorder.stop();
+    mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = document.querySelector('audio');
+        audio.src = audioUrl;
+        
+        // Create download link
+        const downloadLink = document.createElement('a');
+        downloadLink.href = audioUrl;
+        downloadLink.download = 'recording.mp3';
+        downloadLink.textContent = 'Download Recording';
+        document.body.appendChild(downloadLink);
+
+        // Reset chunks
+        audioChunks = [];
+    };
+}
+</script>
+</body>
+</html>
