@@ -7,8 +7,13 @@
 <body>
 <h2>3-Channel Looper</h2>
 <div>
-    <input type="button" value="Record Channel 1" onclick="startRecording(1)">
-    <input type="button" value="Stop Channel 1" onclick="stopRecording(1)">
+    <input id="myButton1" type="button" value="Record Channel 1" onclick="{
+        document.getElementById('myButton1').style=backgroundColor = 'red'
+        startRecording(1)
+    }">
+    <input type="button" value="Stop Channel 1" onclick="{
+        stopRecording(1)
+    }">
     <audio id="audio1" controls></audio>
     <a id="download1" style="display: none;">Download Channel 1</a>
 </div>
