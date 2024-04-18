@@ -1,5 +1,13 @@
-#include <stdio.h>
+#include <emscripten.h>
 
-void hello() {
-    printf("Hello, World!\n");
+EMSCRIPTEN_KEEPALIVE
+const char* hello() {
+    return "Hello, World!";
+}
+
+
+EMSCRIPTEN_KEEPALIVE
+int main() {
+    // Empty main function
+    return 0;
 }

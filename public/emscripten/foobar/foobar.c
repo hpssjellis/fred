@@ -1,14 +1,20 @@
-#include <stdio.h>
+#include <emscripten.h>
 
-void foo(void){
-  printf("foo\n");
+// Function that returns a constant string
+EMSCRIPTEN_KEEPALIVE
+const char* foo() {
+    return "foo";
 }
 
-void bar(void){
-  printf("bar\n");
+// Function that returns another constant string
+EMSCRIPTEN_KEEPALIVE
+const char* bar() {
+    return "bar";
 }
 
-int main() {
-  printf("hello, world!\n");
-  return 0;
+// Main function remains the same, but it's not necessary unless specifically called
+EMSCRIPTEN_KEEPALIVE
+const char* main() {
+    return "hello, world!";
 }
+

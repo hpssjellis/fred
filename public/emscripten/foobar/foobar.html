@@ -13,23 +13,29 @@
     <div id="output"></div>
 
     <script>
-      // Function to run the main function of the WebAssembly module
-      async function runMain() {
-        await Module.ready;
-        Module.ccall('main', 'number', [], []);
-      }
+        // Function to run the main function of the WebAssembly module
+        async function runMain() {
+            if (Module.ready) {
+                const result = Module.ccall('main', 'string', [], []);
+                document.getElementById('output').innerHTML += 'Main: ' + result + '<br>';
+            }
+        }
 
-      // Function to call the 'foo' function
-      async function callFoo() {
-        await Module.ready;
-        Module.ccall('foo', null, [], []);
-      }
+        // Function to call the 'foo' function
+        async function callFoo() {
+            if (Module.ready) {
+                const result = Module.ccall('foo', 'string', [], []);
+                document.getElementById('output').innerHTML += 'Foo: ' + result + '<br>';
+            }
+        }
 
-      // Function to call the 'bar' function
-      async function callBar() {
-        await Module.ready;
-        Module.ccall('bar', null, [], []);
-      }
+        // Function to call the 'bar' function
+        async function callBar() {
+            if (Module.ready) {
+                const result = Module.ccall('bar', 'string', [], []);
+                document.getElementById('output').innerHTML += 'Bar: ' + result + '<br>';
+            }
+        }
     </script>
 </body>
 </html>

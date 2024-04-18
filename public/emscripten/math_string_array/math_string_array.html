@@ -55,7 +55,7 @@
         let numbers = document.getElementById('inputArray').value.split(',').map(Number);
         console.log("Parsed numbers:", numbers); // Debug the parsed array
 
-        const arrayPtr = Module.malloc(numbers.length * 4);
+        const arrayPtr = Module._malloc(numbers.length * 4);
         console.log("Memory allocated at:", arrayPtr); // Debug memory allocation
 
         Module.HEAP32.set(numbers, arrayPtr / 4); // Set array in WASM memory
