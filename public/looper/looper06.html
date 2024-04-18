@@ -15,9 +15,9 @@
     <input id="myStop1"  type="button"value="Stop Channel 1" onclick="{
         document.getElementById('myStart1').style.backgroundColor = 'gray';
         document.getElementById('myStop1').style.backgroundColor  = 'green';
-        stopRecording(1);
+        stopRecording(1, 'myName1');
     }">
-    <input type="text" id="myName1" value="wow.mp3">
+    <input type="text" id="myName1" value="Channel1.mp3">
     <input type="file" accept="audio/mp3" onchange="loadFile(1, event)">
     <audio id="audio1" controls></audio>
     <a id="download1" style="display: none;">Download Channel 1</a>
@@ -31,8 +31,9 @@
     <input id="myStop2"  type="button" value="Stop Channel 2" onclick="{
         document.getElementById('myStart2').style.backgroundColor = 'gray';
         document.getElementById('myStop2').style.backgroundColor  = 'green';
-        stopRecording(2);
+        stopRecording(2, 'myName2');
     }">
+    <input type="text" id="myName2" value="Channel2.mp3">
     <input type="file" accept="audio/mp3" onchange="loadFile(2, event)">
     <audio id="audio2" controls></audio>
     <a id="download2" style="display: none;">Download Channel 2</a>
@@ -41,13 +42,14 @@
     <input id="myStart3"  type="button" value="Record Channel 3" onclick="{
         document.getElementById('myStart3').style.backgroundColor = 'red';
         document.getElementById('myStop3').style.backgroundColor  = 'gray';
-        startRecording(3);
+        startRecording(3,'myName3');
     }">
     <input id="myStop3"  type="button" value="Stop Channel 3" onclick="{
         document.getElementById('myStart3').style.backgroundColor = 'gray';
         document.getElementById('myStop3').style.backgroundColor  = 'green';
         stopRecording(3);
     }">
+    <input type="text" id="myName3" value="Channel3.mp3">
     <input type="file" accept="audio/mp3" onchange="loadFile(3, event)">
     <audio id="audio3" controls></audio>
     <a id="download3" style="display: none;">Download Channel 3</a>
@@ -84,7 +86,7 @@ function startRecording(channel) {
     });
 }
 
-function stopRecording(channel) {
+function stopRecording(channel, myFileName) {
     mediaRecorders[channel].stop();
     mediaRecorders[channel].onstop = () => {
         const audioBlob = new Blob(audioChunks[channel], { type: 'audio/mp3' });
@@ -92,7 +94,7 @@ function stopRecording(channel) {
         audioElements[channel].src = audioUrl;
 
         // Setup download link using the value from the text input for naming the file
-        const fileName = document.getElementById('myName1').value;  // Get the file name from the input box
+        const fileName = document.getElementById(myFileName).value;  // Get the file name from the input box
         downloadLinks[channel].href = audioUrl;
         downloadLinks[channel].download = fileName; // Use the text input value for the file name
         downloadLinks[channel].style.display = 'inline';
