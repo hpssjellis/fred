@@ -18,6 +18,15 @@
         document.getElementById('myStart1').style.backgroundColor = 'gray';
         document.getElementById('myStop1').style.backgroundColor  = 'green';
         stopRecording(1, 'myName1');
+    }">    
+    <input type="button" value="Loop" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[1].loop = true;
+            this.value = 'Once';
+        } else {
+            audioElements[1].loop = false;
+            this.value = 'Loop';
+        }
     }">
     <input type="file" accept="audio/mp3" onchange="loadFile(1, event)">
     <audio id="audio1" controls></audio>
@@ -35,6 +44,15 @@
         document.getElementById('myStart2').style.backgroundColor = 'gray';
         document.getElementById('myStop2').style.backgroundColor  = 'green';
         stopRecording(2, 'myName2');
+    }">    
+    <input type="button" value="Loop" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[2].loop = true;
+            this.value = 'Once';
+        } else {
+            audioElements[2].loop = false;
+            this.value = 'Loop';
+        }
     }">
     <input type="file" accept="audio/mp3" onchange="loadFile(2, event)">
     <audio id="audio2" controls></audio>
