@@ -108,7 +108,13 @@ const downloadLinks = {
 };
 
 function startRecording(channel) {
-    navigator.mediaDevices.getUserMedia({ audio: true })
+    navigator.mediaDevices.getUserMedia({ 
+    audio: {
+               sampleRate: 48000, // Higher sample rates might capture more detail
+               noiseSuppression: true, // Helps reduce background noise
+               echoCancellation: true // Useful if the recording environment has echo issues
+          }
+    })
     .then(stream => {
         mediaRecorders[channel] = new MediaRecorder(stream);
         audioChunks[channel] = [];
