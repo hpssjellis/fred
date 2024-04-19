@@ -107,7 +107,7 @@ function stopRecording(channel, myFileName) {
         downloadLinks[channel].href = audioUrl;
         downloadLinks[channel].download = fileName;
         downloadLinks[channel].style.display = 'inline';
-        downloadLinks[channel].textContent = `Download Channel ${channel}`;
+        downloadLinks[channel].textContent = `Download Channel ${myFileName}`;
 
         delete mediaRecorders[channel];
         delete audioChunks[channel];
@@ -115,26 +115,6 @@ function stopRecording(channel, myFileName) {
 }
 
 
-  /*
-function loadFile(channel, event) {
-    const file = event.target.files[0];
-    if (file) {
-        const fileUrl = URL.createObjectURL(file);
-        audioElements[channel].src = fileUrl;
-
-        // Set the download link
-        downloadLinks[channel].href = fileUrl;
-        downloadLinks[channel].download = file.name;
-        downloadLinks[channel].style.display = 'inline';
-        downloadLinks[channel].textContent = `Download Channel ${channel} Uploaded File`;
-
-        // Update the text box with the uploaded file's name
-        const textBoxId = `myName${channel}`;  // Assumes your text box IDs are formatted as 'myName1', 'myName2', etc.
-        document.getElementById(textBoxId).value = file.name;
-    }
-}
-
-  */
 
   function loadFile(channel, event) {
     const file = event.target.files[0];
