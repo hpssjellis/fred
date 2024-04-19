@@ -457,11 +457,12 @@ function startTimer(channel) {
     let count = 0;
     const buttonId = 'myStart' + channel;
     const button = document.getElementById(buttonId);
-    button.textContent = count + 's';  // Initialize button label
+    button.value = count + 's';  // Initialize button label
 
     timers[channel] = setInterval(() => {
         count++;
-        button.textContent = count + 's';  // Update the button label every second
+        button.value = count + 's';  // Update the button label every second
+        console.log(button.value)
     }, 1000);
 }
 
