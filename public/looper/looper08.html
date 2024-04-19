@@ -91,6 +91,7 @@
     
 <div>
     <input type="button" value="Play All Channels" onclick="playAllChannels()">
+    <input type=button value="Stop All Audio" onclick="stopAllAudio()">
 </div>
 
 <script>
@@ -178,6 +179,18 @@ function playAllChannels() {
             audio.currentTime = 0;
         }
         audio.play();
+    });
+}
+
+
+    function stopAllAudio() {
+    const audios = [1, 2, 3]; // Array of audio element IDs suffixes
+    audios.forEach(num => {
+        const audioPlayer = document.getElementById('audio' + num);
+        if (audioPlayer) {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+        }
     });
 }
 </script>
