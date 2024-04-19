@@ -377,6 +377,7 @@ function startRecording(channel) {
         
         // Start the timer
         startTimer(channel);
+        console.log('started');
     })
     .catch(error => {
         console.error("Error accessing media devices.", error);
