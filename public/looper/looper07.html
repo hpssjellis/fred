@@ -107,7 +107,7 @@ function stopRecording(channel, myFileName) {
         downloadLinks[channel].href = audioUrl;
         downloadLinks[channel].download = fileName;
         downloadLinks[channel].style.display = 'inline';
-        downloadLinks[channel].textContent = `Download Channel ${myFileName}`;
+        downloadLinks[channel].textContent = `Download Channel ${fileName}`;
 
         delete mediaRecorders[channel];
         delete audioChunks[channel];
