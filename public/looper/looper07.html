@@ -54,14 +54,14 @@
         document.getElementById('myStop3').style.backgroundColor  = 'green';
         stopRecording(3, 'myName3');
     }">
-      <input type=button value="Loop" onclick="{
-      if (this.value == 'Loop'){
-        document.getElementById('audio3').loop = true; 
-        this.value='Once'
-      } else {
-        document.getElementById('audio3').loop = false;  
-        this.value='Loop'
-      }
+    <input type="button" value="Loop" onclick="{
+        if (this.value === 'Loop') {
+            document.getElementById('audio3').loop = true;
+            this.value = 'Once';
+        } else {
+            document.getElementById('audio3').loop = false;
+            this.value = 'Loop';
+        }
     }">
     <input type="file" accept="audio/mp3" onchange="loadFile(3, event)">
     <audio id="audio3" controls></audio>
