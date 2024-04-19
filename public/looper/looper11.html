@@ -457,7 +457,8 @@ function startTimer(channel) {
     let count = 0;
     const buttonId = 'myStart' + channel;
     const button = document.getElementById(buttonId);
-    button.value = count + 's';  // Initialize button label
+    const myButtonName = button.value
+    button.value = button.value +', ' + count + ':00 s';  // Initialize button label
 
     timers[channel] = setInterval(() => {
         count++;
@@ -470,7 +471,7 @@ function stopTimer(channel) {
     clearInterval(timers[channel]);  // Stop the timer
     const buttonId = 'myStart' + channel;
     const button = document.getElementById(buttonId);
-    button.textContent = 'Record Channel ' + channel;  // Reset button label
+    button.value = 'Record Channel ' + channel;  // Reset button label
 }
     
 </script>
