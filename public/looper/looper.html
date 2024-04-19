@@ -6,6 +6,12 @@
 </head>
 <body>
 <h2>Music Multi Channel Javascript Looper</h2>
+
+<div>
+    <input type="button" value="Play All Channels" onclick="playAllChannels()">
+    <input type=button value="Stop All Audio" onclick="stopAllAudio()">
+</div>
+<br>
     
 <div>
     <input type="text" id="myName1" size=10 value="Channel1.mp3">
@@ -329,6 +335,11 @@
 </div>
 
 <script>
+    
+let timers = {};  // Keeps track of timers for different channels
+let myLatestValue = ''
+let myLatestCount = 0;
+    
 const mediaRecorders = {};
 const audioChunks = {};
 const audioElements = {
@@ -371,6 +382,10 @@ function startRecording(channel) {
         };
 
         mediaRecorders[channel].start();
+        
+        // Start the timer
+        startTimer(channel);
+        console.log('started');
     })
     .catch(error => {
         console.error("Error accessing media devices.", error);
@@ -388,10 +403,13 @@ function stopRecording(channel, myFileName) {
         downloadLinks[channel].href = audioUrl;
         downloadLinks[channel].download = fileName;
         downloadLinks[channel].style.display = 'inline';
-        downloadLinks[channel].textContent = `Download Channel ${channel}`;
+        downloadLinks[channel].textContent = `Download ${fileName}`;
 
         delete mediaRecorders[channel];
         delete audioChunks[channel];
+
+        // Stop the timer
+        stopTimer(channel);
     };
 }
 
@@ -439,6 +457,32 @@ function playAllChannels() {
         }
     });
 }
+
+
+
+
+function startTimer(channel) {
+    let count = 0;
+    const buttonId = 'myStart' + channel;
+    const button = document.getElementById(buttonId);
+    myLatestValue = button.value
+    button.value = myLatestValue +', ' + count + ':00 s';  // Initialize button label
+
+    timers[channel] = setInterval(() => {
+        count++;
+        myLatestCount = count
+        button.value = myLatestValue +', ' + count + ':00 s';  // Update the button label every second
+        //console.log(button.value)
+    }, 1000);
+}
+
+function stopTimer(channel) {
+    clearInterval(timers[channel]);  // Stop the timer
+    const buttonId = 'myStart' + channel;
+    const button = document.getElementById(buttonId);
+    button.value = myLatestValue +', ' + myLatestCount + ':00 s';  // Reset button label
+}
+    
 </script>
 </body>
 </html>
