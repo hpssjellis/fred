@@ -329,6 +329,9 @@
 </div>
 
 <script>
+    
+let timers = {};  // Keeps track of timers for different channels
+    
 const mediaRecorders = {};
 const audioChunks = {};
 const audioElements = {
@@ -371,6 +374,9 @@ function startRecording(channel) {
         };
 
         mediaRecorders[channel].start();
+        
+        // Start the timer
+        startTimer(channel);
     })
     .catch(error => {
         console.error("Error accessing media devices.", error);
@@ -392,6 +398,9 @@ function stopRecording(channel, myFileName) {
 
         delete mediaRecorders[channel];
         delete audioChunks[channel];
+
+        // Stop the timer
+        stopTimer(channel);
     };
 }
 
@@ -439,6 +448,29 @@ function playAllChannels() {
         }
     });
 }
+
+
+
+
+function startTimer(channel) {
+    let count = 0;
+    const buttonId = 'myStart' + channel;
+    const button = document.getElementById(buttonId);
+    button.textContent = count + 's';  // Initialize button label
+
+    timers[channel] = setInterval(() => {
+        count++;
+        button.textContent = count + 's';  // Update the button label every second
+    }, 1000);
+}
+
+function stopTimer(channel) {
+    clearInterval(timers[channel]);  // Stop the timer
+    const buttonId = 'myStart' + channel;
+    const button = document.getElementById(buttonId);
+    button.textContent = 'Record Channel ' + channel;  // Reset button label
+}
+    
 </script>
 </body>
 </html>
