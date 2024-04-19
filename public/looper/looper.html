@@ -45,12 +45,12 @@
         document.getElementById('myStop2').style.backgroundColor  = 'green';
         stopRecording(2, 'myName2');
     }">    
-    <input type="button" value="Loop" onclick="{
+    <input type="button" value="Once" onclick="{
         if (this.value == 'Loop') {
-            audioElements[2].loop = true;
+            audioElements[2].loop = false;
             this.value = 'Once';
         } else {
-            audioElements[2].loop = false;
+            audioElements[2].loop = true;
             this.value = 'Loop';
         }
     }"><br>
@@ -73,12 +73,12 @@
         stopRecording(3, 'myName3');
     }">
     
-    <input type="button" value="Loop" onclick="{
+    <input type="button" value="Once" onclick="{
         if (this.value == 'Loop') {
-            audioElements[3].loop = true;
+            audioElements[3].loop = false;
             this.value = 'Once';
         } else {
-            audioElements[3].loop = false;
+            audioElements[3].loop = true;
             this.value = 'Loop';
         }
     }"><br>
@@ -91,6 +91,7 @@
     
 <div>
     <input type="button" value="Play All Channels" onclick="playAllChannels()">
+    <input type=button value="Stop All Audio" onclick="stopAllAudio()">
 </div>
 
 <script>
@@ -178,6 +179,18 @@ function playAllChannels() {
             audio.currentTime = 0;
         }
         audio.play();
+    });
+}
+
+
+    function stopAllAudio() {
+    const audios = [1, 2, 3]; // Array of audio element IDs suffixes
+    audios.forEach(num => {
+        const audioPlayer = document.getElementById('audio' + num);
+        if (audioPlayer) {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+        }
     });
 }
 </script>
