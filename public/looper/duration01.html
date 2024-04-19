@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recorded Audio Duration</title>
+</head>
+<body>
+    <audio id="audioPlayer" controls></audio>
+    <div>Duration: <span id="duration">Unknown</span> seconds</div>
+    <button onclick="loadAndPlayAudio()">Load and Play Audio</button>
+
+    <script>
+        function loadAndPlayAudio() {
+            // Suppose this is your recorded audio blob
+            const audioBlob = new Blob([/* your recorded audio data */], { type: 'audio/mp3' });
+
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audioPlayer = document.getElementById('audioPlayer');
+            const durationDisplay = document.getElementById('duration');
+
+            audioPlayer.src = audioUrl;
+            audioPlayer.load();  // Force re-load to ensure metadata is loaded
+
+            audioPlayer.onloadedmetadata = function() {
+                durationDisplay.textContent = audioPlayer.duration.toFixed(2);
+            };
+
+            // Manually update duration if you know it beforehand (e.g., from a recording's length)
+            // This is just an example value
+            durationDisplay.textContent = 'Loading...';
+
+            audioPlayer.play();
+        }
+    </script>
+</body>
+</html>
