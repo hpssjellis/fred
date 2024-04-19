@@ -19,12 +19,12 @@
         document.getElementById('myStop1').style.backgroundColor  = 'green';
         stopRecording(1, 'myName1');
     }">    
-    <input type="button" value="Loop" onclick="{
+    <input type="button" value="Once" onclick="{
         if (this.value == 'Loop') {
-            audioElements[1].loop = true;
+            audioElements[1].loop = false;
             this.value = 'Once';
         } else {
-            audioElements[1].loop = false;
+            audioElements[1].loop = true;
             this.value = 'Loop';
         }
     }"><br>
