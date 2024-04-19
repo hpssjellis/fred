@@ -8,6 +8,7 @@
 <h2>Music Multi Channel Javascript Looper</h2>
     
 <div>
+    <input type="text" id="myName1" size=10 value="Channel1.mp3">
     <input id="myStart1" type="button" value="Record Channel 1" onclick="{
         document.getElementById('myStart1').style.backgroundColor = 'red';
         document.getElementById('myStop1').style.backgroundColor  = 'gray';
@@ -18,13 +19,13 @@
         document.getElementById('myStop1').style.backgroundColor  = 'green';
         stopRecording(1, 'myName1');
     }">
-    <input type="text" id="myName1" value="Channel1.mp3">
     <input type="file" accept="audio/mp3" onchange="loadFile(1, event)">
     <audio id="audio1" controls></audio>
     <a id="download1" style="display: none;">Download Channel 1</a>
 </div>
 
     <div>
+    <input type="text" id="myName2" size=10 value="Channel2.mp3">
     <input id="myStart2" type="button" value="Record Channel 2" onclick="{
         document.getElementById('myStart2').style.backgroundColor = 'red';
         document.getElementById('myStop2').style.backgroundColor  = 'gray';
@@ -35,7 +36,6 @@
         document.getElementById('myStop2').style.backgroundColor  = 'green';
         stopRecording(2, 'myName2');
     }">
-    <input type="text" id="myName2" value="Channel2.mp3">
     <input type="file" accept="audio/mp3" onchange="loadFile(2, event)">
     <audio id="audio2" controls></audio>
     <a id="download2" style="display: none;">Download Channel 2</a>
@@ -43,6 +43,7 @@
 
 
 <div>
+    <input type="text" id="myName3" size=10 value="Channel3.mp3">
     <input id="myStart3" type="button" value="Record Channel 3" onclick="{
         document.getElementById('myStart3').style.backgroundColor = 'red';
         document.getElementById('myStop3').style.backgroundColor  = 'gray';
@@ -62,8 +63,7 @@
             audioElements[3].loop = false;
             this.value = 'Loop';
         }
-
-    <input type="text" id="myName3" value="Channel3.mp3">
+    }">
     <input type="file" accept="audio/mp3" onchange="loadFile(3, event)">
     <audio id="audio3" controls></audio>
     <a id="download3" style="display: none;">Download Channel 3</a>
