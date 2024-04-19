@@ -55,6 +55,10 @@
     }">
     <input type="text" id="myName3" value="Channel3.mp3">
     <input type="file" accept="audio/mp3" onchange="loadFile(3, event)">
+    <input type=button value="Loop" onclick="{
+       isLooping3 = !isLooping3; // Toggle the state
+       document.getElementById('audio3').loop = isLooping3; 
+    }">
     <audio id="audio3" controls></audio>
     <a id="download3" style="display: none;">Download Channel 3</a>
 </div>
@@ -66,6 +70,8 @@
 </div>
 
 <script>
+bool isLooping3 = false;
+    
 const mediaRecorders = {};
 const audioChunks = {};
 const audioElements = {
@@ -107,7 +113,7 @@ function stopRecording(channel, myFileName) {
         downloadLinks[channel].href = audioUrl;
         downloadLinks[channel].download = fileName;
         downloadLinks[channel].style.display = 'inline';
-        downloadLinks[channel].textContent = `Download Channel ${channel}`;
+        downloadLinks[channel].textContent = `Download Channel ${myFileName}`;
 
         delete mediaRecorders[channel];
         delete audioChunks[channel];
