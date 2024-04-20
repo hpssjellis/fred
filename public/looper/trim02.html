@@ -27,10 +27,8 @@ function loadAudio(input) {
             const fileResult = e.target.result;
             audioContext.decodeAudioData(fileResult, function(buffer) {
                 audioBuffer = buffer;
-                const duration = audioBuffer.duration;
-                document.getElementById('startTrim').max = duration;
-                document.getElementById('endTrim').max = duration;
-                document.getElementById('endTrim').value = duration;
+                endOffset = buffer.duration;
+                updateSliders(buffer.duration);
                 updateTrim();
             });
         };
@@ -38,14 +36,24 @@ function loadAudio(input) {
     }
 }
 
+function updateSliders(duration) {
+    const startSlider = document.getElementById('startTrim');
+    const endSlider = document.getElementById('endTrim');
+    startSlider.max = duration;
+    endSlider.max = duration;
+    endSlider.value = duration; // Set the end trim slider to the full duration by default
+}
+
 function updateTrim() {
-    startOffset = parseFloat(document.getElementById('startTrim').value);
-    endOffset = parseFloat(document.getElementById('endTrim').value);
+    const startValue = parseFloat(document.getElementById('startTrim').value);
+    const endValue = parseFloat(document.getElementById('endTrim').value);
+    startOffset = Math.min(startValue, endValue); // Ensure start is always less than end
+    endOffset = Math.max(startValue, endValue);
 }
 
 function playAudio() {
     if (sourceNode) {
-        sourceNode.stop();  // Stop previous playback if any
+        sourceNode.stop(); // Stop previous playback if any
     }
     sourceNode = audioContext.createBufferSource();
     sourceNode.buffer = audioBuffer;
@@ -65,7 +73,6 @@ function stopAudio() {
         sourceNode.stop();
     }
 }
-
 
       
     </script>
