@@ -6,10 +6,15 @@
 </head>
 <body>
 <h2>Music Multi Channel Javascript Looper</h2>
+    <script src="path/to/recorder.js"></script>
+<script src="path/to/lame.min.js"></script>
+
 
 <div>
     <input type="button" value="Play All Channels" onclick="playAllChannels()">
-    <input type=button value="Stop All Audio" onclick="stopAllAudio()">
+    <input type=button value="Stop All Audio" onclick="stopAllAudio()"><div>
+    <input type="button" value="Download All as MP3" onclick="downloadAllTracks()">
+    
 </div>
 <br>
     
@@ -101,7 +106,234 @@
 
 
   
-// assume this works just has 6 more div the same as the above
+
+  
+  
+<div>
+    <input type="text" id="myName4" size=10 value="Channel4.mp3">
+    <input id="myStart4" type="button" value="Record Channel 4" onclick="{
+        document.getElementById('myStart4').style.backgroundColor = 'red';
+        document.getElementById('myStop4').style.backgroundColor  = 'gray';
+        startRecording(4);
+    }">
+    <input id="myStop4"  type="button"value="Stop Channel 4" onclick="{
+        document.getElementById('myStart4').style.backgroundColor = 'gray';
+        document.getElementById('myStop4').style.backgroundColor  = 'green';
+        stopRecording(4, 'myName4');
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[4].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[4].loop = true;
+            this.value = 'Loop';
+        }
+    }"><br>
+    <input type="file" accept="audio/mp3" onchange="loadFile(4, event)">
+    <audio id="audio4" controls></audio>
+    <a id="download4" style="display: none;">Download Channel 4</a>
+</div>
+
+
+
+
+
+  
+  
+<div>
+    <input type="text" id="myName5" size=10 value="Channel5.mp3">
+    <input id="myStart5" type="button" value="Record Channel 5" onclick="{
+        document.getElementById('myStart5').style.backgroundColor = 'red';
+        document.getElementById('myStop5').style.backgroundColor  = 'gray';
+        startRecording(5);
+    }">
+    <input id="myStop5"  type="button"value="Stop Channel 5" onclick="{
+        document.getElementById('myStart5').style.backgroundColor = 'gray';
+        document.getElementById('myStop5').style.backgroundColor  = 'green';
+        stopRecording(5, 'myName5');
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[5].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[5].loop = true;
+            this.value = 'Loop';
+        }
+    }"><br>
+
+
+    <input type="text" id="myName1" size=10 value="Channel1.mp3">
+    <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(1, event)">
+    <audio id="audio1" controls></audio>
+    <a id="download1" style="display: none;">Download Channel 1</a>
+</div>
+
+</div>
+
+
+
+
+
+
+  
+
+
+  
+  
+  
+<div>
+    <input type="text" id="myName6" size=10 value="Channel6.mp3">
+    <input id="myStart6" type="button" value="Record Channel 6" onclick="{
+        document.getElementById('myStart6').style.backgroundColor = 'red';
+        document.getElementById('myStop6').style.backgroundColor  = 'gray';
+        startRecording(6);
+    }">
+    <input id="myStop6"  type="button"value="Stop Channel 6" onclick="{
+        document.getElementById('myStart6').style.backgroundColor = 'gray';
+        document.getElementById('myStop6').style.backgroundColor  = 'green';
+        stopRecording(6, 'myName6');
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[6].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[6].loop = true;
+            this.value = 'Loop';
+        }
+    }"><br>
+    <input type="file" accept="audio/mp3" onchange="loadFile(6, event)">
+    <audio id="audio6" controls></audio>
+    <a id="download6" style="display: none;">Download Channel 6</a>
+</div>
+
+
+
+
+
+
+  
+
+
+  
+  
+  
+<div>
+    <input type="text" id="myName7" size=10 value="Channel7.mp3">
+    <input id="myStart7" type="button" value="Record Channel 7" onclick="{
+        document.getElementById('myStart7').style.backgroundColor = 'red';
+        document.getElementById('myStop7').style.backgroundColor  = 'gray';
+        startRecording(7);
+    }">
+    <input id="myStop7"  type="button"value="Stop Channel 7" onclick="{
+        document.getElementById('myStart7').style.backgroundColor = 'gray';
+        document.getElementById('myStop7').style.backgroundColor  = 'green';
+        stopRecording(7, 'myName7');
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[7].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[7].loop = true;
+            this.value = 'Loop';
+        }
+    }"><br>
+    <input type="file" accept="audio/mp3" onchange="loadFile(7, event)">
+    <audio id="audio7" controls></audio>
+    <a id="download7" style="display: none;">Download Channel 7</a>
+</div>
+
+
+
+
+
+
+  
+
+
+  
+  
+  
+<div>
+    <input type="text" id="myName8" size=10 value="Channel8.mp3">
+    <input id="myStart8" type="button" value="Record Channel 8" onclick="{
+        document.getElementById('myStart8').style.backgroundColor = 'red';
+        document.getElementById('myStop8').style.backgroundColor  = 'gray';
+        startRecording(8);
+    }">
+    <input id="myStop8"  type="button"value="Stop Channel 8" onclick="{
+        document.getElementById('myStart8').style.backgroundColor = 'gray';
+        document.getElementById('myStop8').style.backgroundColor  = 'green';
+        stopRecording(8, 'myName8');
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[8].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[8].loop = true;
+            this.value = 'Loop';
+        }
+    }"><br>
+    <input type="file" accept="audio/mp3" onchange="loadFile(8, event)">
+    <audio id="audio8" controls></audio>
+    <a id="download8" style="display: none;">Download Channel 8</a>
+</div>
+
+
+
+
+
+
+  
+
+
+  
+  
+  
+<div>
+    <input type="text" id="myName9" size=10 value="Channel9.mp3">
+    <input id="myStart9" type="button" value="Record Channel 9" onclick="{
+        document.getElementById('myStart9').style.backgroundColor = 'red';
+        document.getElementById('myStop9').style.backgroundColor  = 'gray';
+        startRecording(9);
+    }">
+    <input id="myStop9"  type="button"value="Stop Channel 9" onclick="{
+        document.getElementById('myStart9').style.backgroundColor = 'gray';
+        document.getElementById('myStop9').style.backgroundColor  = 'green';
+        stopRecording(9, 'myName9');
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[9].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[9].loop = true;
+            this.value = 'Loop';
+        }
+    }"><br>
+    <input type="file" accept="audio/mp3" onchange="loadFile(9, event)">
+    <audio id="audio9" controls></audio>
+    <a id="download9" style="display: none;">Download Channel 9</a>
+</div>
+
+
+
+
+
+
+  
+
+
 
   
 
@@ -113,6 +345,8 @@
 <div>
     <input type="button" value="Play All Channels" onclick="playAllChannels()">
     <input type=button value="Stop All Audio" onclick="stopAllAudio()">
+    <input type="button" value="Download All as MP3" onclick="downloadAllTracks()">
+
 </div>
 
 <script>
@@ -146,6 +380,52 @@ const downloadLinks = {
     9: document.getElementById('download9')
 };
 
+
+
+
+function downloadAllTracks() {
+    const mixedAudioBuffer = mixTracks(audioElements);
+    encodeAudioToMP3(mixedAudioBuffer);
+}
+
+function mixTracks(audioElements) {
+    // Example of mixing audio - this is a placeholder. Actual implementation depends on the audio data you have.
+    // You would need to manually mix audio data here, possibly using an OfflineAudioContext or by manually mixing raw PCM data.
+    // For simplicity, this is a conceptual placeholder.
+    return new AudioBuffer(); // Placeholder return
+}
+
+function encodeAudioToMP3(audioBuffer) {
+    // Convert audioBuffer to an array of raw PCM data first
+    let samples = audioBuffer.getChannelData(0); // Assuming mono for simplicity
+
+    const mp3Encoder = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, 128);
+    let mp3Data = [];
+    const sampleBlockSize = 1152; // Number of samples per channel in an MP3 frame
+    for (let i = 0; i < samples.length; i += sampleBlockSize) {
+        let sampleChunk = samples.subarray(i, i + sampleBlockSize);
+        let mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
+        if (mp3buf.length > 0) {
+            mp3Data.push(new Int8Array(mp3buf));
+        }
+    }
+    let mp3End = mp3Encoder.flush();   // Flush remaining data
+    if (mp3End.length > 0) {
+        mp3Data.push(new Int8Array(mp3End));
+    }
+
+    let blob = new Blob(mp3Data, {type: 'audio/mp3'});
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = 'mixedTrack.mp3';
+    a.click();
+}
+
+
+
+
+    
 function startRecording(channel) {
     navigator.mediaDevices.getUserMedia({ 
     audio: {
