@@ -85,35 +85,6 @@ function stopAudio() {
 
 
 
-      /*
-function playAudio() {
-    if (sourceNode) {
-        sourceNode.stop();  // Stop previous playback if any
-    }
-    sourceNode = audioContext.createBufferSource();
-    sourceNode.buffer = audioBuffer;
-
-    // Calculate playback duration and start time
-    const duration = endOffset - startOffset;
-    sourceNode.loop = true;
-    sourceNode.loopStart = startOffset;
-    sourceNode.loopEnd = endOffset;
-
-    sourceNode.connect(audioContext.destination);
-    sourceNode.start(0, startOffset, duration);
-}
-
-
-
-
-      
-function stopAudio() {
-    if (sourceNode) {
-        sourceNode.stop();
-    }
-}
-
-*/
       
     </script>
 </body>
