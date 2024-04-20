@@ -384,7 +384,7 @@ const downloadLinks = {
 };
 
 
-
+/*
 
 function downloadAllTracks() {
     const mixedAudioBuffer = mixTracks(audioElements);
@@ -425,8 +425,71 @@ function encodeAudioToMP3(audioBuffer) {
     a.click();
 }
 
+*/
 
+async function downloadAllTracks() {
+    const mixedAudioBuffer = await mixTracks(Object.values(audioElements));
+    encodeAudioToMP3(mixedAudioBuffer);
+}
 
+async function mixTracks(audioElements) {
+    // Create an OfflineAudioContext
+    const sampleRate = 44100; // Common sample rate for audio files
+    const numChannels = 2; // Stereo
+    const length = sampleRate * 5; // Buffer length - 5 seconds
+
+    // Determine the longest audio track
+    const bufferLength = audioElements.reduce((maxLength, elem) => {
+        if (!elem.src) return maxLength;
+        const buffer = await elem.audioBuffer.arrayBuffer();
+        return Math.max(maxLength, buffer.length);
+    }, 0);
+
+    const offlineContext = new OfflineAudioContext(numChannels, bufferLength, sampleRate);
+    
+    // Decode and mix each channel
+    for (let elem of audioElements) {
+        if (!elem.src) continue;
+        const response = await fetch(elem.src);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await offlineContext.decodeAudioData(arrayBuffer);
+
+        const source = offlineContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(offlineContext.destination);
+        source.start();
+    }
+
+    // Render the audio
+    return await offlineContext.startRendering();
+}
+
+function encodeAudioToMP3(audioBuffer) {
+    const samples = audioBuffer.getChannelData(0); // Assuming mono for simplicity
+    const mp3Encoder = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, 128);
+    let mp3Data = [];
+    const sampleBlockSize = 1152; // Number of samples per channel in an MP3 frame
+
+    for (let i = 0; i < samples.length; i += sampleBlockSize) {
+        const sampleChunk = samples.subarray(i, i + sampleBlockSize);
+        const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
+        if (mp3buf.length > 0) {
+            mp3Data.push(new Int8Array(mp3buf));
+        }
+    }
+
+    const mp3End = mp3Encoder.flush();   // Flush remaining data
+    if (mp3End.length > 0) {
+        mp3Data.push(new Int8Array(mp3End));
+    }
+
+    const blob = new Blob(mp3Data, {type: 'audio/mp3'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mixedTrack.mp3';
+    a.click();
+}
 
     
 function startRecording(channel) {
