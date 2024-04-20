@@ -439,11 +439,16 @@ async function mixTracks(audioElements) {
     const length = sampleRate * 5; // Buffer length - 5 seconds
 
     // Determine the longest audio track
+    /*
     const bufferLength = audioElements.reduce((maxLength, elem) => {
         if (!elem.src) return maxLength;
         const buffer = await elem.audioBuffer.arrayBuffer();
         return Math.max(maxLength, buffer.length);
     }, 0);
+
+    */
+
+   const bufferLength = 220500;   // should be 5 seconds
 
     const offlineContext = new OfflineAudioContext(numChannels, bufferLength, sampleRate);
     
