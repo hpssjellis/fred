@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Trimmer with Loop</title>
+</head>
+<body>
+    <input type="file" accept="audio/*" onchange="loadAudio(this)">
+    <br>
+    Start Trim: <input type="range" id="startTrim" value="0" min="0" max="100" step="1" onchange="updateTrim()">
+    End Trim: <input type="range" id="endTrim" value="100" min="0" max="100" step="1" onchange="updateTrim()">
+    <br>
+    <button onclick="playAudio()">Play</button>
+    <button onclick="stopAudio()">Stop</button>
+    <!-- Loop Toggle Button -->
+    <input type="button" id="loopToggle" value="Enable Loop" onclick="toggleLoop()">
+
+    <script>
+
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let audioBuffer = null;
+let sourceNode = null;
+let startOffset = 0;
+let endOffset = 0;
+
+function loadAudio(input) {
+    if (input.files.length > 0) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const fileResult = e.target.result;
+            audioContext.decodeAudioData(fileResult, function(buffer) {
+                audioBuffer = buffer;
+                const duration = audioBuffer.duration;
+                document.getElementById('startTrim').max = duration;
+                document.getElementById('endTrim').max = duration;
+                document.getElementById('endTrim').value = duration;
+                updateTrim();
+            });
+        };
+        reader.readAsArrayBuffer(input.files[0]);
+    }
+}
+
+function updateTrim() {
+    startOffset = parseFloat(document.getElementById('startTrim').value);
+    endOffset = parseFloat(document.getElementById('endTrim').value);
+}
+
+let isLooping = false;  // State to keep track of whether looping is enabled
+
+function toggleLoop() {
+    isLooping = !isLooping;  // Toggle the current state of looping
+    document.getElementById('loopToggle').value = isLooping ? "Disable Loop" : "Enable Loop";  // Update button label
+    
+    if (isLooping) {
+        playAudio();  // Restart playback with loop settings applied
+    } else {
+        playAudio();  // Restart playback without looping
+    }
+}
+
+function playAudio() {
+    if (sourceNode) {
+        sourceNode.stop();  // Stop previous playback if any
+    }
+    sourceNode = audioContext.createBufferSource();
+    sourceNode.buffer = audioBuffer;
+
+    // Set loop properties based on the current state of `isLooping`
+    sourceNode.loop = isLooping;
+    sourceNode.loopStart = startOffset;
+    sourceNode.loopEnd = endOffset;
+
+    const duration = isLooping ? undefined : (endOffset - startOffset);  // If looping, do not specify duration, let it loop
+
+    sourceNode.connect(audioContext.destination);
+    sourceNode.start(0, startOffset, duration);
+}
+
+function stopAudio() {
+    if (sourceNode) {
+        sourceNode.stop();
+    }
+}
+
+
+
+      /*
+function playAudio() {
+    if (sourceNode) {
+        sourceNode.stop();  // Stop previous playback if any
+    }
+    sourceNode = audioContext.createBufferSource();
+    sourceNode.buffer = audioBuffer;
+
+    // Calculate playback duration and start time
+    const duration = endOffset - startOffset;
+    sourceNode.loop = true;
+    sourceNode.loopStart = startOffset;
+    sourceNode.loopEnd = endOffset;
+
+    sourceNode.connect(audioContext.destination);
+    sourceNode.start(0, startOffset, duration);
+}
+
+
+
+
+      
+function stopAudio() {
+    if (sourceNode) {
+        sourceNode.stop();
+    }
+}
+
+*/
+      
+    </script>
+</body>
+</html>
