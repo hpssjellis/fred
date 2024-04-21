@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Mixing Example</title>
+</head>
+<body>
+<button id="mixAndDownload">Mix and Download</button>
+
+    <div>
+    <label>Load Track 1:</label>
+    <input type="file" accept="audio/*" onchange="loadTrack(1, event)">
+    <audio id="audio1" controls></audio>
+</div>
+<div>
+    <label>Load Track 2:</label>
+    <input type="file" accept="audio/*" onchange="loadTrack(2, event)">
+    <audio id="audio2" controls></audio>
+</div>
+
+
+
+    
+<script>
+    const audioContext = new AudioContext();
+
+    async function mixAndDownloadAudio() {
+        // Simulate two audio sources
+        const track1 = await fetchAudio('a.mp3');
+        const track2 = await fetchAudio('num.mp3');
+
+        // Create an offline context
+        const offlineContext = new OfflineAudioContext(1, audioContext.sampleRate * 40, audioContext.sampleRate);
+
+        // Create buffer sources
+        const source1 = offlineContext.createBufferSource();
+        const source2 = offlineContext.createBufferSource();
+        source1.buffer = track1;
+        source2.buffer = track2;
+
+        // Connect sources to the offline context
+        source1.connect(offlineContext.destination);
+        source2.connect(offlineContext.destination);
+
+        // Start both sources at the same time
+        source1.start();
+        source2.start();
+
+        // Render the audio
+        const renderedBuffer = await offlineContext.startRendering();
+        const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
+        downloadBlob(wavBlob, 'mixedAudio.wav');
+    }
+
+    async function fetchAudio(url) {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        return audioContext.decodeAudioData(arrayBuffer);
+    }
+
+    function bufferToWave(abuffer, len) {
+        let numOfChan = abuffer.numberOfChannels,
+            length = len * numOfChan * 2 + 44,
+            buffer = new ArrayBuffer(length),
+            view = new DataView(buffer),
+            channels = [], i, sample,
+            offset = 0,
+            pos = 0;
+
+        // write WAV header
+        setUint32(0x46464952);                         // "RIFF"
+        setUint32(length - 8);                         // file length - 8
+        setUint32(0x45564157);                         // "WAVE"
+
+        setUint32(0x20746d66);                         // "fmt " chunk
+        setUint32(16);                                 // length = 16
+        setUint16(1);                                  // PCM (uncompressed)
+        setUint16(numOfChan);
+        setUint32(abuffer.sampleRate);
+        setUint32(abuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
+        setUint16(numOfChan * 2);                      // block-align
+        setUint16(16);                                 // 16-bit (hardcoded in this demo)
+
+        setUint32(0x61746164);                         // "data" - chunk
+        setUint32(length - pos - 4);                   // chunk length
+
+        // write interleaved data
+        for(i = 0; i < abuffer.numberOfChannels; i++)
+            channels.push(abuffer.getChannelData(i));
+
+        while(pos < length) {
+            for(i = 0; i < numOfChan; i++) {             // interleave channels
+                sample = Math.max(-1, Math.min(1, channels[i][offset])); // clamp
+                sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0; // scale to 16-bit signed int
+                view.setInt16(pos, sample, true);          // write 16-bit sample
+                pos += 2;
+            }
+            offset++                                     // next source sample
+        }
+
+        // create Blob
+        return new Blob([buffer], {type: "audio/wav"});
+
+        function setUint16(data) {
+            view.setUint16(pos, data, true);
+            pos += 2;
+        }
+
+        function setUint32(data) {
+            view.setUint32(pos, data, true);
+            pos += 4;
+        }
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('mixAndDownload').addEventListener('click', mixAndDownloadAudio);
+
+
+
+
+
+    const audioElements = {};
+const audioBuffers = {};
+
+function loadTrack(trackId, event) {
+    const file = event.target.files[0];
+    const url = URL.createObjectURL(file);
+    const audio = document.getElementById(`audio${trackId}`);
+    audio.src = url;
+    audio.onloadedmetadata = () => { // Ensure the audio is loaded
+        convertToAudioBuffer(trackId, file);
+    };
+}
+
+function convertToAudioBuffer(trackId, file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const arrayBuffer = e.target.result;
+        audioContext.decodeAudioData(arrayBuffer, function(buffer) {
+            audioBuffers[trackId] = buffer;
+        }, function(e) {
+            console.log("Error decoding file", e);
+        });
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+
+
+</script>
+</body>
+</html>
