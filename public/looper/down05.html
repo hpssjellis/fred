@@ -5,7 +5,7 @@
     <title>Audio Mixing Example</title>
 </head>
 <body>
-
+<h2>Load Tracks, Mix and Download</h2>
 
 <div>
     <label>Load Track 1:</label>
@@ -19,97 +19,80 @@
 </div>
 <button onclick="mergeAndDownload()">Merge and Download</button>
 
-  
-<button id="mixAndDownload">Mix and Download</button>
 <script>
     const audioContext = new AudioContext();
+    const audioBuffers = {};
 
-    async function mixAndDownloadAudio() {
-        // Simulate two audio sources
-        const track1 = await fetchAudio('a.mp3');
-        const track2 = await fetchAudio('num.mp3');
+    function loadTrack(trackId, event) {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const arrayBuffer = e.target.result;
+            audioContext.decodeAudioData(arrayBuffer, function(buffer) {
+                audioBuffers[trackId] = buffer;
+                const url = URL.createObjectURL(new Blob([e.target.result]));
+                document.getElementById(`audio${trackId}`).src = url;
+            }, function(e) {
+                console.log("Error decoding file", e);
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    }
 
-        // Create an offline context
+    function mergeAndDownload() {
+        if (Object.keys(audioBuffers).length < 2) {
+            alert("Please load two tracks first.");
+            return;
+        }
+
         const offlineContext = new OfflineAudioContext(1, audioContext.sampleRate * 40, audioContext.sampleRate);
-
-        // Create buffer sources
         const source1 = offlineContext.createBufferSource();
         const source2 = offlineContext.createBufferSource();
-        source1.buffer = track1;
-        source2.buffer = track2;
+        source1.buffer = audioBuffers[1];
+        source2.buffer = audioBuffers[2];
 
-        // Connect sources to the offline context
         source1.connect(offlineContext.destination);
         source2.connect(offlineContext.destination);
-
-        // Start both sources at the same time
         source1.start();
         source2.start();
 
-        // Render the audio
-        const renderedBuffer = await offlineContext.startRendering();
-        const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
-        downloadBlob(wavBlob, 'mixedAudio.wav');
-    }
-
-    async function fetchAudio(url) {
-        const response = await fetch(url);
-        const arrayBuffer = await response.arrayBuffer();
-        return audioContext.decodeAudioData(arrayBuffer);
+        offlineContext.startRendering().then(renderedBuffer => {
+            const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
+            downloadBlob(wavBlob, 'mixedAudio.wav');
+        });
     }
 
     function bufferToWave(abuffer, len) {
-        let numOfChan = abuffer.numberOfChannels,
-            length = len * numOfChan * 2 + 44,
-            buffer = new ArrayBuffer(length),
-            view = new DataView(buffer),
-            channels = [], i, sample,
-            offset = 0,
-            pos = 0;
-
-        // write WAV header
-        setUint32(0x46464952);                         // "RIFF"
-        setUint32(length - 8);                         // file length - 8
-        setUint32(0x45564157);                         // "WAVE"
-
-        setUint32(0x20746d66);                         // "fmt " chunk
-        setUint32(16);                                 // length = 16
-        setUint16(1);                                  // PCM (uncompressed)
-        setUint16(numOfChan);
-        setUint32(abuffer.sampleRate);
-        setUint32(abuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
-        setUint16(numOfChan * 2);                      // block-align
-        setUint16(16);                                 // 16-bit (hardcoded in this demo)
-
-        setUint32(0x61746164);                         // "data" - chunk
-        setUint32(length - pos - 4);                   // chunk length
-
-        // write interleaved data
-        for(i = 0; i < abuffer.numberOfChannels; i++)
-            channels.push(abuffer.getChannelData(i));
-
-        while(pos < length) {
-            for(i = 0; i < numOfChan; i++) {             // interleave channels
-                sample = Math.max(-1, Math.min(1, channels[i][offset])); // clamp
-                sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0; // scale to 16-bit signed int
-                view.setInt16(pos, sample, true);          // write 16-bit sample
-                pos += 2;
+        const numOfChan = abuffer.numberOfChannels;
+        const length = len * numOfChan * 2 + 44;
+        const buffer = new ArrayBuffer(length);
+        const view = new DataView(buffer);
+        let offset = 44;
+        for (let i = 0; i < len; i++) {
+            for (let channel = 0; channel < numOfChan; channel++) {
+                const sample = Math.max(-1, Math.min(1, abuffer.getChannelData(channel)[i]));
+                view.setInt16(offset, sample < 0 ? sample * 32768 : sample * 32767, true);
+                offset += 2;
             }
-            offset++                                     // next source sample
         }
+        writeWAVHeader(view, numOfChan, abuffer.sampleRate, len);
+        return new Blob([view], {type: "audio/wav"});
+    }
 
-        // create Blob
-        return new Blob([buffer], {type: "audio/wav"});
-
-        function setUint16(data) {
-            view.setUint16(pos, data, true);
-            pos += 2;
-        }
-
-        function setUint32(data) {
-            view.setUint32(pos, data, true);
-            pos += 4;
-        }
+    function writeWAVHeader(view, numChannels, sampleRate, numSamples) {
+        view.setUint32(0, 0x46464952, false); // "RIFF"
+        view.setUint32(4, 36 + numSamples * numChannels * 2, true); // file length
+        view.setUint32(8, 0x45564157, false); // "WAVE"
+        view.setUint32(12, 0x20746D66, false); // "fmt "
+        view.setUint32(16, 16, true); // PCM chunk size
+        view.setUint16(20, 1, true); // format tag
+        view.setUint16(22, numChannels, true); // channels
+        view.setUint32(24, sampleRate, true); // sample rate
+        view.setUint32(28, sampleRate * numChannels * 2, true); // byte rate
+        view.setUint16(32, numChannels * 2, true); // block align
+        view.setUint16(34, 16, true); // bits per sample
+        view.setUint32(36, 0x61746164, false); // "data"
+        view.setUint32(40, numSamples * numChannels * 2, true); // data chunk size
     }
 
     function downloadBlob(blob, filename) {
@@ -122,54 +105,6 @@
         a.click();
         window.URL.revokeObjectURL(url);
     }
-
-    document.getElementById('mixAndDownload').addEventListener('click', mixAndDownloadAudio);
-
-
-
-
-const audioElements = {};
-const audioBuffers = {};
-
-function loadTrack(trackId, event) {
-    const file = event.target.files[0];
-    const url = URL.createObjectURL(file);
-    const audio = document.getElementById(`audio${trackId}`);
-    audio.src = url;
-    audio.onloadedmetadata = () => { // Ensure the audio is loaded
-        convertToAudioBuffer(trackId, file);
-    };
-}
-
-function convertToAudioBuffer(trackId, file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const arrayBuffer = e.target.result;
-        audioContext.decodeAudioData(arrayBuffer, function(buffer) {
-            audioBuffers[trackId] = buffer;
-        }, function(e) {
-            console.log("Error decoding file", e);
-        });
-    };
-    reader.readAsArrayBuffer(file);
-}
-
-function mergeAndDownload() {
-    if (Object.keys(audioBuffers).length < 2) {
-        alert("Please load two tracks first.");
-        return;
-    }
-    // Assuming you have a mergeTracks function similar to previous explanations
-    const mixedBuffer = mergeTracks([audioBuffers[1], audioBuffers[2]]);
-    // Convert and download mixedBuffer as in previous steps
-}
-
-
-
-
-
-
-  
 </script>
 </body>
 </html>
