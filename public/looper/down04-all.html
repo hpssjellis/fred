@@ -6,6 +6,21 @@
 </head>
 <body>
 <button id="mixAndDownload">Mix and Download</button>
+
+    <div>
+    <label>Load Track 1:</label>
+    <input type="file" accept="audio/*" onchange="loadTrack(1, event)">
+    <audio id="audio1" controls></audio>
+</div>
+<div>
+    <label>Load Track 2:</label>
+    <input type="file" accept="audio/*" onchange="loadTrack(2, event)">
+    <audio id="audio2" controls></audio>
+</div>
+<button onclick="mergeAndDownload()">Merge and Download</button>
+
+
+    
 <script>
     const audioContext = new AudioContext();
 
@@ -109,6 +124,47 @@
     }
 
     document.getElementById('mixAndDownload').addEventListener('click', mixAndDownloadAudio);
+
+
+
+
+
+    const audioElements = {};
+const audioBuffers = {};
+
+function loadTrack(trackId, event) {
+    const file = event.target.files[0];
+    const url = URL.createObjectURL(file);
+    const audio = document.getElementById(`audio${trackId}`);
+    audio.src = url;
+    audio.onloadedmetadata = () => { // Ensure the audio is loaded
+        convertToAudioBuffer(trackId, file);
+    };
+}
+
+function convertToAudioBuffer(trackId, file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const arrayBuffer = e.target.result;
+        audioContext.decodeAudioData(arrayBuffer, function(buffer) {
+            audioBuffers[trackId] = buffer;
+        }, function(e) {
+            console.log("Error decoding file", e);
+        });
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function mergeAndDownload() {
+    if (Object.keys(audioBuffers).length < 2) {
+        alert("Please load two tracks first.");
+        return;
+    }
+    // Assuming you have a mergeTracks function similar to previous explanations
+    const mixedBuffer = mergeTracks([audioBuffers[1], audioBuffers[2]]);
+    // Convert and download mixedBuffer as in previous steps
+}
+
 </script>
 </body>
 </html>
