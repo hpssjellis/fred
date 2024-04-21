@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Mixing Example</title>
+</head>
+<body>
+<button id="mixAndDownload">Mix and Download</button>
+<script>
+    const audioContext = new AudioContext();
+
+    async function mixAndDownloadAudio() {
+        // Simulate two audio sources
+        const track1 = await fetchAudio('path/to/your/first/track.mp3');
+        const track2 = await fetchAudio('path/to/your/second/track.mp3');
+
+        // Create an offline context
+        const offlineContext = new OfflineAudioContext(1, audioContext.sampleRate * 40, audioContext.sampleRate);
+
+        // Create buffer sources
+        const source1 = offlineContext.createBufferSource();
+        const source2 = offlineContext.createBufferSource();
+        source1.buffer = track1;
+        source2.buffer = track2;
+
+        // Connect sources to the offline context
+        source1.connect(offlineContext.destination);
+        source2.connect(offlineContext.destination);
+
+        // Start both sources at the same time
+        source1.start();
+        source2.start();
+
+        // Render the audio
+        const renderedBuffer = await offlineContext.startRendering();
+        const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
+        downloadBlob(wavBlob, 'mixedAudio.wav');
+    }
+
+    async function fetchAudio(url) {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        return audioContext.decodeAudioData(arrayBuffer);
+    }
+
+    function bufferToWave(abuffer, len) {
+        let numOfChan = abuffer.numberOfChannels,
+            length = len * numOfChan * 2 + 44,
+            buffer = new ArrayBuffer(length),
+            view = new DataView(buffer),
+            channels = [], i, sample,
+            offset = 0,
+            pos = 0;
+
+        // write WAV header
+        setUint32(0x46464952);                         // "RIFF"
+        setUint32(length - 8);                         // file length - 8
+        setUint32(0x45564157);                         // "WAVE"
+
+        setUint32(0x20746d66);                         // "fmt " chunk
+        setUint32(16);                                 // length = 16
+        setUint16(1);                                  // PCM (uncompressed)
+        setUint16(numOfChan);
+        setUint32(abuffer.sampleRate);
+        setUint32(abuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
+        setUint16(numOfChan * 2);                      // block-align
+        setUint16(16);                                 // 16-bit (hardcoded in this demo)
+
+        setUint32(0x61746164);                         // "data" - chunk
+        setUint32(length - pos - 4);                   // chunk length
+
+        // write interleaved data
+        for(i = 0; i < abuffer.numberOfChannels; i++)
+            channels.push(abuffer.getChannelData(i));
+
+        while(pos < length) {
+            for(i = 0; i < numOfChan; i++) {             // interleave channels
+                sample = Math.max(-1, Math.min(1, channels[i][offset])); // clamp
+                sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0; // scale to 16-bit signed int
+                view.setInt16(pos, sample, true);          // write 16-bit sample
+                pos += 2;
+            }
+            offset++                                     // next source sample
+        }
+
+        // create Blob
+        return new Blob([buffer], {
