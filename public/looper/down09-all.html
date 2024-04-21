@@ -44,46 +44,54 @@
         return audioContext.decodeAudioData(arrayBuffer);
     }
 
-    function encodeMP3(audioBuffer) {
-        const mp3Encoder = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, 128);
-        const samples = audioBuffer.getChannelData(0); // Get samples from the mono buffer
-        const mp3Data = [];
-        const sampleBlockSize = 1152;
 
-        console.log("Total samples to encode:", samples.length);
 
-        for (let i = 0; i < samples.length; i += sampleBlockSize) {
-            const sampleChunk = samples.subarray(i, i + sampleBlockSize);
-            const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
-            if (mp3buf.length > 0) {
-                mp3Data.push(new Uint8Array(mp3buf));
-            }
-        }
+function encodeMP3(audioBuffer) {
+    console.log("Buffer length:", audioBuffer.length);
+    console.log("Sample rate:", audioBuffer.sampleRate);
+    const channelData = audioBuffer.getChannelData(0);  // Assuming mono for simplicity
+    console.log("First 10 samples:", channelData.slice(0, 10));
 
-        const mp3buf = mp3Encoder.flush();
+    const mp3Encoder = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, 128);
+    const samples = channelData;
+    const mp3Data = [];
+    const sampleBlockSize = 1152; // Standard MP3 block size
+
+    for (let i = 0; i < samples.length; i += sampleBlockSize) {
+        const sampleChunk = samples.subarray(i, i + sampleBlockSize);
+        const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
         if (mp3buf.length > 0) {
             mp3Data.push(new Uint8Array(mp3buf));
         }
-
-        if (mp3Data.length > 0) {
-            const blob = new Blob(mp3Data, {type: 'audio/mp3'});
-            console.log("MP3 encoding completed, file size:", blob.size);
-            downloadBlob(blob, 'mixedAudio.mp3');
-        } else {
-            console.log("No MP3 data was produced.");
-        }
     }
 
-    function downloadBlob(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a); // Clean up
-        URL.revokeObjectURL(url); // Free up memory
+    const mp3buf = mp3Encoder.flush();
+    if (mp3buf.length > 0) {
+        mp3Data.push(new Uint8Array(mp3buf));
     }
+
+    if (mp3Data.length > 0) {
+        const blob = new Blob(mp3Data, {type: 'audio/mp3'});
+        console.log("MP3 data size:", blob.size);
+        downloadBlob(blob, 'output.mp3');
+    } else {
+        console.error("Failed to produce any MP3 data.");
+    }
+}
+
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+
+    
 </script>
 </body>
 </html>
