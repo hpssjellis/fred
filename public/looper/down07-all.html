@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Audio Mixing Example</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.0/lame.min.js"></script>
+
 </head>
 <body>
 <h2>Load Tracks, Mix and Download</h2>
@@ -17,6 +19,7 @@
     <input type="file" accept="audio/*" onchange="loadTrack(2, event)">
     <audio id="audio2" controls></audio>
 </div>
+    <input type=text value="mixedAudio.wav" id='myOutFilename'>
 <button onclick="mergeAndDownload()">Merge and Download</button>
 
 <script>
@@ -39,6 +42,55 @@
         reader.readAsArrayBuffer(file);
     }
 
+
+    function mergeAndDownload() {
+    if (Object.keys(audioBuffers).length < 2) {
+        alert("Please load two tracks first.");
+        return;
+    }
+
+    const offlineContext = new OfflineAudioContext(1, audioContext.sampleRate * 40, audioContext.sampleRate);
+    const source1 = offlineContext.createBufferSource();
+    const source2 = offlineContext.createBufferSource();
+    source1.buffer = audioBuffers[1];
+    source2.buffer = audioBuffers[2];
+
+    source1.connect(offlineContext.destination);
+    source2.connect(offlineContext.destination);
+    source1.start();
+    source2.start();
+
+    offlineContext.startRendering().then(renderedBuffer => {
+        encodeMP3(renderedBuffer);
+    });
+}
+
+function encodeMP3(audioBuffer) {
+    const mp3Encoder = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, 128); // Mono, Sample Rate, 128kbps
+    const samples = audioBuffer.getChannelData(0); // Assuming it's mono
+    const mp3Data = [];
+    const sampleBlockSize = 1152; // Number of samples per frame
+
+    for (let i = 0; i < samples.length; i += sampleBlockSize) {
+        const sampleChunk = samples.subarray(i, i + sampleBlockSize);
+        const mp3buf = mp3Encoder.encodeBuffer(sampleChunk); // Mono encoding
+        if (mp3buf.length > 0) {
+            mp3Data.push(new Uint8Array(mp3buf));
+        }
+    }
+
+    const mp3buf = mp3Encoder.flush(); // Flush the encoder
+    if (mp3buf.length > 0) {
+        mp3Data.push(new Uint8Array(mp3buf));
+    }
+
+    const blob = new Blob(mp3Data, {type: 'audio/mp3'});
+    downloadBlob(blob, 'mixedAudio.mp3');
+}
+
+
+    /*
+
     function mergeAndDownload() {
         if (Object.keys(audioBuffers).length < 2) {
             alert("Please load two tracks first.");
@@ -58,9 +110,14 @@
 
         offlineContext.startRendering().then(renderedBuffer => {
             const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
-            downloadBlob(wavBlob, 'mixedAudio.wav');
+            downloadBlob(wavBlob, document.getElementById('myOutFilename').value);
         });
     }
+
+    */
+
+
+    /*
 function bufferToWave(abuffer, len) {
     const numOfChannels = abuffer.numberOfChannels;
     const sampleRate = abuffer.sampleRate;
@@ -118,16 +175,19 @@ function bufferToWave(abuffer, len) {
         view.setUint32(40, numSamples * numChannels * 2, true); // data chunk size
     }
 
-    function downloadBlob(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-    }
+    */
+
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a); // Clean up
+    URL.revokeObjectURL(url); // Free up memory
+}
+
 </script>
 </body>
 </html>
