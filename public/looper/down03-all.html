@@ -54,7 +54,37 @@ function stopRecording(track) {
 }
 
 function mergeAndDownload() {
-    // This function remains mostly the same but needs adjustment if actual merging logic is implemented
+    const maxLength = Math.max(audioData[1].length, audioData[2].length);
+    const mergedData = new Int16Array(maxLength);
+
+    // Simple mix of two tracks
+    for (let i = 0; i < maxLength; i++) {
+        const sample1 = audioData[1][i] || 0;
+        const sample2 = audioData[2][i] || 0;
+        mergedData[i] = (sample1 + sample2) / 2;
+    }
+
+    // Encode to MP3
+    const mp3Encoder = new lamejs.Mp3Encoder(1, audioContext.sampleRate, 128);
+    const mp3Data = [];
+    const sampleBlockSize = 1152;
+    for (let i = 0; i < mergedData.length; i += sampleBlockSize) {
+        const sampleChunk = mergedData.subarray(i, i + sampleBlockSize);
+        const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
+        if (mp3buf.length > 0) {
+            mp3Data.push(new Int8Array(mp3buf));
+        }
+    }
+    const mp3End = mp3Encoder.flush();
+    if (mp3End.length > 0) {
+        mp3Data.push(new Int8Array(mp3End));
+    }
+    const blob = new Blob(mp3Data, {type: 'audio/mp3'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mergedTrack.mp3';
+    a.click();
 }
 
     
