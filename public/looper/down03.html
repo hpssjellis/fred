@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Two Track Audio Recorder and Merger</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recorderjs/0.1.0/recorder.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.all.js"></script>
+</head>
+<body>
+<h2>Record Two Tracks and Merge into One MP3</h2>
+<div>
+    <button onclick="startRecording(1)">Start Recording Track 1</button>
+    <button onclick="stopRecording(1)">Stop Recording Track 1</button>
+    <audio id="track1" controls></audio>
+</div>
+<div>
+    <button onclick="startRecording(2)">Start Recording Track 2</button>
+    <button onclick="stopRecording(2)">Stop Recording Track 2</button>
+    <audio id="track2" controls></audio>
+</div>
+<button onclick="mergeAndDownload()">Merge Tracks and Download MP3</button>
+
+<script>
+let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let recorders = {};
+let audioData = {
+    1: [],
+    2: []
+};
+
+function startRecording(track) {
+    navigator.mediaDevices.getUserMedia({audio: true})
+        .then(stream => {
+            const mediaRecorder = new Recorder(audioContext.createMediaStreamSource(stream), { numChannels: 1 });
+            recorders[track] = mediaRecorder;
+            mediaRecorder.record();
+        }).catch(error => {
+            console.error("Error accessing microphone: ", error);
+        });
+}
+
+function stopRecording(track) {
+    if (recorders[track]) {
+        recorders[track].stop();
+        recorders[track].getBuffer(function(buffers) {
+            const blob = new Blob([new Int16Array(buffers[0])], { type: 'audio/wav' });
+            const url = URL.createObjectURL(blob);
+            document.getElementById('track' + track).src = url;
+            audioData[track] = buffers[0];
+        });
+    }
+}
+
+function mergeAndDownload() {
+    const maxLength = Math.max(audioData[1].length, audioData[2].length);
+    const mergedData = new Int16Array(maxLength);
+
+    // Simple mix of two tracks
+    for (let i = 0; i < maxLength; i++) {
+        const sample1 = audioData[1][i] || 0;
+        const sample2 = audioData[2][i] || 0;
+        mergedData[i] = (sample1 + sample2) / 2;
+    }
+
+    // Encode to MP3
+    const mp3Encoder = new lamejs.Mp3Encoder(1, audioContext.sampleRate, 128);
+    const mp3Data = [];
+    const sampleBlockSize = 1152;
+    for (let i = 0; i < mergedData.length; i += sampleBlockSize) {
+        const sampleChunk = mergedData.subarray(i, i + sampleBlockSize);
+        const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
+        if (mp3buf.length > 0) {
+            mp3Data.push(new Int8Array(mp3buf));
+        }
+    }
+    const mp3End = mp3Encoder.flush();
+    if (mp3End.length > 0) {
+        mp3Data.push(new Int8Array(mp3End));
+    }
+    const blob = new Blob(mp3Data, {type: 'audio/mp3'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mergedTrack.mp3';
+    a.click();
+}
+</script>
+</body>
+</html>
