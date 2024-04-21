@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio from Client - Crunker Example</title>
+    <style>
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: start;
+        }
+    </style>
+</head>
+<body>
+    <form onsubmit="event.preventDefault();">
+        <label>Sample rate:
+            <input type="number" id="sampleRate" value="48000">
+        </label>
+        <input type="file" id="audios" multiple accept="audio/*">
+        <div>
+            <input type="button" id="mergeBtn" value="Merge">
+            <input type="button" id="concatBtn" value="Concat">
+        </div>
+    </form>
+
+    <script type="module">
+        import Crunker from 'https://unpkg.com/crunker@latest/dist/crunker.esm.js';
+
+        const inputSampleRate = document.getElementById('sampleRate');
+        const inputAudios = document.getElementById('audios');
+        const mergeBtn = document.getElementById('mergeBtn');
+        const concatBtn = document.getElementById('concatBtn');
+
+        mergeBtn.addEventListener('click', async function handleMergeClick() {
+            await processAudio('mergeAudio', 'mergedAudio.mp3');
+        });
+
+        concatBtn.addEventListener('click', async function handleConcatClick() {
+            await processAudio('concatAudio', 'concatenatedAudio.mp3');
+        });
+
+        async function processAudio(task, filename) {
+            const files = inputAudios.files;
+            if (files.length) {
+                const crunker = new Crunker({ sampleRate: parseInt(inputSampleRate.value) });
+                const buffers = await Promise.all(
+                    Array.from(files).map(async (file) => {
+                        const arrayBuffer = await file.arrayBuffer();
+                        return crunker._context.decodeAudioData(arrayBuffer);
+                    })
+                );
+                const processedAudio = await crunker[task](buffers);
+                const output = await crunker.export(processedAudio, 'audio/mp3');
+                crunker.download(output.blob, filename);
+            } else {
+                alert('Please select at least two audio files.');
+            }
+        }
+
+        const crunkerInstance = new Crunker();
+        crunkerInstance.notSupported(() => {
+            alert('Browser unsupported!');
+            mergeBtn.disabled = true;
+            concatBtn.disabled = true;
+        });
+    </script>
+</body>
+</html>
