@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Mixing Example</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.0/lame.min.js"></script>
+</head>
+<body>
+<h2>Load Tracks, Mix and Download as MP3</h2>
+
+<button onclick="fetchAndMixTracks()">Fetch, Mix and Download</button>
+
+<script>
+    const audioContext = new AudioContext();
+
+    async function fetchAndMixTracks() {
+        console.log("Fetching tracks...");
+        const track1 = await fetchAudio('a.mp3');
+        const track2 = await fetchAudio('num.mp3');
+
+        console.log("Mixing tracks...");
+        const offlineContext = new OfflineAudioContext(1, audioContext.sampleRate * 40, audioContext.sampleRate);
+        const source1 = offlineContext.createBufferSource();
+        const source2 = offlineContext.createBufferSource();
+        source1.buffer = track1;
+        source2.buffer = track2;
+
+        source1.connect(offlineContext.destination);
+        source2.connect(offlineContext.destination);
+        source1.start(0);
+        source2.start(0);
+
+        offlineContext.startRendering().then(renderedBuffer => {
+            console.log("Rendering completed. Encoding to MP3...");
+            encodeMP3(renderedBuffer);
+        }).catch(e => {
+            console.error("Rendering failed: ", e);
+        });
+    }
+
+    async function fetchAudio(url) {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        return audioContext.decodeAudioData(arrayBuffer);
+    }
+
+    function encodeMP3(audioBuffer) {
+        const mp3Encoder = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, 128);
+        const samples = audioBuffer.getChannelData(0); // Get samples from the mono buffer
+        const mp3Data = [];
+        const sampleBlockSize = 1152;
+
+        console.log("Total samples to encode:", samples.length);
+
+        for (let i = 0; i < samples.length; i += sampleBlockSize) {
+            const sampleChunk = samples.subarray(i, i + sampleBlockSize);
+            const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
+            if (mp3buf.length > 0) {
+                mp3Data.push(new Uint8Array(mp3buf));
+            }
+        }
+
+        const mp3buf = mp3Encoder.flush();
+        if (mp3buf.length > 0) {
+            mp3Data.push(new Uint8Array(mp3buf));
+        }
+
+        if (mp3Data.length > 0) {
+            const blob = new Blob(mp3Data, {type: 'audio/mp3'});
+            console.log("MP3 encoding completed, file size:", blob.size);
+            downloadBlob(blob, 'mixedAudio.mp3');
+        } else {
+            console.log("No MP3 data was produced.");
+        }
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a); // Clean up
+        URL.revokeObjectURL(url); // Free up memory
+    }
+</script>
+</body>
+</html>
