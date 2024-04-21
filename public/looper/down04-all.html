@@ -11,8 +11,8 @@
 
     async function mixAndDownloadAudio() {
         // Simulate two audio sources
-        const track1 = await fetchAudio('C:\Users\keyfr\Downloads\a.mp3');
-        const track2 = await fetchAudio('C:\Users\keyfr\Downloads\num.mp3');
+        const track1 = await fetchAudio('a.mp3');
+        const track2 = await fetchAudio('num.mp3');
 
         // Create an offline context
         const offlineContext = new OfflineAudioContext(1, audioContext.sampleRate * 40, audioContext.sampleRate);
