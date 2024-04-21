@@ -5,17 +5,18 @@
     <title>Audio Mixing Example</title>
 </head>
 <body>
-<button id="mixAndDownload">Mix and Download</button>
 
-    <div>
+
+<div>
     <label>Load Track 1:</label>
     <input type="file" accept="audio/*" onchange="loadTrack(1, event)">
     <audio id="audio1" controls></audio>
-</div>
-<div>
+
     <label>Load Track 2:</label>
     <input type="file" accept="audio/*" onchange="loadTrack(2, event)">
     <audio id="audio2" controls></audio>
+
+    <input type=button value="Mix and Download" id="mixAndDownload" onclickl="{mixAndDownloadAudio()}">
 </div>
 
 
@@ -127,7 +128,7 @@
 
 
 
-
+/*
 
     const audioElements = {};
 const audioBuffers = {};
@@ -155,7 +156,7 @@ function convertToAudioBuffer(trackId, file) {
     reader.readAsArrayBuffer(file);
 }
 
-
+*/
 
 </script>
 </body>
