@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Mixing with Crunker</title>
+    <script src="https://cdn.jsdelivr.net/npm/crunker@2.4.0/dist/crunker.min.js"></script>
+</head>
+<body>
+<h2>Load and Mix Tracks with Crunker</h2>
+<button onclick="fetchAndMixTracks()">Fetch, Mix and Download</button>
+
+<script>
+    const crunker = new Crunker();
+
+    async function fetchAndMixTracks() {
+        try {
+            console.log("Fetching and mixing tracks...");
+            const buffers = await crunker.fetchAudio('a.mp3', 'num.mp3');
+            const mixed = crunker.mix(buffers);
+            const output = crunker.export(mixed, "audio/mp3");
+            downloadFile(output.blob, 'mixedAudio.mp3');
+            console.log("Tracks mixed and MP3 generated successfully.");
+        } catch (err) {
+            console.error("An error occurred:", err);
+        }
+    }
+
+    function downloadFile(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+</script>
+</body>
+</html>
