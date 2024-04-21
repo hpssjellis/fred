@@ -84,4 +84,31 @@
         }
 
         // create Blob
-        return new Blob([buffer], {
+        return new Blob([buffer], {type: "audio/wav"});
+
+        function setUint16(data) {
+            view.setUint16(pos, data, true);
+            pos += 2;
+        }
+
+        function setUint32(data) {
+            view.setUint32(pos, data, true);
+            pos += 4;
+        }
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('mixAndDownload').addEventListener('click', mixAndDownloadAudio);
+</script>
+</body>
+</html>
