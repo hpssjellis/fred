@@ -26,22 +26,30 @@
     const audioContext = new AudioContext();
     const audioBuffers = {};
 
-    function loadTrack(trackId, event) {
-        const file = event.target.files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const arrayBuffer = e.target.result;
-            audioContext.decodeAudioData(arrayBuffer, function(buffer) {
-                audioBuffers[trackId] = buffer;
-                const url = URL.createObjectURL(new Blob([e.target.result]));
-                document.getElementById(`audio${trackId}`).src = url;
-            }, function(e) {
-                console.log("Error decoding file", e);
-            });
-        };
-        reader.readAsArrayBuffer(file);
-    }
 
+
+function loadTrack(trackId, event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const arrayBuffer = e.target.result;
+        // Decode the audio data from the array buffer
+        audioContext.decodeAudioData(arrayBuffer, function(buffer) {
+            audioBuffers[trackId] = buffer;
+            // Create an object URL for the audio buffer and set it as the source for the audio control
+            const audioBlob = new Blob([e.target.result], {type: file.type});
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audioElement = document.getElementById(`audio${trackId}`);
+            audioElement.src = audioUrl;
+            audioElement.load(); // Important to call load to update the audio element's data
+        }, function(e) {
+            console.log("Error decoding file", e);
+        });
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+    
 
     function mergeAndDownload() {
     if (Object.keys(audioBuffers).length < 2) {
