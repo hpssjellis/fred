@@ -386,12 +386,13 @@ const downloadLinks = {
     function updateTrim(trackId) {
     const startTrimInput = document.getElementById(`startTrim${trackId}`);
     const endTrimInput = document.getElementById(`endTrim${trackId}`);
-
+    console.log('trim start');
     if (!startTrimInput || !endTrimInput) {
         console.error('Trim controls for track', trackId, 'not found.');
         return;
     }
 
+    console.log('audio element');
     const audioElement = audioElements[trackId];
     if (audioElement && audioElement.readyState >= 2) {
         const duration = audioElement.duration;
@@ -400,9 +401,13 @@ const downloadLinks = {
 
         audioElement.loopStart = startTrim;
         audioElement.loopEnd = endTrim;
+        
+    console.log('trim set');
     } else {
         console.warn('Audio metadata not yet loaded for track', trackId);
     }
+        
+    console.log('trim down');
 }
 
 
