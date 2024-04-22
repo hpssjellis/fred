@@ -628,6 +628,47 @@ function playAllChannels() {
     console.log('Done Crunker...');
 }
 
+
+
+
+
+
+    
+/*
+
+const audioContext = new AudioContext();
+let audioBuffers = {};
+
+async function loadFile(trackId, event) {
+    const file = event.target.files[0];
+    const arrayBuffer = await file.arrayBuffer();
+    audioBuffers[trackId] = await audioContext.decodeAudioData(arrayBuffer);
+}
+
+function updateTrimSettings(trackId) {
+    const startTrim = document.getElementById(`startTrim${trackId}`).value;
+    const endTrim = document.getElementById(`endTrim${trackId}`).value;
+    console.log(`Track ${trackId} trim updated: Start ${startTrim}, End ${endTrim}`);
+}
+
+function playTrimmedAudio(trackId) {
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffers[trackId];
+    const startTrim = parseFloat(document.getElementById(`startTrim${trackId}`).value) / 1000;
+    const endTrim = parseFloat(document.getElementById(`endTrim${trackId}`).value) / 1000;
+    const duration = endTrim - startTrim;
+
+    source.connect(audioContext.destination);
+    source.start(0, startTrim, duration);
+    console.log(`Playing track ${trackId} from ${startTrim} to ${endTrim}`);
+}
+
+window.addEventListener('unload', () => audioContext.close());
+
+
+        */
+
+    
 </script>
 
 <h6>Use at your own risk<br>
