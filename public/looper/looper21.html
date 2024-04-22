@@ -646,6 +646,15 @@ function loadFile(channel, event) {
 }
 
 
+function playAllChannels() {
+    Object.values(audioElements).forEach(audio => {
+        if (!audio.paused) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+        audio.play();
+    });
+}
 
     
 
