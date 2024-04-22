@@ -372,6 +372,9 @@ const downloadLinks = {
     9: document.getElementById('download9')
 };
 
+
+
+    /*
 function startRecording(channel) {
     navigator.mediaDevices.getUserMedia({ 
     audio: {
@@ -398,6 +401,44 @@ function startRecording(channel) {
         console.error("Error accessing media devices.", error);
     });
 }
+
+    */
+
+
+
+
+    function startRecording(channel) {
+    navigator.mediaDevices.getUserMedia({ 
+        audio: {
+            sampleRate: 48000, // Make sure this matches Crunker's expected sample rate if needed
+            noiseSuppression: true, // Helps reduce background noise
+            echoCancellation: true // Useful if the recording environment has echo issues
+        }
+    })
+    .then(stream => {
+        const mediaRecorder = new MediaRecorder(stream);
+
+        // Initialize the audio chunks array for the channel
+        audioChunks[channel] = [];
+
+        // Handle data available event
+        mediaRecorder.ondataavailable = event => {
+            audioChunks[channel].push(event.data);
+        };
+
+        // Start recording
+        mediaRecorder.start();
+
+        // Store the media recorder instance
+        mediaRecorders[channel] = mediaRecorder;
+
+        console.log('Recording started for channel', channel);
+    })
+    .catch(error => {
+        console.error("Error accessing media devices:", error);
+    });
+}
+
 
 /*
   
