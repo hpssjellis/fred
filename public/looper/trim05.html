@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Channel Looper</title>
+</head>
+<body>
+<h2>Music Multi Channel Javascript Looper</h2>
+
+<!-- Controls for each channel -->
+<div>
+    <input type="file" accept="audio/*" onchange="loadFile(1, this)">
+    <audio id="audio1" controls></audio>
+    Start Trim: <input type="range" id="startTrim1" value="0" min="0" max="100" step="1" onchange="updateTrim(1)">
+    End Trim: <input type="range" id="endTrim1" value="100" min="0" max="100" step="1" onchange="updateTrim(1)">
+    <button onclick="playAudio(1)">Play</button>
+    <button onclick="stopAudio(1)">Stop</button>
+</div>
+
+
+
+<div>
+    <input type="file" accept="audio/*" onchange="loadFile(2, this)">
+    <audio id="audio2" controls></audio>
+    Start Trim: <input type="range" id="startTrim2" value="0" min="0" max="100" step="1" onchange="updateTrim(2)">
+    End Trim: <input type="range" id="endTrim2" value="100" min="0" max="100" step="1" onchange="updateTrim(2)">
+    <button onclick="playAudio(2)">Play</button>
+    <button onclick="stopAudio(2)">Stop</button>
+</div>
+
+
+
+  <div>
+    <input type="file" accept="audio/*" onchange="loadFile(3, this)">
+    <audio id="audio3" controls></audio>
+    Start Trim: <input type="range" id="startTrim3" value="0" min="0" max="100" step="1" onchange="updateTrim(3)">
+    End Trim: <input type="range" id="endTrim3" value="100" min="0" max="100" step="1" onchange="updateTrim(3)">
+    <button onclick="playAudio(3)">Play</button>
+    <button onclick="stopAudio(3)">Stop</button>
+</div>
+
+
+
+
+
+  
+<script>
+const audioContext = new AudioContext();
+const audioBuffers = {};
+const sourceNodes = {};
+
+// Load audio file for specific track
+function loadFile(trackId, input) {
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        audioBuffers[trackId] = await audioContext.decodeAudioData(e.target.result);
+        updateMaxRanges(trackId);
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// Update maximum values for trim ranges based on loaded audio
+function updateMaxRanges(trackId) {
+    const audioBuffer = audioBuffers[trackId];
+    const duration = audioBuffer.duration;
+    const startInput = document.getElementById(`startTrim${trackId}`);
+    const endInput = document.getElementById(`endTrim${trackId}`);
+    startInput.max = duration;
+    endInput.max = duration;
+    endInput.value = duration;
+}
+
+// Update trim settings
+function updateTrim(trackId) {
+    const startTrim = parseFloat(document.getElementById(`startTrim${trackId}`).value);
+    const endTrim = parseFloat(document.getElementById(`endTrim${trackId}`).value);
+    if (sourceNodes[trackId]) {
+        sourceNodes[trackId].loopStart = startTrim;
+        sourceNodes[trackId].loopEnd = endTrim;
+    }
+}
+
+// Play audio considering trim settings
+function playAudio(trackId) {
+    if (sourceNodes[trackId]) sourceNodes[trackId].stop();
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffers[trackId];
+    source.loop = true;
+    source.loopStart = parseFloat(document.getElementById(`startTrim${trackId}`).value);
+    source.loopEnd = parseFloat(document.getElementById(`endTrim${trackId}`).value);
+    source.connect(audioContext.destination);
+    source.start();
+    sourceNodes[trackId] = source; // Keep track of the source node
+}
+
+// Stop audio
+function stopAudio(trackId) {
+    if (sourceNodes[trackId]) {
+        sourceNodes[trackId].stop();
+        sourceNodes[trackId] = null;
+    }
+}
+
+</script>
+</body>
+</html>
