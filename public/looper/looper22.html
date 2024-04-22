@@ -40,6 +40,10 @@
     Start Trim: <input type="range" id="startTrim1" value="0" min="0" max="1000" step="1" onchange="updateTrim(1)">
     <audio id="audio1" controls></audio>
     End Trim: <input type="range" id="endTrim1" value="1000" min="0" max="1000" step="1" onchange="updateTrim(1)">
+    <input type=button value=sow onclick="{
+       console.log(audioElements[0])
+       console.log('audioElements[0]')     
+    }">
     <a id="download1" style="display: none;">Download Channel 1</a>
 </div><br>
 
@@ -582,6 +586,10 @@ function stopTimer(channel) {
 }
 
 function playAllChannels() {
+    console.log('Object.values(audioElements)')
+    console.log(Object.values(audioElements))
+    console.log(audioElements)
+    console.log('audioElements')
     Object.values(audioElements).forEach(audio => {
         if (!audio.paused) {
             audio.pause();
