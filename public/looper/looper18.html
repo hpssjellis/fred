@@ -493,7 +493,7 @@ function loadFile(channel, event) {
 
 
     */
-
+/*
 
     function loadFile(channel, event) {
     const file = event.target.files[0];
@@ -525,7 +525,38 @@ function loadFile(channel, event) {
     };
     reader.readAsArrayBuffer(file);
 }
+*/
 
+
+    function loadFile(channel, event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const arrayBuffer = e.target.result;
+        try {
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            audioBuffers[channel] = audioBuffer;  // Save the buffer for use in merging
+
+            // Create and set a Blob as the source for the audio element to ensure compatibility
+            const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+            const url = URL.createObjectURL(blob);
+            const audioElement = document.getElementById(`audio${channel}`);
+            audioElement.src = url;
+            audioElement.load(); // Force the audio element to reload and update the source
+            audioElement.onloadedmetadata = () => {
+                console.log(`Track ${channel} loaded successfully. Duration: ${audioElement.duration} seconds.`);
+            };
+        } catch (error) {
+            console.error('Error decoding audio data:', error);
+            alert(`Error decoding audio data: ${error.message}`);
+        }
+    };
+    reader.onerror = (err) => {
+        console.error('Error reading file:', err);
+        alert('Error reading file.');
+    };
+    reader.readAsArrayBuffer(file);
+}
 
 function playAllChannels() {
     Object.values(audioElements).forEach(audio => {
