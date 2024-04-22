@@ -378,40 +378,6 @@ const downloadLinks = {
 };
 
 
-
-    /*
-function startRecording(channel) {
-    navigator.mediaDevices.getUserMedia({ 
-    audio: {
-               sampleRate: 48000, // Higher sample rates might capture more detail
-               noiseSuppression: true, // Helps reduce background noise
-               echoCancellation: true // Useful if the recording environment has echo issues
-          }
-    })
-    .then(stream => {
-        mediaRecorders[channel] = new MediaRecorder(stream);
-        audioChunks[channel] = [];
-
-        mediaRecorders[channel].ondataavailable = event => {
-            audioChunks[channel].push(event.data);
-        };
-
-        mediaRecorders[channel].start();
-        
-        // Start the timer
-        startTimer(channel);
-        console.log('started');
-    })
-    .catch(error => {
-        console.error("Error accessing media devices.", error);
-    });
-}
-
-    */
-
-
-
-
     function startRecording(channel) {
     navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -449,58 +415,6 @@ function startRecording(channel) {
 }
 
 
-/*
-  
-function stopRecording(channel, myFileName) {
-    mediaRecorders[channel].stop();
-    mediaRecorders[channel].onstop = () => {
-        const audioBlob = new Blob(audioChunks[channel], { type: 'audio/mp3' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        audioElements[channel].src = audioUrl;
-
-        const fileName = document.getElementById(myFileName).value;
-        downloadLinks[channel].href = audioUrl;
-        downloadLinks[channel].download = fileName;
-        downloadLinks[channel].style.display = 'inline';
-        downloadLinks[channel].textContent = `Download ${fileName}`;
-
-        delete mediaRecorders[channel];
-        delete audioChunks[channel];
-
-        // Stop the timer
-        stopTimer(channel);
-    };
-}
-
-
-  */
-
-/*
-  async function stopRecording(channel, myFileName) {
-    mediaRecorders[channel].stop();
-    mediaRecorders[channel].onstop = async () => {
-        const audioBlob = new Blob(audioChunks[channel], { type: 'audio/mp3' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        audioElements[channel].src = audioUrl;
-
-        const arrayBuffer = await audioBlob.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-        // Store the audio buffer for later processing
-        audioBuffers[channel] = audioBuffer;
-
-        // Continue with the rest of your existing functionality
-        const fileName = document.getElementById(myFileName).value;
-        downloadLinks[channel].href = audioUrl;
-        downloadLinks[channel].download = fileName;
-        downloadLinks[channel].style.display = 'inline';
-        downloadLinks[channel].textContent = `Download ${fileName}`;
-
-        delete mediaRecorders[channel];
-        delete audioChunks[channel];
-    };
-}
-*/
 
     async function stopRecording(channel, myFileName) {
     mediaRecorders[channel].stop();
@@ -530,6 +444,8 @@ function stopRecording(channel, myFileName) {
 }
 
 
+    /*
+
 function loadFile(channel, event) {
     const file = event.target.files[0];
     if (file) {
@@ -550,6 +466,27 @@ function loadFile(channel, event) {
     }
 }
 
+
+    */
+function loadFile(channel, event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const arrayBuffer = e.target.result;
+        try {
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            audioBuffers[channel] = audioBuffer;  // Save the buffer for use in merging
+
+            // Set the audio element to play the uploaded file
+            const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+            const url = URL.createObjectURL(blob);
+            document.getElementById(`audio${channel}`).src = url;
+        } catch (error) {
+            console.error('Error decoding audio data:', error);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
 
 
 function playAllChannels() {
