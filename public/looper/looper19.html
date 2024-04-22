@@ -40,7 +40,7 @@
             this.value = 'Loop';
         }
     }"><br>
-    <input type="file" accept="audio/mp3" onchange="loadFile(1, event)">
+    <input type="file" accept="audio/*" onchange="loadFile(1, event)">
     <audio id="audio1" controls></audio>
     <a id="download1" style="display: none;">Download Channel 1</a>
 
@@ -356,28 +356,8 @@
    <input type="button" value="Merge and Download Tracks" onclick="mergeAndDownloadTracks()">
 </div>
 
+
 <script>
-
-To apply the trim and loop functionality to multiple audio tracks, each represented by a <div> in your looper code, you can generalize the loadAudio, playAudio, and updateTrim functions to handle multiple tracks. This involves managing audio buffers, source nodes, and UI elements for each track independently.
-
-Here’s how you can adapt the trim and loop functionality to handle multiple tracks. I'll show you the modified approach for one track, which you can replicate for others:
-
-HTML Setup for One Track
-html
-Copy code
-<div>
-    <input type="file" accept="audio/*" onchange="loadAudio(this, 1)">
-    Start Trim: <input type="range" id="startTrim1" value="0" min="0" max="100" step="1" onchange="updateTrim(1)">
-    End Trim: <input type="range" id="endTrim1" value="100" min="0" max="100" step="1" onchange="updateTrim(1)">
-    <button onclick="playAudio(1)">Play</button>
-    <button onclick="stopAudio(1)">Stop</button>
-    <input type="button" id="loopToggle1" value="Enable Loop" onclick="toggleLoop(1)">
-</div>
-JavaScript Code Adaptation
-This adaptation involves making the functions parameterized by a track identifier, allowing each function to operate on specific track data.
-
-javascript
-Copy code
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 const audioBuffers = {};
 const sourceNodes = {};
