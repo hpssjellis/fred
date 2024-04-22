@@ -581,6 +581,15 @@ function stopTimer(channel) {
     button.value = myLatestValue +', ' + myLatestCount + ':00 s';  // Reset button label
 }
 
+function playAllChannels() {
+    Object.values(audioElements).forEach(audio => {
+        if (!audio.paused) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+        audio.play();
+    });
+}
 
 
   // for crunker
