@@ -446,7 +446,7 @@ const downloadLinks = {
 }
 
 
-    
+    /*
 
 function loadFile(channel, event) {
     const file = event.target.files[0];
@@ -468,7 +468,7 @@ function loadFile(channel, event) {
     }
 }
 
-
+*/
     
 
 
@@ -572,6 +572,44 @@ function playAllChannels() {
 
 
     */
+
+
+function loadFile(channel, event) {
+    const file = event.target.files[0];
+    if (file) {
+        const fileUrl = URL.createObjectURL(file);
+        audioElements[channel].src = fileUrl;
+
+        // Set the download link, although this might not be needed for MP4 as you won't download it as audio
+        downloadLinks[channel].href = fileUrl;
+        downloadLinks[channel].download = file.name;
+        downloadLinks[channel].style.display = 'inline';
+
+        // Update the link text to reflect the new file name
+        downloadLinks[channel].textContent = `Download ${file.name}`;
+
+        // Update the text box with the uploaded file's name
+        const textBoxId = `myName${channel}`;
+        document.getElementById(textBoxId).value = file.name;
+
+        // Additionally, decode the audio data to an AudioBuffer for Crunker use
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const arrayBuffer = e.target.result;
+            audioContext.decodeAudioData(arrayBuffer, (decodedData) => {
+                audioBuffers[channel] = decodedData;
+                console.log(`Audio data loaded and decoded for channel ${channel}.`);
+            }, (error) => {
+                console.error(`Error decoding audio data for channel ${channel}:`, error);
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    }
+}
+
+
+
+    
 
     function stopAllAudio() {
     const audios = [1, 2, 3, 4, 5, 6, 7, 8, 9]; // Array of audio element IDs suffixes
