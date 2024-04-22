@@ -39,6 +39,8 @@
     }"><br>
 
     <audio id="audio1" controls></audio>
+    Start Trim: <input type="range" id="startTrim" value="0" min="0" max="1000" step="1" onchange="updateTrim(1)">
+    End Trim: <input type="range" id="endTrim" value="100" min="0" max="1000" step="1" onchange="updateTrim(1)">
     <a id="download1" style="display: none;">Download Channel 1</a>
 </div>
 
@@ -354,7 +356,8 @@ let myLatestCount = 0;
 const mediaRecorders = {};
 const audioChunks = {};
 const audioBuffers = {};  // This will store the AudioBuffers accessible to any function
-
+const sourceNodes = {};
+    
 const audioElements = {
     1: document.getElementById('audio1'),
     2: document.getElementById('audio2'),
@@ -379,6 +382,15 @@ const downloadLinks = {
     9: document.getElementById('download9')
 };
 
+
+    function updateTrim(trackId) {
+    const startTrim = parseFloat(document.getElementById(`startTrim${trackId}`).value);
+    const endTrim = parseFloat(document.getElementById(`endTrim${trackId}`).value);
+    if (sourceNodes[trackId]) {
+        sourceNodes[trackId].loopStart = startTrim;
+        sourceNodes[trackId].loopEnd = endTrim;
+    }
+}
 
     function startRecording(channel) {
     navigator.mediaDevices.getUserMedia({ 
