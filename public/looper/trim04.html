@@ -203,6 +203,29 @@ const downloadLinks = {
 
 
 
+function startTimer(channel) {
+    let count = 0;
+    const buttonId = 'myStart' + channel;
+    const button = document.getElementById(buttonId);
+    myLatestValue = button.value
+    button.value = myLatestValue +', ' + count + ':00 s';  // Initialize button label
+
+    timers[channel] = setInterval(() => {
+        count++;
+        myLatestCount = count
+        button.value = myLatestValue +', ' + count + ':00 s';  // Update the button label every second
+        //console.log(button.value)
+    }, 1000);
+}
+
+function stopTimer(channel) {
+    clearInterval(timers[channel]);  // Stop the timer
+    const buttonId = 'myStart' + channel;
+    const button = document.getElementById(buttonId);
+    button.value = myLatestValue +', ' + myLatestCount + ':00 s';  // Reset button label
+}
+
+
       
 
 function loadAudio(input) {
