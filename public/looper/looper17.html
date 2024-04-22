@@ -430,6 +430,10 @@ function startRecording(channel) {
             audioChunks[channel].push(event.data);
         };
 
+        
+        startTimer(channel);
+        console.log('timer started');
+        
         // Start recording
         mediaRecorder.start();
 
