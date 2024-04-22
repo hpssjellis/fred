@@ -18,7 +18,7 @@
 <div>   
     <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(1, event)">
     <input type="text" id="myName1" size=10 value="Channel1.mp3">
-    <input id="myStart1" type="button" value="Record Channel 1" onclick="{
+    <input id="myStart1" type="button" value="Record Channel 1" style=" background-Color:lime; " onclick="{
         document.getElementById('myStart1').style.backgroundColor = 'red';
         document.getElementById('myStop1').style.backgroundColor  = 'gray';
         startRecording(1);
@@ -40,9 +40,9 @@
     Start Trim: <input type="range" id="startTrim1" value="0" min="0" max="1000" step="1" onchange="updateTrim(1)">
     <audio id="audio1" controls></audio>
     End Trim: <input type="range" id="endTrim1" value="1000" min="0" max="1000" step="1" onchange="updateTrim(1)">
-    <input type=button value=sow onclick="{
-       console.log(audioElements[0])
-       console.log('audioElements[0]')     
+    <input type=button value=show onclick="{
+       console.log(audioElements[1])
+       console.log('audioElements[1]')     
     }">
     <a id="download1" style="display: none;">Download Channel 1</a>
 </div><br>
@@ -53,7 +53,7 @@
     <div>
     <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(2, event)">
     <input type="text" id="myName2" size=10 value="Channel2.mp3">
-    <input id="myStart2" type="button" value="Record Channel 2" onclick="{
+    <input id="myStart2" type="button" value="Record Channel 2" style=" background-Color:lime; " onclick="{
         document.getElementById('myStart2').style.backgroundColor = 'red';
         document.getElementById('myStop2').style.backgroundColor  = 'gray';
         startRecording(2);
