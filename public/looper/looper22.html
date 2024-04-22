@@ -68,7 +68,10 @@
             this.value = 'Loop';
         }
     }"><br>
+
+    Start Trim: <input type="range" id="startTrim2" value="0" min="0" max="1000" step="1" onchange="updateTrim(2)">
     <audio id="audio2" controls></audio>
+    End Trim: <input type="range" id="endTrim2" value="1000" min="0" max="1000" step="1" onchange="updateTrim(2)">
     <a id="download2" style="display: none;">Download Channel 2</a>
 </div>
 
@@ -382,6 +385,8 @@ const downloadLinks = {
 };
 
 
+
+    /*
     
     function updateTrim(trackId) {
     const startTrimInput = document.getElementById(`startTrim${trackId}`);
@@ -408,6 +413,30 @@ const downloadLinks = {
     }
         
     console.log('trim down');
+}
+
+    */
+
+    function updateTrim(trackId) {
+    const startTrimInput = document.getElementById(`startTrim${trackId}`);
+    const endTrimInput = document.getElementById(`endTrim${trackId}`);
+    const audioElement = audioElements[trackId];
+
+    if (audioElement && audioElement.readyState >= HTMLMediaElement.HAVE_METADATA) {
+        // Calculate the trim values based on audio duration
+        const duration = audioElement.duration;
+        const startTrim = (parseFloat(startTrimInput.value) / 1000) * duration;
+        const endTrim = (parseFloat(endTrimInput.value) / 1000) * duration;
+
+        // Apply these calculated trim values to the loop properties of the audio element
+        audioElement.loopStart = startTrim;
+        audioElement.loopEnd = endTrim;
+        audioElement.loop = true;  // Ensure looping is enabled to observe the effect
+
+        console.log(`Trim updated for track ${trackId}: Start ${startTrim}, End ${endTrim}`);
+    } else {
+        console.error('Audio metadata not loaded, or audio element does not exist for track', trackId);
+    }
 }
 
 
