@@ -468,6 +468,9 @@ function loadFile(channel, event) {
 
 
     */
+
+
+    /*
 function loadFile(channel, event) {
     const file = event.target.files[0];
     const reader = new FileReader();
@@ -484,6 +487,41 @@ function loadFile(channel, event) {
         } catch (error) {
             console.error('Error decoding audio data:', error);
         }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+
+    */
+
+
+    function loadFile(channel, event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const arrayBuffer = e.target.result;
+        try {
+            // Decode the audio data from the array buffer
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            audioBuffers[channel] = audioBuffer;  // Save the buffer for use in merging
+
+            // Create a Blob from the arrayBuffer to set as source for the audio element
+            const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+            const url = URL.createObjectURL(blob);
+            const audioElement = document.getElementById(`audio${channel}`);
+            audioElement.src = url;
+            audioElement.load(); // Ensure the audio is reloaded after setting the source
+            audioElement.onloadedmetadata = () => {
+                console.log(`Track ${channel} loaded: duration ${audioElement.duration}s`);
+            };
+        } catch (error) {
+            console.error('Error decoding audio data:', error);
+            alert(`Failed to load audio file: ${error.message}`);
+        }
+    };
+    reader.onerror = (err) => {
+        console.error('FileReader error', err);
+        alert('Error reading audio file.');
     };
     reader.readAsArrayBuffer(file);
 }
@@ -541,36 +579,6 @@ function stopTimer(channel) {
   // for crunker
 
 
-  /*
-  async function mergeAndDownloadTracks() {
-    // Ensure Crunker is loaded
-    const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
-    const crunker = new Crunker({ sampleRate: 48000 });
-
-    let buffers = [];
-    for (let i = 1; i <= Object.keys(audioElements).length; i++) {
-        const audioEl = document.getElementById(`audio${i}`);
-        if (audioEl) {
-            // Fetch the audio blob from the src of the audio element
-            const response = await fetch(audioEl.src);
-            const arrayBuffer = await response.arrayBuffer();
-            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            buffers.push(audioBuffer);
-        }
-    }
-
-    if (buffers.length > 1) {
-        // Process and download the merged audio
-        const merged = await crunker.mergeAudio(buffers);
-        const output = await crunker.export(merged, 'audio/mp3');
-        crunker.download(output.blob, 'mergedTracks.mp3');
-    } else {
-        alert('Not enough tracks to merge.');
-    }
-}
-
-
-  */
 
 
   async function mergeAndDownloadTracks() {
