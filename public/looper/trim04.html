@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Trimmer with Loop</title>
+</head>
+<body>
+
+<div>
+    <input type="button" value="Play All Channels" onclick="playAllChannels()">
+    <input type=button value="Stop All Audio" onclick="stopAllAudio()">
+        <input type="text" id="myMergeName" size=10 value="Merge-All.mp3">
+    <input type="button" value="Merge and Download Tracks" onclick="mergeAndDownloadTracks()">
+</div>
+<br>
+    
+<div>   
+    <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(1, event)">
+    <input type="text" id="myName1" size=10 value="Channel1.mp3">
+    <input id="myStart1" type="button" value="Record Channel 1"  style=" background-Color:lime; " onclick="{
+        document.getElementById('myStart1').style.backgroundColor = 'gray';
+        document.getElementById('myStop1').style.backgroundColor  = 'red';
+        startRecording(1);
+    }">
+    <input id="myStop1"  type="button"value="Stop Channel 1" onclick="{
+        document.getElementById('myStart1').style.backgroundColor = 'gray';
+        document.getElementById('myStop1').style.backgroundColor  = 'green';
+        stopRecording(1, 'myName1');
+    }">    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[1].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[1].loop = true;
+            this.value = 'Loop';
+        }
+    }"><br>
+
+    <audio id="audio1" controls></audio>
+    <a id="download1" style="display: none;">Download Channel 1</a>
+</div>
+
+
+
+
+
+
+
+  
+    <input type="file" accept="audio/*" onchange="loadAudio(this)">
+    <br>
+    Start Trim: <input type="range" id="startTrim" value="0" min="0" max="100" step="1" onchange="updateTrim()">
+    End Trim: <input type="range" id="endTrim" value="100" min="0" max="100" step="1" onchange="updateTrim()">
+    <br>
+    <button onclick="playAudio()">Play</button>
+    <button onclick="stopAudio()">Stop</button>
+    <!-- Loop Toggle Button -->
+    <input type="button" id="loopToggle" value="Enable Loop" onclick="toggleLoop()">
+
+    <script>
+
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+//let audioBuffer = null;
+let sourceNode = null;
+let startOffset = 0;
+let endOffset = 0;
+
+
+
+    
+let timers = {};  // Keeps track of timers for different channels
+let myLatestValue = ''
+let myLatestCount = 0;
+    
+const mediaRecorders = {};
+const audioChunks = {};
+const audioBuffers = {};  // This will store the AudioBuffers accessible to any function
+
+const audioElements = {
+    1: document.getElementById('audio1'),
+    2: document.getElementById('audio2'),
+    3: document.getElementById('audio3'),
+    4: document.getElementById('audio4'),
+    5: document.getElementById('audio5'),
+    6: document.getElementById('audio6'),
+    7: document.getElementById('audio7'),
+    8: document.getElementById('audio8'),
+    9: document.getElementById('audio9')
+};
+    
+const downloadLinks = {
+    1: document.getElementById('download1'),
+    2: document.getElementById('download2'),
+    3: document.getElementById('download3'),
+    4: document.getElementById('download4'),
+    5: document.getElementById('download5'),
+    6: document.getElementById('download6'),
+    7: document.getElementById('download7'),
+    8: document.getElementById('download8'),
+    9: document.getElementById('download9')
+};
+
+
+    function startRecording(channel) {
+    navigator.mediaDevices.getUserMedia({ 
+        audio: {
+            sampleRate: 48000, // Make sure this matches Crunker's expected sample rate if needed
+            noiseSuppression: true, // Helps reduce background noise
+            echoCancellation: true // Useful if the recording environment has echo issues
+        }
+    })
+    .then(stream => {
+        const mediaRecorder = new MediaRecorder(stream);
+
+        // Initialize the audio chunks array for the channel
+        audioChunks[channel] = [];
+
+        // Handle data available event
+        mediaRecorder.ondataavailable = event => {
+            audioChunks[channel].push(event.data);
+        };
+
+        
+        startTimer(channel);
+        console.log('timer started');
+        
+        // Start recording
+        mediaRecorder.start();
+
+        // Store the media recorder instance
+        mediaRecorders[channel] = mediaRecorder;
+
+        console.log('Recording started for channel', channel);
+    })
+    .catch(error => {
+        console.error("Error accessing media devices:", error);
+    });
+}
+
+
+
+    async function stopRecording(channel, myFileName) {
+    mediaRecorders[channel].stop();
+    mediaRecorders[channel].onstop = async () => {
+        const audioBlob = new Blob(audioChunks[channel], { type: 'audio/mp3' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        audioElements[channel].src = audioUrl;
+
+        // Decode audio data to AudioBuffer when the MediaRecorder stops
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        audioContext.decodeAudioData(arrayBuffer, (decodedData) => {
+            audioBuffers[channel] = decodedData;
+        });
+
+        const fileName = document.getElementById(myFileName).value;
+        downloadLinks[channel].href = audioUrl;
+        downloadLinks[channel].download = fileName;
+        downloadLinks[channel].style.display = 'inline';
+        downloadLinks[channel].textContent = `Download ${fileName}`;
+
+        delete mediaRecorders[channel];
+        delete audioChunks[channel];
+
+        // Stop the timer
+        stopTimer(channel);
+    };
+}
+
+
+
+
+
+      
+
+function loadAudio(input) {
+    if (input.files.length > 0) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const fileResult = e.target.result;
+            audioContext.decodeAudioData(fileResult, function(buffer) {
+                audioBuffers = buffer;
+                const duration = audioBuffers.duration;
+                document.getElementById('startTrim').max = duration;
+                document.getElementById('endTrim').max = duration;
+                document.getElementById('endTrim').value = duration;
+                updateTrim();
+            });
+        };
+        reader.readAsArrayBuffer(input.files[0]);
+    }
+}
+
+function updateTrim() {
+    startOffset = parseFloat(document.getElementById('startTrim').value);
+    endOffset = parseFloat(document.getElementById('endTrim').value);
+}
+
+let isLooping = false;  // State to keep track of whether looping is enabled
+
+function toggleLoop() {
+    isLooping = !isLooping;  // Toggle the current state of looping
+    document.getElementById('loopToggle').value = isLooping ? "Disable Loop" : "Enable Loop";  // Update button label
+    
+    if (isLooping) {
+        playAudio();  // Restart playback with loop settings applied
+    } else {
+        playAudio();  // Restart playback without looping
+    }
+}
+
+function playAudio() {
+    if (sourceNode) {
+        sourceNode.stop();  // Stop previous playback if any
+    }
+    sourceNode = audioContext.createBufferSource();
+    sourceNode.buffer = audioBuffers;
+
+    // Set loop properties based on the current state of `isLooping`
+    sourceNode.loop = isLooping;
+    sourceNode.loopStart = startOffset;
+    sourceNode.loopEnd = endOffset;
+
+    const duration = isLooping ? undefined : (endOffset - startOffset);  // If looping, do not specify duration, let it loop
+
+    sourceNode.connect(audioContext.destination);
+    sourceNode.start(0, startOffset, duration);
+}
+
+function stopAudio() {
+    if (sourceNode) {
+        sourceNode.stop();
+    }
+}
+
+
+
+      
+    </script>
+</body>
+</html>
