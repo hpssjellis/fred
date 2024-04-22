@@ -650,8 +650,8 @@ function stopTimer(channel) {
     try {
         const buffers = Object.values(audioBuffers).filter(b => b); // Filter out any empty slots
         const mergedAudio = await crunker.mergeAudio(buffers);
-        const output = await crunker.export(mergedAudio, myMergeFilename);
-        crunker.download(output.blob, 'mergedTracks.mp3');
+        const output = await crunker.export(mergedAudio, 'audio/mp3');
+        crunker.download(output.blob, myMergeFilename);
     } catch (error) {
         console.error('Error during audio processing:', error);
         alert('Error during audio processing. Please check the console for more details.');
