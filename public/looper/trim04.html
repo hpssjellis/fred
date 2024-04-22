@@ -6,6 +6,8 @@
 </head>
 <body>
 
+
+    <!--
 <div>
     <input type="button" value="Play All Channels" onclick="playAllChannels()">
     <input type=button value="Stop All Audio" onclick="stopAllAudio()">
@@ -13,7 +15,9 @@
     <input type="button" value="Merge and Download Tracks" onclick="mergeAndDownloadTracks()">
 </div>
 <br>
-    
+
+
+    -->
 <div>   
     <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(1, event)">
     <input type="text" id="myName1" size=10 value="Channel1.mp3">
@@ -42,6 +46,34 @@
 </div>
 
 
+
+    
+<div>   
+    <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(2, event)">
+    <input type="text" id="myName1" size=10 value="Channel2.mp3">
+    <input id="myStart2" type="button" value="Record Channel 2"  style=" background-Color:lime; " onclick="{
+        document.getElementById('myStart2').style.backgroundColor = 'gray';
+        document.getElementById('myStop2').style.backgroundColor  = 'red';
+        startRecording(2);
+    }">
+    <input id="myStop2"  type="button"value="Stop Channel 2" onclick="{
+        document.getElementById('myStart2').style.backgroundColor = 'gray';
+        document.getElementById('myStop2').style.backgroundColor  = 'green';
+        stopRecording(2, 'myName2');
+    }">    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[2].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[2].loop = true;
+            this.value = 'Loop';
+        }
+    }"><br>
+
+    <audio id="audio2" controls></audio>
+    <a id="download2" style="display: none;">Download Channel 2</a>
+</div>
 
 
 
