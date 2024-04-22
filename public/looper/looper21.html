@@ -37,10 +37,10 @@
             this.value = 'Loop';
         }
     }"><br>
-
-    <audio id="audio1" controls></audio>
-    Start Trim: <input type="range" id="startTrim" value="0" min="0" max="1000" step="1" onchange="updateTrim(1)">
-    End Trim: <input type="range" id="endTrim" value="1000" min="0" max="1000" step="1" onchange="updateTrim(1)">
+     
+    Start Trim: <input type="range" id="startTrim1" value="0" min="0" max="1000" step="1" onchange="updateTrim(1)">
+    <audio id="audio1" controls loop></audio>
+    End Trim: <input type="range" id="endTrim1" value="1000" min="0" max="1000" step="1" onchange="updateTrim(1)">
     <a id="download1" style="display: none;">Download Channel 1</a>
 </div>
 
@@ -382,17 +382,11 @@ const downloadLinks = {
     9: document.getElementById('download9')
 };
 
-
+/*
     function updateTrim(trackId) {
     const startTrim = parseFloat(document.getElementById(`startTrim${trackId}`).value);
     const endTrim = parseFloat(document.getElementById(`endTrim${trackId}`).value);
 
-       /* 
-    if (sourceNodes[trackId]) {
-        sourceNodes[trackId].loopStart = startTrim;
-        sourceNodes[trackId].loopEnd = endTrim;
-    }
-        */
     if (audioElements[trackId]) {
         audioElements[trackId].loopStart = startTrim;
         audioElements[trackId].loopEnd = endTrim;
@@ -401,6 +395,28 @@ const downloadLinks = {
 
         
 }
+
+    */
+
+
+
+    function updateTrim(trackId) {
+    const audioElement = document.getElementById(`audio${trackId}`);
+    const duration = audioElement.duration;  // Get the duration of the audio file
+
+    const startTrimInput = document.getElementById(`startTrim${trackId}`);
+    const endTrimInput = document.getElementById(`endTrim${trackId}`);
+
+    // Calculate start and end times in seconds
+    const startTrim = (parseFloat(startTrimInput.value) / 1000) * duration;
+    const endTrim = (parseFloat(endTrimInput.value) / 1000) * duration;
+
+    if (audioElement) {
+        audioElement.loopStart = startTrim;
+        audioElement.loopEnd = endTrim;
+    }
+}
+
 
     function startRecording(channel) {
     navigator.mediaDevices.getUserMedia({ 
