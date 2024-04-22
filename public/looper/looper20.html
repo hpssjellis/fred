@@ -608,10 +608,22 @@ function loadFile(channel, event) {
 }
 
 
-
+function playAllChannels() {
+    console.log('Object.values(audioElements)')
+    console.log(Object.values(audioElements))
+    console.log(audioElements)
+    console.log('audioElements')
+    Object.values(audioElements).forEach(audio => {
+        if (!audio.paused) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+        audio.play();
+    });
+}
     
 
-    function stopAllAudio() {
+function stopAllAudio() {
     const audios = [1, 2, 3, 4, 5, 6, 7, 8, 9]; // Array of audio element IDs suffixes
     audios.forEach(num => {
         const audioPlayer = document.getElementById('audio' + num);
