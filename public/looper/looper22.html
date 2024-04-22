@@ -413,7 +413,7 @@ function updateTrim(trackId) {
     }
 }
 */
-
+/*
 
 function updateTrim(trackId) {
     const audioElement = audioElements[trackId];
@@ -436,7 +436,32 @@ function updateTrim(trackId) {
     }
 }
 
-    
+
+    */
+
+
+    function updateTrim(trackId) {
+    const startTrimInput = document.getElementById(`startTrim${trackId}`);
+    const endTrimInput = document.getElementById(`endTrim${trackId}`);
+
+    if (!startTrimInput || !endTrimInput) {
+        console.error('Trim controls for track', trackId, 'not found.');
+        return;
+    }
+
+    const audioElement = audioElements[trackId];
+    if (audioElement && audioElement.readyState >= 2) {
+        const duration = audioElement.duration;
+        const startTrim = (parseFloat(startTrimInput.value) / 1000) * duration;
+        const endTrim = (parseFloat(endTrimInput.value) / 1000) * duration;
+
+        audioElement.loopStart = startTrim;
+        audioElement.loopEnd = endTrim;
+    } else {
+        console.warn('Audio metadata not yet loaded for track', trackId);
+    }
+}
+
 
     function startRecording(channel) {
     navigator.mediaDevices.getUserMedia({ 
