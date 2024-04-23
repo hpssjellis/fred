@@ -588,7 +588,10 @@ function playAllChannels() {
             audio.currentTime = trackSetting.startTime; // Start time from the settings object
             audio.play();
             audio.loop = audioElements[key].loop
-
+            console.log(key)
+            console.log(audio.loop)
+            console.log(audioElements[key].loop)
+            
             // Use a separate startTime for each track based on its setting
             let startTime = Date.now();
             let interval = setInterval(() => {
