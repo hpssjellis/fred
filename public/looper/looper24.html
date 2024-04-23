@@ -584,7 +584,7 @@ async function processAudioUsingCrunker(operation, trackId = null) {
         let processedAudio;
         if (trackId !== null && audioBuffers[trackId]) {
             processedAudio = audioBuffers[trackId];  // Use the specific buffer if a track ID is provided
-            myCrunkerFilename = document.getElementById('myName${trackId}').value  
+            myCrunkerFilename = document.getElementById('myName'+trackId).value  
         } else if (operation === "merge" && buffers.length > 1) {
             processedAudio = await crunker.mergeAudio(buffers);
             myCrunkerFilename = document.getElementById('myMergeName').value  
