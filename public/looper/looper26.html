@@ -681,6 +681,55 @@ function handleStop(track) {
 }
 
 
+    // Assuming each track has an associated play button that calls this function
+function playTrack(track) {
+    const startTrim = parseFloat(document.getElementById('startTrim' + track).value);
+    const endTrim = parseFloat(document.getElementById('endTrim' + track).value);
+
+    // Set the trimmed start and end times on the AudioTrimmer
+    AudioTrimmer.updateTrim(track, startTrim, endTrim);
+
+    // Check if audio is already playing and stop it to prevent overlapping
+    if (AudioTrimmer.sourceNodes[track] && AudioTrimmer.sourceNodes[track].source) {
+        AudioTrimmer.stopAudio(track);
+    }
+
+    // Start playing the audio with trimming settings
+    AudioTrimmer.playAudio(track);
+}
+
+function stopTrack(track) {
+    // Use the trimmer code to stop the audio
+    AudioTrimmer.stopAudio(track);
+}
+
+function toggleLoop(track) {
+    // Update the trimming object's looping state
+    AudioTrimmer.toggleLoop(track);
+
+    // Optionally, adjust the button label or state based on whether it's looping
+    const loopButton = document.getElementById(`loopToggle${track}`);
+    loopButton.value = AudioTrimmer.isLooping[track] ? "Disable Loop" : "Enable Loop";
+}
+
+function loadTrack(fileInput, track) {
+    if (fileInput.files.length > 0) {
+        // Assume you have some function that reads the file and loads it as an audio buffer
+        const audioBuffer = yourFunctionToLoadAudio(fileInput.files[0]);
+
+        // Once the audio is loaded, set it in a shared buffer object accessible by the trimmer
+        AudioTrimmer.audioBuffers[track] = audioBuffer;
+
+        // Initialize trim values to full length of the audio
+        const duration = audioBuffer.duration;
+        document.getElementById('startTrim' + track).max = duration;
+        document.getElementById('endTrim' + track).max = duration;
+        document.getElementById('startTrim' + track).value = 0;
+        document.getElementById('endTrim' + track).value = duration;
+    }
+}
+
+    
 </script>
 
 <h6>Use at your own risk<br>
