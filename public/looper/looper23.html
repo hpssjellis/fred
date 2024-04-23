@@ -497,8 +497,7 @@ function playAllChannels() {
     Object.values(audioElements).forEach(audio => {
         if (!audio.paused) {
             audio.pause();
-            audio.currentTime = 1;   //   was 0
-            audio.duration = 2;      // was not listed
+            audio.currentTime = 3.00;   //   was 0
         }
         audio.play();
     });
