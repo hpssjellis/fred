@@ -42,8 +42,7 @@
       <input type="button" value="start at" onclick="{
         console.log('audioContext') 
         console.log(audioContext) 
-        console.log('audioContext[1].start') 
-        console.log(audioContext[1].start) 
+          myPlayAudio(1)
         
     }">    
     <input type=button value="Save Track 1" onclick="processAudioUsingCrunker('single', 1)"><br>
@@ -736,6 +735,38 @@ function loadTrack(fileInput, track) {
     }
 }
 
+
+
+    function myPlayAudio(trackId) {
+    if (!audioBuffers[trackId]) {
+        console.error("No audio loaded for track", trackId);
+        return;
+    }
+
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffers[trackId];
+    
+    // Assume you set loop points and start times somewhere
+    source.loop = true;
+    source.loopStart = 2;  // Example loop start in seconds
+    source.loopEnd = 5;    // Example loop end in seconds
+    const startTime = 0;   // Start immediately for example
+
+    // Connect and play
+    source.connect(audioContext.destination);
+    source.start(startTime);
+
+    // Logging
+    console.log(`Playing track ${trackId}`);
+    console.log(`Duration: ${source.buffer.duration} seconds`);
+    console.log(`Sample Rate: ${source.buffer.sampleRate} Hz`);
+    console.log(`Loop Start: ${source.loopStart} seconds`);
+    console.log(`Loop End: ${source.loopEnd} seconds`);
+    console.log(`Start Time: ${startTime} seconds`);
+
+    // Keep track of your source if needed
+    audioElements[trackId] = source;
+}
     
 </script>
 
