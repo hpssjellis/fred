@@ -645,6 +645,55 @@ function stopTimer(channel) {
   // for crunker
 
 
+    // not yet tested for multiple tracks with start and duration
+async function myMergeTracks(audioContext, tracksSettings) {
+    let adjustedBuffers = [];
+
+    for (const [key, setting] of Object.entries(tracksSettings)) {
+        const buffer = audioBuffers[key];
+        if (buffer) {
+            // Calculate start and end points in samples
+            let startSample = Math.floor(setting.startTime * buffer.sampleRate);
+            let endSample = startSample + Math.floor(setting.duration * buffer.sampleRate);
+            endSample = Math.min(endSample, buffer.length);  // Ensure endSample does not exceed buffer length
+
+            // Slice the buffer
+            let slicedBuffer = buffer.slice(startSample, endSample);
+
+            // If startTime is not 0, prepend silence
+            if (setting.startTime > 0) {
+                let silentBuffer = audioContext.createBuffer(buffer.numberOfChannels, startSample, buffer.sampleRate);
+                for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+                    // Fill the channel with zeros (silence)
+                    silentBuffer.getChannelData(channel).fill(0);
+                }
+                // Concatenate silence and sliced buffer
+                slicedBuffer = concatenateBuffers(silentBuffer, slicedBuffer, audioContext);
+            }
+
+            adjustedBuffers.push(slicedBuffer);
+        }
+    }
+
+    // Use crunker to merge adjusted buffers
+    const crunker = new Crunker();
+    const output = await crunker.mergeAudio(adjustedBuffers);
+    return output;
+}
+
+// Helper function to concatenate two audio buffers
+function concatenateBuffers(buf1, buf2, context) {
+    let tmp = context.createBuffer(buf1.numberOfChannels, buf1.length + buf2.length, buf1.sampleRate);
+    for (let channel = 0; channel < buf1.numberOfChannels; channel++) {
+        let channelData = tmp.getChannelData(channel);
+        channelData.set(buf1.getChannelData(channel), 0);
+        channelData.set(buf2.getChannelData(channel), buf1.length);
+    }
+    return tmp;
+}
+
+
+    
 
 async function processAudioUsingCrunker(operation, trackId = null) {
     if (Object.keys(audioBuffers).length === 0) {
