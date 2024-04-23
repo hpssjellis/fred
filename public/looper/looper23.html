@@ -12,6 +12,21 @@
     <input type=button value="Stop All Audio" onclick="stopAllAudio()">
         <input type="text" id="myMergeName" size=10 value="Merge-All.mp3">
     <input type="button" value="Merge and Download Tracks" onclick="mergeAndDownloadTracks()">
+
+
+
+    <!-- Buttons to handle specific tracks -->
+<button onclick="processAudioUsingCrunker('single', 1)">Save Track 1</button>
+<button onclick="processAudioUsingCrunker('single', 2)">Save Track 2</button>
+<!-- etc. -->
+
+<!-- Button to merge or concatenate all tracks -->
+<button onclick="processAudioUsingCrunker('merge')">Merge All Tracks</button>
+<button onclick="processAudioUsingCrunker('concat')">Concatenate All Tracks</button>
+
+
+
+    
 </div>
 <br>
     
@@ -529,8 +544,66 @@ function stopTimer(channel) {
 
   // for crunker
 
+async function processSingleFile(file) {
+    const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
+    const crunker = new Crunker();
+
+    try {
+        // Decode the file to an AudioBuffer
+        const buffer = await file.arrayBuffer();
+        const audioBuffer = await crunker._context.decodeAudioData(buffer);
+
+        // Export the audio buffer to an MP3 file
+        const output = await crunker.export(audioBuffer, 'audio/mp3');
+        crunker.download(output.blob, 'processedFile.mp3');
+    } catch (error) {
+        console.error('Error processing the file:', error);
+        alert('Failed to process the audio file.');
+    }
+}
 
 
+
+async function processAudioUsingCrunker(operation, trackId = null) {
+    if (Object.keys(audioBuffers).length === 0) {
+        alert('No audio loaded.');
+        return;
+    }
+
+    const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
+    const crunker = new Crunker({ sampleRate: 48000 });
+
+    try {
+        let buffers = Object.values(audioBuffers).filter(buffer => buffer);
+        
+        if (buffers.length === 0) {
+            alert('Please load at least one track.');
+            return;
+        }
+
+        let processedAudio;
+        if (trackId !== null && audioBuffers[trackId]) {
+            processedAudio = audioBuffers[trackId];  // Use the specific buffer if a track ID is provided
+        } else if (operation === "merge" && buffers.length > 1) {
+            processedAudio = await crunker.mergeAudio(buffers);
+        } else if (operation === "concat" && buffers.length > 1) {
+            processedAudio = await crunker.concatAudio(buffers);
+        } else {
+            throw new Error("Invalid operation specified or invalid track ID.");
+        }
+
+        const output = await crunker.export(processedAudio, 'audio/mp3');
+        crunker.download(output.blob, `${trackId ? `Track${trackId}` : operation}Audio.mp3`);
+    } catch (error) {
+        console.error('Error during audio processing:', error);
+        alert('Error during audio processing. Please check the console for more details.');
+    }
+}
+
+  
+
+
+    
 
   async function mergeAndDownloadTracks() {
     if (Object.keys(audioBuffers).length < 2) {
