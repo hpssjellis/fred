@@ -834,9 +834,49 @@ function playPartOfAudio(trackId, start, end) {
         }, (end - start) * 1000); // Convert to milliseconds
     }
 }
+/*
+//const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+//let audioBuffer = null;  // This will hold the decoded audio data
 
-// Example usage: Play audio from 10 to 20 seconds
-playPartOfAudio(1, 10, 20);
+// Function to load and decode audio file
+function loadAndDecodeAudio(trackId) {
+    const fileInput = document.getElementById(`audio${trackId}`);
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const arrayBuffer = e.target.result;
+        audioContext.decodeAudioData(arrayBuffer, (buffer) => {
+            audioBuffer = buffer;
+        });
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// Function to play a segment of the loaded audio
+function playAudioSegment(start, duration) {
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioContext.destination);
+    source.start(0, start, duration);  // start at 'start' seconds, play for 'duration' seconds
+}
+
+// Load and decode audio
+loadAndDecodeAudio(1);
+
+// Play a specific segment
+// Ensure the audio is loaded before attempting to play it
+setTimeout(() => {
+    playAudioSegment(5, 10);  // Start at 5 seconds, play for 10 seconds
+}, 1000);  // Delay to ensure audio is loaded - better handled by event listeners in production code
+
+*/
+
+
+
+
+
+
+
 
     
 </script>
