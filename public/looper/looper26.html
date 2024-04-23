@@ -45,6 +45,10 @@
           myPlayAudio(1)
         
     }">    
+    <input type="button" value="data" onclick="{
+    setupAudioListeners(1);
+    logAudioDetails(1);    
+    }">   
     <input type=button value="Save Track 1" onclick="processAudioUsingCrunker('single', 1)"><br>
     Start Trim: <input type="range" id="startTrim1" value="0" min="0" max="100" step="1" onchange="AudioTrimmer.updateTrim(1, parseFloat(this.value), parseFloat(document.getElementById('endTrim1').value))">
     <audio id="audio1" controls></audio>
@@ -767,6 +771,34 @@ function loadTrack(fileInput, track) {
     // Keep track of your source if needed
     audioElements[trackId] = source;
 }
+
+
+
+    function logAudioDetails(trackId) {
+    const audioElement = document.getElementById(`audio${trackId}`);
+
+    if (audioElement) {
+        console.log(`Current Time (Playback Position) for Track ${trackId}:`, audioElement.currentTime, "seconds");
+        console.log(`Duration for Track ${trackId}:`, audioElement.duration, "seconds");
+    } else {
+        console.log(`Audio element for track ${trackId} not found.`);
+    }
+}
+
+function setupAudioListeners(trackId) {
+    const audioElement = document.getElementById(`audio${trackId}`);
+    if (audioElement) {
+        audioElement.addEventListener('loadedmetadata', () => {
+            console.log(`Metadata loaded for Track ${trackId}:`);
+            console.log(`Duration: ${audioElement.duration} seconds`);
+        });
+        
+        audioElement.addEventListener('timeupdate', () => {
+            console.log(`Current Time for Track ${trackId}: ${audioElement.currentTime} seconds`);
+        });
+    }
+}
+
     
 </script>
 
