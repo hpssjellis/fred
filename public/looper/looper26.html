@@ -40,8 +40,10 @@
         }
     }">  
     <input type=button value="Save Track 1" onclick="processAudioUsingCrunker('single', 1)"><br>
-
+    Start Trim: <input type="range" id="startTrim1" value="0" min="0" max="100" step="1" onchange="AudioTrimmer.updateTrim(1, parseFloat(this.value), parseFloat(document.getElementById('endTrim1').value))">
     <audio id="audio1" controls></audio>
+    End Trim: <input type="range" id="endTrim1" value="100" min="0" max="100" step="1"  onchange="AudioTrimmer.updateTrim(1, parseFloat(document.getElementById('startTrim1').value), parseFloat(this.value))">
+
 
  <!--   <a id="download1" style="display: none;">Download Channel 1</a>  -->
 </div>
@@ -73,7 +75,10 @@
     }">
     <input type=button value="Save Track 2" onclick="processAudioUsingCrunker('single', 2)">    
     <br>
+    Start Trim: <input type="range" id="startTrim2" value="0" min="0" max="100" step="1" onchange="AudioTrimmer.updateTrim(2, parseFloat(this.value), parseFloat(document.getElementById('endTrim2').value))">
     <audio id="audio2" controls></audio>
+    End Trim: <input type="range" id="endTrim2" value="100" min="0" max="100" step="1"  onchange="AudioTrimmer.updateTrim(2, parseFloat(document.getElementById('startTrim2').value), parseFloat(this.value))">
+
   <!--  <a id="download2" style="display: none;">Download Channel 2</a> -->
 </div>
 
@@ -107,7 +112,10 @@
     }">
     <input type=button value="Save Track 3" onclick="processAudioUsingCrunker('single', 3)">
     <br>
+    Start Trim: <input type="range" id="startTrim3" value="0" min="0" max="100" step="1" onchange="AudioTrimmer.updateTrim(3, parseFloat(this.value), parseFloat(document.getElementById('endTrim3').value))">
     <audio id="audio3" controls></audio>
+    End Trim: <input type="range" id="endTrim3" value="100" min="0" max="100" step="1"  onchange="AudioTrimmer.updateTrim(3, parseFloat(document.getElementById('startTrim3').value), parseFloat(this.value))">
+
    <!-- <a id="download3" style="display: none;">Download Channel 3</a>-->
 </div>
 
@@ -594,7 +602,66 @@ async function processAudioUsingCrunker(operation, trackId = null) {
     }
 }
 
-  
+
+
+    // audio trimmer
+
+    const AudioTrimmer = {
+    audioContext: null,
+    sourceNodes: {},
+    isLooping: {},
+
+    initAudioContext: function() {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        return this.audioContext;
+    },
+
+    updateTrim: function(track, startOffset, endOffset) {
+        if (this.sourceNodes[track]) {
+            this.stopAudio(track);
+        }
+        this.sourceNodes[track] = { startOffset, endOffset };
+    },
+
+    toggleLoop: function(track) {
+        this.isLooping[track] = !this.isLooping[track];
+        if (this.isLooping[track]) {
+            document.getElementById(`loopToggle${track}`).value = "Disable Loop";
+        } else {
+            document.getElementById(`loopToggle${track}`).value = "Enable Loop";
+        }
+        this.playAudio(track);
+    },
+
+    playAudio: function(track) {
+        const context = this.initAudioContext();
+        const audioBuffer = audioBuffers[track]; // Assume audioBuffers is globally accessible
+        if (!audioBuffer) return; // Ensure there's an audio buffer
+
+        if (this.sourceNodes[track] && this.sourceNodes[track].source) {
+            this.sourceNodes[track].source.stop(); // Stop if playing
+        }
+
+        let sourceNode = context.createBufferSource();
+        sourceNode.buffer = audioBuffer;
+        sourceNode.loop = this.isLooping[track] || false;
+        sourceNode.loopStart = this.sourceNodes[track].startOffset;
+        sourceNode.loopEnd = this.sourceNodes[track].endOffset;
+
+        sourceNode.connect(context.destination);
+        sourceNode.start(0, this.sourceNodes[track].startOffset, this.sourceNodes[track].endOffset - this.sourceNodes[track].startOffset);
+        this.sourceNodes[track].source = sourceNode;
+    },
+
+    stopAudio: function(track) {
+        if (this.sourceNodes[track] && this.sourceNodes[track].source) {
+            this.sourceNodes[track].source.stop();
+        }
+    }
+};
+
 
 
 </script>
