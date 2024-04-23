@@ -380,41 +380,32 @@ const downloadLinks = {
 };
 
 
-    function startRecording(channel) {
-    navigator.mediaDevices.getUserMedia({ 
+function startRecording(channel) {
+    navigator.mediaDevices.getUserMedia({
         audio: {
-            sampleRate: 48000, // Make sure this matches Crunker's expected sample rate if needed
-            noiseSuppression: true, // Helps reduce background noise
-            echoCancellation: true // Useful if the recording environment has echo issues
+            sampleRate: 48000,
+            noiseSuppression: true,
+            echoCancellation: true
         }
     })
     .then(stream => {
-        const mediaRecorder = new MediaRecorder(stream);
+        const options = { mimeType: 'audio/webm;codecs=opus' }; // or 'audio/mp3' if supported
+        const mediaRecorder = new MediaRecorder(stream, options);
 
-        // Initialize the audio chunks array for the channel
         audioChunks[channel] = [];
-
-        // Handle data available event
         mediaRecorder.ondataavailable = event => {
             audioChunks[channel].push(event.data);
         };
 
-        
         startTimer(channel);
-        console.log('timer started');
-        
-        // Start recording
         mediaRecorder.start();
-
-        // Store the media recorder instance
         mediaRecorders[channel] = mediaRecorder;
-
-        console.log('Recording started for channel', channel);
     })
     .catch(error => {
         console.error("Error accessing media devices:", error);
     });
 }
+
 
 
 
@@ -446,132 +437,7 @@ const downloadLinks = {
 }
 
 
-    /*
-
-function loadFile(channel, event) {
-    const file = event.target.files[0];
-    if (file) {
-        const fileUrl = URL.createObjectURL(file);
-        audioElements[channel].src = fileUrl;
-
-        // Set the download link, although this might not be needed for MP4 as you won't download it as audio
-        downloadLinks[channel].href = fileUrl;
-        downloadLinks[channel].download = file.name;
-        downloadLinks[channel].style.display = 'inline';
-
-        // Update the link text to reflect the new file name
-        downloadLinks[channel].textContent = `Download ${file.name}`; // Updates the link text
-
-        // Update the text box with the uploaded file's name
-        const textBoxId = `myName${channel}`;  // Assumes your text box IDs are formatted as 'myName1', 'myName2', etc.
-        document.getElementById(textBoxId).value = file.name;
-    }
-}
-
-*/
-    
-
-
-    /*
-function loadFile(channel, event) {
-    const file = event.target.files[0];
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const arrayBuffer = e.target.result;
-        try {
-            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            audioBuffers[channel] = audioBuffer;  // Save the buffer for use in merging
-
-            // Set the audio element to play the uploaded file
-            const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
-            const url = URL.createObjectURL(blob);
-            document.getElementById(`audio${channel}`).src = url;
-        } catch (error) {
-            console.error('Error decoding audio data:', error);
-        }
-    };
-    reader.readAsArrayBuffer(file);
-}
-
-
-    */
-/*
-
-    function loadFile(channel, event) {
-    const file = event.target.files[0];
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const arrayBuffer = e.target.result;
-        try {
-            // Decode the audio data from the array buffer
-            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            audioBuffers[channel] = audioBuffer;  // Save the buffer for use in merging
-
-            // Create a Blob from the arrayBuffer to set as source for the audio element
-            const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
-            const url = URL.createObjectURL(blob);
-            const audioElement = document.getElementById(`audio${channel}`);
-            audioElement.src = url;
-            audioElement.load(); // Ensure the audio is reloaded after setting the source
-            audioElement.onloadedmetadata = () => {
-                console.log(`Track ${channel} loaded: duration ${audioElement.duration}s`);
-            };
-        } catch (error) {
-            console.error('Error decoding audio data:', error);
-            alert(`Failed to load audio file: ${error.message}`);
-        }
-    };
-    reader.onerror = (err) => {
-        console.error('FileReader error', err);
-        alert('Error reading audio file.');
-    };
-    reader.readAsArrayBuffer(file);
-}
-*/
-
-/*
-    function loadFile(channel, event) {
-    const file = event.target.files[0];
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const arrayBuffer = e.target.result;
-        try {
-            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            audioBuffers[channel] = audioBuffer;  // Save the buffer for use in merging
-
-            // Create and set a Blob as the source for the audio element to ensure compatibility
-            const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
-            const url = URL.createObjectURL(blob);
-            const audioElement = document.getElementById(`audio${channel}`);
-            audioElement.src = url;
-            audioElement.load(); // Force the audio element to reload and update the source
-            audioElement.onloadedmetadata = () => {
-                console.log(`Track ${channel} loaded successfully. Duration: ${audioElement.duration} seconds.`);
-            };
-        } catch (error) {
-            console.error('Error decoding audio data:', error);
-            alert(`Error decoding audio data: ${error.message}`);
-        }
-    };
-    reader.onerror = (err) => {
-        console.error('Error reading file:', err);
-        alert('Error reading file.');
-    };
-    reader.readAsArrayBuffer(file);
-}
-
-function playAllChannels() {
-    Object.values(audioElements).forEach(audio => {
-        if (!audio.paused) {
-            audio.pause();
-            audio.currentTime = 0;
-        }
-        audio.play();
-    });
-}
-
-
-    */
+ 
 
 
 function loadFile(channel, event) {
