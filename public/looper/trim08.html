@@ -1,0 +1,90 @@
+
+2
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Trimmer</title>
+</head>
+<body>
+    <input type="file" id="audioFile" accept="audio/*">
+    <button onclick="trimAudio()">Trim Audio</button>
+
+    <script>
+        async function trimAudio() {
+            const audioFileInput = document.getElementById('audioFile');
+            const audioFile = audioFileInput.files[0];
+            const startTime = 10; // Start time in seconds
+            const endTime = 30; // End time in seconds
+
+            if (audioFile) {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const fileBuffer = await audioFile.arrayBuffer();
+                    const audioBuffer = await audioContext.decodeAudioData(fileBuffer);
+
+                    // Trim the audio buffer
+                    const trimmedBuffer = trimAudioBuffer(audioBuffer, startTime, endTime);
+
+                    // Create a Blob from the trimmed buffer
+                    const trimmedAudioBlob = await createBlobFromAudioBuffer(trimmedBuffer);
+
+                    // Create an <audio> element to play the trimmed audio
+                    const audioElement = document.createElement('audio');
+                    audioElement.controls = true;
+                    const audioUrl = URL.createObjectURL(trimmedAudioBlob);
+                    audioElement.src = audioUrl;
+
+                    document.body.appendChild(audioElement);
+                } catch (error) {
+                    console.error('Error trimming audio:', error);
+                }
+            } else {
+                console.error('Please select an audio file.');
+            }
+        }
+
+        function trimAudioBuffer(buffer, startTime, endTime) {
+            const sampleRate = buffer.sampleRate;
+            const startFrame = startTime * sampleRate;
+            const endFrame = endTime * sampleRate;
+            const duration = endTime - startTime;
+            const channels = buffer.numberOfChannels;
+
+            // Create a new AudioBuffer for the trimmed audio
+            const trimmedBuffer = audioContext.createBuffer(
+                channels,
+                (endFrame - startFrame),
+                sampleRate
+            );
+
+            for (let channel = 0; channel < channels; channel++) {
+                const sourceData = buffer.getChannelData(channel).subarray(startFrame, endFrame);
+                trimmedBuffer.getChannelData(channel).set(sourceData);
+            }
+
+            return trimmedBuffer;
+        }
+
+        function createBlobFromAudioBuffer(audioBuffer) {
+            return new Promise((resolve) => {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const audioBufferSource = audioContext.createBufferSource();
+                audioBufferSource.buffer = audioBuffer;
+
+                audioBufferSource.connect(audioContext.destination);
+
+                audioBufferSource.onended = () => {
+                    const audioData = audioBuffer.getChannelData(0);
+                    const audioBlob = new Blob([audioData], { type: 'audio/wav' });
+                    resolve(audioBlob);
+                };
+
+                audioBufferSource.start();
+                audioBufferSource.stop(audioContext.currentTime + audioBuffer.duration);
+            });
+        }
+    </script>
+</body>
+</html>
+
