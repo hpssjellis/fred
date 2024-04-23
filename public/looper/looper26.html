@@ -552,9 +552,10 @@ function playAllChannels() {
     Object.values(audioElements).forEach(audio => {
         if (!audio.paused) {
             audio.pause();
-            audio.currentTime = 2;
-            audio.duration = 3;
+            audio.currentTime = 0;
         }
+        audio.currentTime = 2;
+        audio.duration = 3;
         audio.play();
     });
 }
