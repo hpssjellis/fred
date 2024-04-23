@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Manipulation Example</title>
+</head>
+<body>
+    <div>
+        <label for="audioFile1">Upload Audio 1:</label>
+        <input type="file" id="audioFile1" accept="audio/*" onchange="loadAndDecodeAudio(1)">
+    </div>
+    <div>
+        <label for="audioFile2">Upload Audio 2:</label>
+        <input type="file" id="audioFile2" accept="audio/*" onchange="loadAndDecodeAudio(2)">
+    </div>
+
+    <button onclick="playAudioSegment(1, 0, 5)">Play First 5 Seconds of Track 1</button>
+    <button onclick="playAudioSegment(2, 0, 5)">Play First 5 Seconds of Track 2</button>
+
+    <script>
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioBuffers = {}; // This object will store multiple audio buffers, indexed by track ID
+
+        // Function to load and decode audio file
+        function loadAndDecodeAudio(trackId) {
+            const fileInput = document.getElementById(`audioFile${trackId}`);
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const arrayBuffer = e.target.result;
+                try {
+                    audioBuffers[trackId] = await audioContext.decodeAudioData(arrayBuffer);
+                    console.log(`Track ${trackId} loaded and decoded.`);
+                } catch (error) {
+                    console.error(`Error decoding audio for track ${trackId}:`, error);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Function to play a segment of the loaded audio
+        function playAudioSegment(trackId, start, duration) {
+            if (audioBuffers[trackId]) {
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBuffers[trackId];
+                source.connect(audioContext.destination);
+                source.start(0, start, duration); // start immediately, play from 'start' seconds for 'duration' seconds
+                console.log(`Playing track ${trackId} from ${start}s for ${duration}s.`);
+            } else {
+                console.log(`Audio buffer for track ${trackId} is not loaded.`);
+            }
+        }
+    </script>
+</body>
+</html>
