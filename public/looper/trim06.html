@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Trimmer for Multiple Tracks</title>
+</head>
+<body>
+    Track 1:
+    <input type="file" accept="audio/*" onchange="loadAudio(this, 1)">
+    Start Trim: <input type="range" id="startTrim1" value="0" min="0" max="100" step="1" onchange="updateTrim(1)">
+    End Trim: <input type="range" id="endTrim1" value="100" min="0" max="100" step="1" onchange="updateTrim(1)">
+    <br>
+    <button onclick="playAudio(1)">Play Track 1</button>
+    <button onclick="stopAudio(1)">Stop Track 1</button>
+    <input type="button" id="loopToggle1" value="Enable Loop" onclick="toggleLoop(1)">
+    <br><br>
+    Track 2:
+    <input type="file" accept="audio/*" onchange="loadAudio(this, 2)">
+    Start Trim: <input type="range" id="startTrim2" value="0" min="0" max="100" step="1" onchange="updateTrim(2)">
+    End Trim: <input type="range" id="endTrim2" value="100" min="0" max="100" step="1" onchange="updateTrim(2)">
+    <br>
+    <button onclick="playAudio(2)">Play Track 2</button>
+    <button onclick="stopAudio(2)">Stop Track 2</button>
+    <input type="button" id="loopToggle2" value="Enable Loop" onclick="toggleLoop(2)">
+
+    <script>
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const audioBuffers = {};
+const sourceNodes = {};
+const isLooping = {};
+
+function loadAudio(input, track) {
+    if (input.files.length > 0) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const fileResult = e.target.result;
+            audioContext.decodeAudioData(fileResult, function(buffer) {
+                audioBuffers[track] = buffer;
+                const duration = audioBuffers[track].duration;
+                document.getElementById('startTrim' + track).max = duration;
+                document.getElementById('endTrim' + track).max = duration;
+                document.getElementById('endTrim' + track).value = duration;
+                updateTrim(track);
+            });
+        };
+        reader.readAsArrayBuffer(input.files[0]);
+    }
+}
+
+function updateTrim(track) {
+    const startOffset = parseFloat(document.getElementById('startTrim' + track).value);
+    const endOffset = parseFloat(document.getElementById('endTrim' + track).value);
+    sourceNodes[track] = { startOffset, endOffset };
+}
+
+function toggleLoop(track) {
+    isLooping[track] = !isLooping[track];
+    document.getElementById('loopToggle' + track).value = isLooping[track] ? "Disable Loop" : "Enable Loop";
+    playAudio(track);
+}
+
+function playAudio(track) {
+    if (sourceNodes[track]) {
+        if (sourceNodes[track].source) {
+            sourceNodes[track].source.stop();
+        }
+    }
+
+    let sourceNode = audioContext.createBufferSource();
+    sourceNode.buffer = audioBuffers[track];
+    sourceNode.loop = isLooping[track] || false;
+    sourceNode.loopStart = sourceNodes[track].startOffset;
+    sourceNode.loopEnd = sourceNodes[track].endOffset;
+
+    sourceNode.connect(audioContext.destination);
+    sourceNode.start(0, sourceNodes[track].startOffset, sourceNodes[track].endOffset - sourceNodes[track].startOffset);
+    sourceNodes[track].source = sourceNode;
+}
+
+function stopAudio(track) {
+    if (sourceNodes[track] && sourceNodes[track].source) {
+        sourceNodes[track].source.stop();
+    }
+}
+    </script>
+</body>
+</html>
