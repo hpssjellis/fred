@@ -787,6 +787,9 @@ function loadTrack(fileInput, track) {
     if (audioElement) {
         console.log(`Current Time (Playback Position) for Track ${trackId}:`, audioElement.currentTime, "seconds");
         console.log(`Duration for Track ${trackId}:`, audioElement.duration, "seconds");
+        audioElement.duration = 1.000
+        
+        console.log(`Duration for Track ${trackId}:`, audioElement.duration, "seconds");
     } else {
         console.log(`Audio element for track ${trackId} not found.`);
     }
