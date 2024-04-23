@@ -557,6 +557,10 @@ function playAllChannels() {
         audio.currentTime = 2;
         audio.duration = 3;
         audio.play();
+        setTimeout(() => {
+            audio.pause();
+            audio.currentTime = 0; // Optionally reset the currentTime to 0 or some other logic
+        }, 3000); // Stop playing after 3 seconds
     });
 }
     
