@@ -477,10 +477,9 @@ function loadFile(channel, event) {
         // Update the text box with the uploaded file's name
         const textBoxId = `myName${channel}`;
         document.getElementById(textBoxId).value = file.name;
-
         
-        document.getElementById(`myName${channel}`).style.backgroundColor = 'gray';
-        document.getElementById(`myName${channel}`).style.backgroundColor  = 'green';
+        document.getElementById(`myStart${channel}`).style.backgroundColor = 'gray';
+        document.getElementById(`myStop${channel}`).style.backgroundColor  = 'green';
 
         // Additionally, decode the audio data to an AudioBuffer for Crunker use
         const reader = new FileReader();
