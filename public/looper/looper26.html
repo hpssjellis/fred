@@ -39,15 +39,15 @@
             this.value = 'Loop';
         }
     }">  
-      <input type="button" value="start at" onclick="{
+      <input type="button" value="start at2" onclick="{
 
-          myPlayAudio(1)
+ playPartOfAudio(1, 1.000, 2.000)
         
     }">    
-      <input type="button" value="stop at" onclick="{
+      <input type="button" value="stop at2" onclick="{
 
 
-       stopTrack(1)
+ playPartOfAudio(1, 0, 4)
         
     }">    
 
@@ -813,6 +813,30 @@ function setupAudioListeners(trackId) {
         
     }
 }
+
+
+
+    // Function to play only a part of the audio
+function playPartOfAudio(trackId, start, end) {
+    const audioElement = document.getElementById(`audio${trackId}`);
+    if (audioElement) {
+        // Set the start time
+        audioElement.currentTime = start;
+
+        // Play the audio
+        audioElement.play();
+
+        // Stop the audio at 'end' seconds
+        setTimeout(() => {
+            audioElement.pause();
+            // Optionally reset currentTime if you want to replay the same segment again immediately next time
+            audioElement.currentTime = start;
+        }, (end - start) * 1000); // Convert to milliseconds
+    }
+}
+
+// Example usage: Play audio from 10 to 20 seconds
+playPartOfAudio(1, 10, 20);
 
     
 </script>
