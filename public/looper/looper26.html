@@ -43,7 +43,8 @@
     Start Trim: <input type="range" id="startTrim1" value="0" min="0" max="100" step="1" onchange="AudioTrimmer.updateTrim(1, parseFloat(this.value), parseFloat(document.getElementById('endTrim1').value))">
     <audio id="audio1" controls></audio>
     End Trim: <input type="range" id="endTrim1" value="100" min="0" max="100" step="1"  onchange="AudioTrimmer.updateTrim(1, parseFloat(document.getElementById('startTrim1').value), parseFloat(this.value))">
-
+<button onclick="handlePlay(1)">Play Track 1</button>
+<button onclick="handleStop(1)">Stop Track 1</button>
 
  <!--   <a id="download1" style="display: none;">Download Channel 1</a>  -->
 </div>
@@ -662,6 +663,22 @@ async function processAudioUsingCrunker(operation, trackId = null) {
     }
 };
 
+function handlePlay(track) {
+    // Ensure the start and end trim values are updated based on current settings
+    const startTrim = parseFloat(document.getElementById('startTrim' + track).value);
+    const endTrim = parseFloat(document.getElementById('endTrim' + track).value);
+
+    // Update trim settings in the trimmer
+    AudioTrimmer.updateTrim(track, startTrim, endTrim);
+
+    // Play audio using the trimmer code
+    AudioTrimmer.playAudio(track);
+}
+
+function handleStop(track) {
+    // Stop audio using the trimmer code
+    AudioTrimmer.stopAudio(track);
+}
 
 
 </script>
