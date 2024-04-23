@@ -10,8 +10,9 @@
 <div>
     <input type="button" value="Play All Channels" onclick="playAllChannels()">
     <input type=button value="Stop All Audio" onclick="stopAllAudio()">
-        <input type="text" id="myMergeName" size=10 value="Merge-All.mp3">
-    <input type="button" value="Merge and Download Tracks" onclick="mergeAndDownloadTracks()">
+    <input type="text" id="myMergeName" size=10 value="Merge-All.mp3">
+    <input type=button value="Merge All Tracks" onclick="processAudioUsingCrunker('merge')">
+    <input type=button value="Concatenate All Tracks" onclick="processAudioUsingCrunker('concat')">
 
 
 
@@ -21,8 +22,6 @@
 <!-- etc. -->
 
 <!-- Button to merge or concatenate all tracks -->
-<button onclick="processAudioUsingCrunker('merge')">Merge All Tracks</button>
-<button onclick="processAudioUsingCrunker('concat')">Concatenate All Tracks</button>
 
 
 
@@ -54,7 +53,8 @@
     }"><br>
 
     <audio id="audio1" controls></audio>
-    <a id="download1" style="display: none;">Download Channel 1</a>
+    <input type=button value="Save Track 1" onclick="processAudioUsingCrunker('single', 1)">
+ <!--   <a id="download1" style="display: none;">Download Channel 1</a>  -->
 </div>
 
 
@@ -381,7 +381,7 @@ const audioElements = {
     8: document.getElementById('audio8'),
     9: document.getElementById('audio9')
 };
-    
+    /*
 const downloadLinks = {
     1: document.getElementById('download1'),
     2: document.getElementById('download2'),
@@ -393,6 +393,7 @@ const downloadLinks = {
     8: document.getElementById('download8'),
     9: document.getElementById('download9')
 };
+    */
 
 
 function startRecording(channel) {
@@ -436,13 +437,13 @@ function startRecording(channel) {
         audioContext.decodeAudioData(arrayBuffer, (decodedData) => {
             audioBuffers[channel] = decodedData;
         });
-
+/*
         const fileName = document.getElementById(myFileName).value;
         downloadLinks[channel].href = audioUrl;
         downloadLinks[channel].download = fileName;
         downloadLinks[channel].style.display = 'inline';
         downloadLinks[channel].textContent = `Download ${fileName}`;
-
+*/
         delete mediaRecorders[channel];
         delete audioChunks[channel];
 
@@ -460,7 +461,7 @@ function loadFile(channel, event) {
     if (file) {
         const fileUrl = URL.createObjectURL(file);
         audioElements[channel].src = fileUrl;
-
+/*
         // Set the download link, although this might not be needed for MP4 as you won't download it as audio
         downloadLinks[channel].href = fileUrl;
         downloadLinks[channel].download = file.name;
@@ -472,7 +473,7 @@ function loadFile(channel, event) {
         // Update the text box with the uploaded file's name
         const textBoxId = `myName${channel}`;
         document.getElementById(textBoxId).value = file.name;
-
+*/
         // Additionally, decode the audio data to an AudioBuffer for Crunker use
         const reader = new FileReader();
         reader.onload = async (e) => {
