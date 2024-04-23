@@ -40,13 +40,20 @@
         }
     }">  
       <input type="button" value="start at" onclick="{
-        console.log('audioContext') 
-        console.log(audioContext) 
+
           myPlayAudio(1)
         
     }">    
+      <input type="button" value="stop at" onclick="{
+
+
+       stopTrack(1)
+        
+    }">    
+
+ 
     <input type="button" value="data2" onclick="{
-    //setupAudioListeners(1);
+    setupAudioListeners(1);
     logAudioDetails(1);    
     }">   
     <input type=button value="Save Track 1" onclick="processAudioUsingCrunker('single', 1)"><br>
