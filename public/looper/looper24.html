@@ -569,7 +569,7 @@ async function processAudioUsingCrunker(operation, trackId = null) {
         alert('No audio loaded.');
         return;
     }
-
+    let myCrunkerFilename = 'default.mp3'
     const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
     const crunker = new Crunker({ sampleRate: 48000 });
 
@@ -584,13 +584,13 @@ async function processAudioUsingCrunker(operation, trackId = null) {
         let processedAudio;
         if (trackId !== null && audioBuffers[trackId]) {
             processedAudio = audioBuffers[trackId];  // Use the specific buffer if a track ID is provided
-            const myCrunkerFilename = document.getElementById('myName${trackId}').value  
+            myCrunkerFilename = document.getElementById('myName${trackId}').value  
         } else if (operation === "merge" && buffers.length > 1) {
             processedAudio = await crunker.mergeAudio(buffers);
-            const myCrunkerFilename = document.getElementById('myMergeName').value  
+            myCrunkerFilename = document.getElementById('myMergeName').value  
         } else if (operation === "concat" && buffers.length > 1) {
             processedAudio = await crunker.concatAudio(buffers);
-            const myCrunkerFilename = document.getElementById('myMergeName').value  
+            myCrunkerFilename = document.getElementById('myMergeName').value  
         } else {
             throw new Error("Invalid operation specified or invalid track ID.");
         }
