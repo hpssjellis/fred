@@ -59,11 +59,11 @@
     <input type=button value="Save Track 1" onclick="processAudioUsingCrunker('single', 1)"><br>
     Start Trim: <input type="range" id="startTrim1" value="0" min="0" max="100" step="1" onchange="AudioTrimmer.updateTrim(1, parseFloat(this.value), parseFloat(document.getElementById('endTrim1').value))">
   <!--  <audio id="audio1" controls></audio>  -->
-    <audio id="audio1" controls></audio>
+    <audio id="audio1" controls></audio>  cool
 <script>
     const audio = document.getElementById('audioControl');
-    const start = 10; // Start playing at 10 seconds
-    const end = 20; // Stop playing at 20 seconds
+    const start = 2.01; // Start playing at 10 seconds
+    const end = 4.03; // Stop playing at 20 seconds
 
     audio.addEventListener('loadedmetadata', () => {
         audio.currentTime = start; // Set the start time
@@ -77,7 +77,7 @@
     });
 
     // Assuming you have a way to set the source URL
-    audio.src = 'path_to_your_audio_file.mp3';
+  //  audio.src = 'path_to_your_audio_file.mp3';
 </script>
 
     End Trim: <input type="range" id="endTrim1" value="100" min="0" max="100" step="1"  onchange="AudioTrimmer.updateTrim(1, parseFloat(document.getElementById('startTrim1').value), parseFloat(this.value))">
