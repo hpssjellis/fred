@@ -463,15 +463,15 @@ const downloadLinks = {
 
 
     const trackSettings = {
-    track1: { startTime: 2, duration: 3000 },
-    track2: { startTime: 1, duration: 4000 },
-    track3: { startTime: 0, duration: 5000 },
-    track4: { startTime: 3, duration: 6000 },
-    track5: { startTime: 2.5, duration: 3500 },
-    track6: { startTime: 1.5, duration: 2500 },
-    track7: { startTime: 0.5, duration: 1500 },
-    track8: { startTime: 3.5, duration: 2000 },
-    track9: { startTime: 2.2, duration: 4500 }
+    1: { startTime: 2, duration: 3000 },
+    2: { startTime: 1, duration: 4000 },
+    3: { startTime: 0, duration: 5000 },
+    4: { startTime: 3, duration: 6000 },
+    5: { startTime: 2.5, duration: 3500 },
+    6: { startTime: 1.5, duration: 2500 },
+    7: { startTime: 0.5, duration: 1500 },
+    8: { startTime: 3.5, duration: 2000 },
+    9: { startTime: 2.2, duration: 4500 }
 };
 
 function startRecording(channel) {
@@ -577,6 +577,8 @@ function playAllChannels() {
     console.log('audioElements')
     Object.keys(audioElements).forEach(key => {
         const audio = audioElements[key];
+        console.log('key')
+        console.log(key)
         if (!audio.paused) {
             audio.pause();
             audio.currentTime = 0;
