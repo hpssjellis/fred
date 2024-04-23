@@ -39,6 +39,13 @@
             this.value = 'Loop';
         }
     }">  
+      <input type="button" value="start at" onclick="{
+        console.log('audioContext') 
+        console.log(audioContext) 
+        console.log('audioContext[1].start') 
+        console.log(audioContext[1].start) 
+        
+    }">    
     <input type=button value="Save Track 1" onclick="processAudioUsingCrunker('single', 1)"><br>
     Start Trim: <input type="range" id="startTrim1" value="0" min="0" max="100" step="1" onchange="AudioTrimmer.updateTrim(1, parseFloat(this.value), parseFloat(document.getElementById('endTrim1').value))">
     <audio id="audio1" controls></audio>
