@@ -432,6 +432,19 @@ const audioElements = {
     8: document.getElementById('audio8'),
     9: document.getElementById('audio9')
 };
+
+
+    myPlayAllChannels([
+    { startTime: 2, duration: 3 },
+    { startTime: 1, duration: 4 },
+    { startTime: 0, duration: 5 },
+    { startTime: 3, duration: 6 },
+    { startTime: 2.5, duration: 3.5 },
+    { startTime: 1.5, duration: 2.5 },
+    { startTime: 0.5, duration: 1.5 },
+    { startTime: 3.5, duration: 2 },
+    { startTime: 2.2, duration: 4.5 }
+]);
     /*
 const downloadLinks = {
     1: document.getElementById('download1'),
@@ -544,24 +557,38 @@ function loadFile(channel, event) {
 }
 
 
-function playAllChannels() {
+function myPlayAllChannels(tracksSettings) {
     console.log('Object.values(audioElements)')
     console.log(Object.values(audioElements))
     console.log(audioElements)
     console.log('audioElements')
-    Object.values(audioElements).forEach(audio => {
+    Object.values(audioElements).forEach((audio, index) => {
         if (!audio.paused) {
             audio.pause();
             audio.currentTime = 0;
         }
-        audio.currentTime = 2;
-        audio.play();
-        setTimeout(() => {
-            audio.pause();
-            audio.currentTime = 0; // Optionally reset the currentTime to 0 or some other logic
-        }, 3000); // Stop playing after 3 seconds
+        const trackSetting = tracksSettings[index];
+        if (trackSetting) {
+            audio.currentTime = trackSetting.startTime; // Start time from the settings array
+            audio.play();
+            audio.loop = true; // Enable looping if needed
+
+            // Use a separate startTime for each track based on its setting
+            let startTime = Date.now();
+            let interval = setInterval(() => {
+                // Check the elapsed time
+                if (Date.now() - startTime >= trackSetting.duration * 1000) { // Convert seconds to milliseconds
+                    clearInterval(interval); // Clear the interval to stop checking
+                    audio.pause(); // Pause the audio
+                    audio.currentTime = 0; // Reset the currentTime if necessary
+                    audio.loop = false; // Stop looping
+                }
+            }, 100); // Check every 100 milliseconds
+        }
     });
 }
+
+
     
 
 function stopAllAudio() {
