@@ -433,7 +433,7 @@ const audioElements = {
     9: document.getElementById('audio9')
 };
 
-
+/*
     myPlayAllChannels([
     { startTime: 2, duration: 3 },
     { startTime: 1, duration: 4 },
@@ -445,6 +445,8 @@ const audioElements = {
     { startTime: 3.5, duration: 2 },
     { startTime: 2.2, duration: 4.5 }
 ]);
+
+    */
     /*
 const downloadLinks = {
     1: document.getElementById('download1'),
@@ -459,6 +461,18 @@ const downloadLinks = {
 };
     */
 
+
+    const trackSettings = {
+    track1: { startTime: 2, duration: 3000 },
+    track2: { startTime: 1, duration: 4000 },
+    track3: { startTime: 0, duration: 5000 },
+    track4: { startTime: 3, duration: 6000 },
+    track5: { startTime: 2.5, duration: 3500 },
+    track6: { startTime: 1.5, duration: 2500 },
+    track7: { startTime: 0.5, duration: 1500 },
+    track8: { startTime: 3.5, duration: 2000 },
+    track9: { startTime: 2.2, duration: 4500 }
+};
 
 function startRecording(channel) {
     navigator.mediaDevices.getUserMedia({
@@ -556,28 +570,28 @@ function loadFile(channel, event) {
     }
 }
 
-
 function myPlayAllChannels(tracksSettings) {
     console.log('Object.values(audioElements)')
     console.log(Object.values(audioElements))
     console.log(audioElements)
     console.log('audioElements')
-    Object.values(audioElements).forEach((audio, index) => {
+    Object.keys(audioElements).forEach(key => {
+        const audio = audioElements[key];
         if (!audio.paused) {
             audio.pause();
             audio.currentTime = 0;
         }
-        const trackSetting = tracksSettings[index];
+        const trackSetting = tracksSettings[key];
         if (trackSetting) {
-            audio.currentTime = trackSetting.startTime; // Start time from the settings array
+            audio.currentTime = trackSetting.startTime; // Start time from the settings object
             audio.play();
-            audio.loop = true; // Enable looping if needed
+           // audio.loop = true; // Enable looping if needed
 
             // Use a separate startTime for each track based on its setting
             let startTime = Date.now();
             let interval = setInterval(() => {
                 // Check the elapsed time
-                if (Date.now() - startTime >= trackSetting.duration * 1000) { // Convert seconds to milliseconds
+                if (Date.now() - startTime >= trackSetting.duration) { // Convert seconds to milliseconds
                     clearInterval(interval); // Clear the interval to stop checking
                     audio.pause(); // Pause the audio
                     audio.currentTime = 0; // Reset the currentTime if necessary
@@ -587,7 +601,6 @@ function myPlayAllChannels(tracksSettings) {
         }
     });
 }
-
 
     
 
