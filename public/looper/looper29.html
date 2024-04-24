@@ -33,17 +33,20 @@
     
     <input id="myStart1" type="button" value="Record Channel 1"  style=" background-Color:lime; " onclick="{
 
-
         if (this.value.substring(0, 3) ===  'Rec') {
+            console.log('start')
            document.getElementById('myStart1').style.backgroundColor = 'gray';
            document.getElementById('myStop1').style.backgroundColor  = 'red';
-           startRecording(1);
            this.value.replace('Record', 'Stop  ')
+           startRecording(1);
+
         } else {
+           console.log('start')
            document.getElementById('myStart1').style.backgroundColor = 'gray';
            document.getElementById('myStop1').style.backgroundColor  = 'green';
-           stopRecording(1, 'myName1');  
            this.value.replace('Stop  ', 'Record')
+           stopRecording(1, 'myName1');  
+
         }
 
 
