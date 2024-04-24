@@ -38,6 +38,7 @@
            document.getElementById('myStart1').style.backgroundColor = 'gray';
            document.getElementById('myStop1').style.backgroundColor  = 'red';
            this.value.replace('Record', 'Stop  ')
+            console.log(this.value)
            startRecording(1);
 
         } else {
@@ -45,6 +46,7 @@
            document.getElementById('myStart1').style.backgroundColor = 'gray';
            document.getElementById('myStop1').style.backgroundColor  = 'green';
            this.value.replace('Stop  ', 'Record')
+            console.log(this.value)
            stopRecording(1, 'myName1');  
 
         }
