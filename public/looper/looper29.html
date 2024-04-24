@@ -24,9 +24,10 @@
 </div>
 <br>
     
-<div>   
-    <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(1, event)">
+<div>      
     <input type="text" id="myName1" size=10 value="Channel1.mp3">
+    <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(1, event)">
+
 
 
 
@@ -40,7 +41,7 @@
 
           // console.log(this.value)
            startRecording(1);         
-            this.value = this.value.replace('Record', 'Stop  ')
+            document.getElementById('myStart1').value = this.value.replace('Record', 'Stop  ')
 
         } else {
            console.log('stop')
@@ -50,7 +51,7 @@
 
            // console.log(this.value)
            stopRecording(1, 'myName1');  
-            this.value = 'Record Channel 1'
+            document.getElementById('myStart1').value = 'Record Channel 1'
 
         }
 
