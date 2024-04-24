@@ -431,8 +431,8 @@ function startRecording(channel) {
         }
     })
     .then(stream => {
-      //  const options = { mimeType: 'audio/webm;codecs=opus' }; // or 'audio/mp3' if supported
-        const options = { mimeType: 'audio/*' }; // or 'audio/mp3' if supported
+        const options = { mimeType: 'audio/webm;codecs=opus' }; // or 'audio/mp3' if supported
+       // const options = { mimeType: 'audio/*' }; // or 'audio/mp3' if supported
         const mediaRecorder = new MediaRecorder(stream, options);
 
         audioChunks[channel] = [];
