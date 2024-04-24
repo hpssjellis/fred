@@ -37,18 +37,20 @@
            console.log('start')
            document.getElementById('myStart1').style.backgroundColor = 'red';
           //  document.getElementById('myStop1').style.backgroundColor  = 'red';
-           this.value = this.value.replace('Record', 'Stop  ')
-           console.log(this.value)
-           startRecording(1);
+
+          // console.log(this.value)
+           startRecording(1);         
+            this.value = this.value.replace('Record', 'Stop  ')
 
         } else {
            console.log('stop')
-            this.value = 'Record Channel 1'
+           // this.value = 'Record Channel 1'
            document.getElementById('myStart1').style.backgroundColor = 'gray';
         //   document.getElementById('myStop1').style.backgroundColor  = 'green';
 
-            console.log(this.value)
+           // console.log(this.value)
            stopRecording(1, 'myName1');  
+            this.value = 'Record Channel 1'
 
         }
 
