@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,25 +13,18 @@
     Original Audio: <audio id="originalAudio" controls></audio>
     Trimmed Audio: <audio id="trimmedAudio" controls></audio>
     <script>
-
-
-
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let audioBuffer = null;
-let trimmedBuffer = null;
 
-function loadAudio(input) {
+async function loadAudio(input) {
     const file = input.files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = async function (e) {
-            const fileResult = e.target.result;
-            audioContext.decodeAudioData(fileResult, function (buffer) {
-                audioBuffer = buffer; // Save the full audio buffer
-                updateTrim(); // Update trimming based on initial values
-                const originalAudioUrl = URL.createObjectURL(new Blob([fileResult], {type: 'audio/mp3'}));
-                document.getElementById('originalAudio').src = originalAudioUrl;
-            });
+        reader.onload = async function(e) {
+            const arrayBuffer = e.target.result;
+            audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            updateTrim(); // Initially update trim to play full audio
+            document.getElementById('originalAudio').src = URL.createObjectURL(file);
         };
         reader.readAsArrayBuffer(file);
     }
@@ -41,52 +33,31 @@ function loadAudio(input) {
 function updateTrim() {
     const startTrim = parseFloat(document.getElementById('startTrim').value);
     const endTrim = parseFloat(document.getElementById('endTrim').value);
-    const duration = endTrim - startTrim;
-
-    if (audioBuffer) {
-        // Calculate start and end frames based on the audio sample rate
-        const startFrame = startTrim * audioBuffer.sampleRate;
-        const endFrame = endTrim * audioBuffer.sampleRate;
-        const durationFrames = endFrame - startFrame;
-
-        // Create a new buffer for the trimmed audio
-        trimmedBuffer = audioContext.createBuffer(audioBuffer.numberOfChannels, durationFrames, audioBuffer.sampleRate);
-
-        // Copy the trimmed segment to the new buffer
-        for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-            const channelData = audioBuffer.getChannelData(channel);
-            const trimmedChannelData = trimmedBuffer.getChannelData(channel);
-            for (let i = 0; i < durationFrames; i++) {
-                trimmedChannelData[i] = channelData[startFrame + i];
-            }
-        }
-
-        const trimmedAudio = audioContext.createBufferSource();
-        trimmedAudio.buffer = trimmedBuffer;
-        trimmedAudio.connect(audioContext.destination);
-        trimmedAudio.start(0, startTrim, duration);
-
-        // Convert the trimmed audio buffer back to a Blob and set it as the source for the audio control
-        audioContext.decodeAudioData(trimmedBuffer, function(decodedData) {
-            const reader = new FileReader();
-            reader.readAsArrayBuffer(decodedData);
-            reader.onloadend = function() {
-                const blob = new Blob([reader.result], { type: 'audio/mp3' });
-                const url = URL.createObjectURL(blob);
-                document.getElementById('trimmedAudio').src = url;
-            };
-        });
-    }
+    playTrimmedAudio(startTrim, endTrim);
 }
 
+function playTrimmedAudio(startTrim, endTrim) {
+    if (!audioBuffer) return;
 
+    // Stop previously playing trimmed audio if any
+    if (window.currentTrimmedAudioSource) {
+        window.currentTrimmedAudioSource.stop();
+    }
 
-      
+    // Create a new buffer source for playing trimmed audio
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+
+    // Setup start and duration for trimmed playback
+    const duration = endTrim - startTrim;
+
+    source.connect(audioContext.destination);
+    source.start(0, startTrim, duration);
+
+    // Keep a reference to stop it if needed
+    window.currentTrimmedAudioSource = source;
+}
+
     </script>
 </body>
 </html>
-
-
-
-
-
