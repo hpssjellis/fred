@@ -3,10 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>Channel Looper</title>
-
-    <script src="https://unpkg.com/audiobuffer-to-wav"></script>
-
-    
 </head>
 <body>
 <h2>Music Multi Channel Javascript Looper</h2>
@@ -458,7 +454,7 @@ function startRecording(channel) {
 
  
 
-/*
+
 function loadFile(channel, event) {
     const file = event.target.files[0];
     if (file) {
@@ -493,177 +489,6 @@ function loadFile(channel, event) {
 }
 
 
-    */
-
-
-
-/*
-function loadFile(channel, event) {
-    const file = event.target.files[0];
-    if (file) {
-        const fileUrl = URL.createObjectURL(file);
-        audioElements[channel].src = fileUrl;
-
-        // Set the download link, although this might not be needed for MP4 as you won't download it as audio
-        downloadLinks[channel].href = fileUrl;
-        downloadLinks[channel].download = file.name;
-        downloadLinks[channel].style.display = 'inline';
-        downloadLinks[channel].textContent = `Download ${file.name}`;
-        document.getElementById(`myName${channel}`).value = file.name;
-
-        // Decode the audio data to an AudioBuffer
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const arrayBuffer = e.target.result;
-            audioContext.decodeAudioData(arrayBuffer, (decodedData) => {
-                audioBuffers[channel] = decodedData;
-                console.log(`Audio data loaded and decoded for channel ${channel}.`);
-
-                // Trim the audio buffer by 1.3 seconds from the start
-                const trimStart = 1.3; // seconds
-                const trimStartSample = Math.floor(trimStart * decodedData.sampleRate);
-                const trimmedLength = decodedData.length - trimStartSample;
-
-                const trimmedBuffer = audioContext.createBuffer(
-                    decodedData.numberOfChannels, 
-                    trimmedLength, 
-                    decodedData.sampleRate
-                );
-
-                // Copy the trimmed audio data into the new buffer
-                for (let i = 0; i < decodedData.numberOfChannels; i++) {
-                    const channelData = decodedData.getChannelData(i);
-                    const trimmedChannelData = trimmedBuffer.getChannelData(i);
-                    for (let j = 0; j < trimmedLength; j++) {
-                        trimmedChannelData[j] = channelData[j + trimStartSample];
-                    }
-                }
-
-                // Play the trimmed audio
-                const source = audioContext.createBufferSource();
-                source.buffer = trimmedBuffer;
-                source.connect(audioContext.destination);
-                source.start();
-
-                // Update the src of the audio element to play the trimmed audio
-                // Note: This requires a workaround as AudioBuffer can't be directly used in <audio>
-                // You would typically need to convert this to a Blob and then to ObjectURL if needed for an <audio> element
-                // Here we demonstrate playback directly via the Web Audio API
-                audioElements[channel].src = ''; // Clear existing src if any
-                audioElements[channel].srcObject = source; // Not standard, see note above
-
-            }, (error) => {
-                console.error(`Error decoding audio data for channel ${channel}:`, error);
-            });
-        };
-        reader.readAsArrayBuffer(file);
-    }
-}
-
-
-*/
-
-   function loadFile(channel, event) {
-    const file = event.target.files[0];
-    if (file) {
-        const fileUrl = URL.createObjectURL(file);
-        audioElements[channel].src = fileUrl;
-
-        // Decode the audio data to an AudioBuffer
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const arrayBuffer = e.target.result;
-            audioContext.decodeAudioData(arrayBuffer, (decodedData) => {
-                audioBuffers[channel] = decodedData;
-                console.log(`Audio data loaded and decoded for channel ${channel}.`);
-
-                // Trim the audio buffer by 1.3 seconds from the start
-                const trimStart = 1.3; // seconds
-                const trimStartSample = Math.floor(trimStart * decodedData.sampleRate);
-                const trimmedLength = decodedData.length - trimStartSample;
-
-                const trimmedBuffer = audioContext.createBuffer(
-                    decodedData.numberOfChannels, 
-                    trimmedLength, 
-                    decodedData.sampleRate
-                );
-
-                // Copy the trimmed audio data into the new buffer
-                for (let i = 0; i < decodedData.numberOfChannels; i++) {
-                    const channelData = decodedData.getChannelData(i);
-                    const trimmedChannelData = trimmedBuffer.getChannelData(i);
-                    for (let j = 0; j < trimmedLength; j++) {
-                        trimmedChannelData[j] = channelData[j + trimStartSample];
-                    }
-                }
-
-                // Convert AudioBuffer to WAV using audiobuffer-to-wav
-                const wav = bufferToWave(trimmedBuffer, trimmedBuffer.length);
-                const blob = new Blob([wav], { type: 'audio/wav' });
-                const url = URL.createObjectURL(blob);
-
-                // Update the src of the audio element to play the trimmed audio
-                audioElements[channel].src = url;
-            }, (error) => {
-                console.error(`Error decoding audio data for channel ${channel}:`, error);
-            });
-        };
-        reader.readAsArrayBuffer(file);
-    }
-}
-
-    /*
-function bufferToWave(abuffer, len) {
-  const numOfChan = abuffer.numberOfChannels,
-        length = len * numOfChan * 2 + 44,
-        buffer = new ArrayBuffer(length),
-        view = new DataView(buffer),
-        channels = [], i, sample,
-        offset = 0,
-        pos = 0;
-
-  function setUint16(data) {
-    view.setUint16(pos, data, true);
-    pos += 2;
-  }
-
-  function setUint32(data) {
-    view.setUint32(pos, data, true);
-    pos += 4;
-  }
-
-  setUint32(0x46464952); // "RIFF"
-  setUint32(length - 8); // file length - 8
-  setUint32(0x45564157); // "WAVE"
-  setUint32(0x20746d66); // "fmt " chunk
-  setUint32(16); // length = 16
-  setUint16(1); // PCM (uncompressed)
-  setUint16(numOfChan);
-  setUint32(abuffer.sampleRate);
-  setUint32(abuffer.sampleRate * 2 * numOfChan); // byte rate
-  setUint16(numOfChan * 2); // block align
-  setUint16(16); // bits per sample
-  setUint32(0x61746164); // "data" - chunk
-  setUint32(length - pos - 4); // chunk length
-
-  for (i = 0; i < numOfChan; i++) {
-    channels.push(abuffer.getChannelData(i));
-  }
-
-  while (pos < length) {
-    for (i = 0; i < numOfChan; i++) { // interleave channels
-      sample = Math.max(-1, Math.min(1, channels[i][offset])); // clamp
-      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0; // scale to 16-bit signed int
-      view.setInt16(pos, sample, true);
-      pos += 2;
-    }
-    offset++ // next sample
-  }
-
-  return buffer;
-}
- 
-
 function playAllChannels() {
     console.log('Object.values(audioElements)')
     console.log(Object.values(audioElements))
@@ -677,63 +502,8 @@ function playAllChannels() {
         audio.play();
     });
 }
-    */
-
-
-
-function bufferToWave(abuffer, len) {
-  const numOfChan = abuffer.numberOfChannels,
-        length = len * numOfChan * 2 + 44,
-        buffer = new ArrayBuffer(length),
-        view = new DataView(buffer),
-        channels = [];
-  let i, sample, offset = 0, pos = 0;
-
-  function setUint16(data) {
-    view.setUint16(pos, data, true);
-    pos += 2;
-  }
-
-  function setUint32(data) {
-    view.setUint32(pos, data, true);
-    pos += 4;
-  }
-
-  setUint32(0x46464952); // "RIFF"
-  setUint32(length - 8); // file length - 8
-  setUint32(0x45564157); // "WAVE"
-  setUint32(0x20746d66); // "fmt " chunk
-  setUint32(16); // length = 16
-  setUint16(1); // PCM (uncompressed)
-  setUint16(numOfChan);
-  setUint32(abuffer.sampleRate);
-  setUint32(abuffer.sampleRate * numOfChan * 2); // byte rate
-  setUint16(numOfChan * 2); // block align
-  setUint16(16); // bits per sample
-  setUint32(0x61746164); // "data" - chunk
-  setUint32(length - pos - 4); // chunk length
-
-  for (i = 0; i < numOfChan; i++) {
-    channels.push(abuffer.getChannelData(i));
-  }
-
-  while (pos < length) {
-    for (i = 0; i < numOfChan; i++) { // interleave channels
-      sample = Math.max(-1, Math.min(1, channels[i][offset])); // clamp
-      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0; // scale to 16-bit signed int
-      view.setInt16(pos, sample, true);
-      pos += 2;
-    }
-    offset++; // next sample
-  }
-
-  return buffer;
-}
-
-
-
-
     
+
 function stopAllAudio() {
     const audios = [1, 2, 3, 4, 5, 6, 7, 8, 9]; // Array of audio element IDs suffixes
     audios.forEach(num => {
