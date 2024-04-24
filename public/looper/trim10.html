@@ -23,26 +23,28 @@ async function loadAudio(input) {
         reader.onload = async function(e) {
             const arrayBuffer = e.target.result;
             audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            updateTrim(); // Initially update trim to play full audio
             document.getElementById('originalAudio').src = URL.createObjectURL(file);
+            updateTrim(); // Initially update trim to ensure full audio is ready
         };
         reader.readAsArrayBuffer(file);
     }
 }
 
 function updateTrim() {
-    const startTrim = parseFloat(document.getElementById('startTrim').value);
-    const endTrim = parseFloat(document.getElementById('endTrim').value);
+    let startTrim = parseFloat(document.getElementById('startTrim').value);
+    let endTrim = parseFloat(document.getElementById('endTrim').value);
+
+    // Validate and correct trimming boundaries
+    if (startTrim >= endTrim) {
+        endTrim = startTrim + 0.1; // Ensure there's at least a small segment
+        document.getElementById('endTrim').value = endTrim;
+    }
+
     playTrimmedAudio(startTrim, endTrim);
 }
 
 function playTrimmedAudio(startTrim, endTrim) {
     if (!audioBuffer) return;
-
-    // Stop previously playing trimmed audio if any
-    if (window.currentTrimmedAudioSource) {
-        window.currentTrimmedAudioSource.stop();
-    }
 
     // Create a new buffer source for playing trimmed audio
     const source = audioContext.createBufferSource();
@@ -54,7 +56,10 @@ function playTrimmedAudio(startTrim, endTrim) {
     source.connect(audioContext.destination);
     source.start(0, startTrim, duration);
 
-    // Keep a reference to stop it if needed
+    // Handle stopping of previously playing trimmed audio
+    if (window.currentTrimmedAudioSource) {
+        window.currentTrimmedAudioSource.stop();
+    }
     window.currentTrimmedAudioSource = source;
 }
 
