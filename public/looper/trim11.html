@@ -11,7 +11,7 @@
     End Trim (seconds): <input type="number" id="endTrim" value="0" min="0" step="0.1" onchange="updateTrim()">
     <br>
     Original Audio: <audio id="originalAudio" controls></audio>
-    Trimmed Audio: <audio id="trimmedAudio" controls></audio>
+    <button onclick="replaceOriginalAudio()">Replace Original Audio</button>
     <script>
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let audioBuffer = null;
@@ -24,7 +24,6 @@ async function loadAudio(input) {
             const arrayBuffer = e.target.result;
             audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
             document.getElementById('originalAudio').src = URL.createObjectURL(file);
-            updateTrim(); // Initially update trim to ensure full audio is ready
         };
         reader.readAsArrayBuffer(file);
     }
@@ -33,46 +32,41 @@ async function loadAudio(input) {
 function updateTrim() {
     let startTrim = parseFloat(document.getElementById('startTrim').value);
     let endTrim = parseFloat(document.getElementById('endTrim').value);
-
-    // Validate and correct trimming boundaries
     if (startTrim >= endTrim) {
         endTrim = startTrim + 0.1; // Ensure there's at least a small segment
         document.getElementById('endTrim').value = endTrim;
     }
-
-    playTrimmedAudio(startTrim, endTrim);
 }
 
-function playTrimmedAudio(startTrim, endTrim) {
-    if (!audioBuffer) return;
+async function replaceOriginalAudio() {
+    const startTrim = parseFloat(document.getElementById('startTrim').value);
+    const endTrim = parseFloat(document.getElementById('endTrim').value);
+    if (!audioBuffer || startTrim >= endTrim) return;
 
-    // Create a new buffer source for playing trimmed audio
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
+    const frameCount = (endTrim - startTrim) * audioBuffer.sampleRate;
+    const offlineContext = new OfflineAudioContext(audioBuffer.numberOfChannels, frameCount, audioBuffer.sampleRate);
+    const bufferSource = offlineContext.createBufferSource();
+    bufferSource.buffer = audioBuffer;
 
-    // Setup start and duration for trimmed playback
-    const duration = endTrim - startTrim;
+    bufferSource.connect(offlineContext.destination);
+    bufferSource.start(0, startTrim, endTrim - startTrim);
 
-    const offlineContext = new OfflineAudioContext(audioBuffer.numberOfChannels, (endTrim - startTrim) * audioBuffer.sampleRate, audioBuffer.sampleRate);
-    const offlineSource = offlineContext.createBufferSource();
-    offlineSource.buffer = audioBuffer;
-
-    offlineSource.connect(offlineContext.destination);
-    offlineSource.start(0, startTrim, duration);
-
-    offlineContext.startRendering().then(renderedBuffer => {
-        const renderedBlob = new Blob([renderedBuffer], { type: 'audio/wav' });
-        const url = URL.createObjectURL(renderedBlob);
-        document.getElementById('trimmedAudio').src = url;
-    });
-
-    // Keep a reference to stop it if needed
-    if (window.currentTrimmedAudioSource) {
-        window.currentTrimmedAudioSource.stop();
-    }
-    window.currentTrimmedAudioSource = source;
+    const renderedBuffer = await offlineContext.startRendering();
+    const audioBlob = await bufferToWave(renderedBuffer, frameCount);
+    const audioUrl = URL.createObjectURL(audioBlob);
+    document.getElementById('originalAudio').src = audioUrl;
 }
 
-    </script>
-</body>
-</html>
+// Helper function to convert AudioBuffer to a WAV file Blob
+function bufferToWave(abuffer, len) {
+  const numOfChan = abuffer.numberOfChannels,
+        length = len * numOfChan * 2 + 44,
+        buffer = new ArrayBuffer(length),
+        view = new DataView(buffer),
+        channels = [], i, sample,
+        offset = 0,
+        pos = 0;
+
+  // write WAVE header
+  setUint32(0x46464952);                         // "RIFF"
+  setUint32
