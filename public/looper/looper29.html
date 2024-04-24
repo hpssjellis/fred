@@ -33,32 +33,17 @@
 
     
     <input id="myStart1" type="button" value="Record Channel 1"  style=" background-Color:lime; " onclick="{
-
-        if ( this.value.startsWith('Record') ) {
-           console.log('start')
-           document.getElementById('myStart1').style.backgroundColor = 'red';
-          //  document.getElementById('myStop1').style.backgroundColor  = 'red';
-
-          // console.log(this.value)
-
-            document.getElementById('myStart1').value = 'Stop Recording 1'
-           startRecording(1);         
-           // document.getElementById('myStart1').value = this.value.replace('Record', 'Stop  ')
-
-        } else {
-           console.log('stop')
-           // this.value = 'Record Channel 1'
-           document.getElementById('myStart1').style.backgroundColor = 'lime';
-        //   document.getElementById('myStop1').style.backgroundColor  = 'green';
-
-           // console.log(this.value)
-            setTimeout(function () {
-                         document.getElementById('myStart1').value = 'Record Channel 1'
-            }, 2000);
-           stopRecording(1, 'myName1');
-
-        }
-    
+       if ( this.value.startsWith('Record') ) {
+         document.getElementById('myStart1').style.backgroundColor = 'red';
+         document.getElementById('myStart1').value = 'Stop Recording 1'
+         startRecording(1);         
+       } else {
+         document.getElementById('myStart1').style.backgroundColor = 'lime';
+         setTimeout(function () {
+           document.getElementById('myStart1').value = 'Record Channel 1'
+         }, 500);
+         stopRecording(1, 'myName1');
+       }
     }">
 
 
