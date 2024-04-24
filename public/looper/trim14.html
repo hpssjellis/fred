@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Looping Audio Control SPA</title>
+</head>
+<body>
+    <h1>Looping Audio Control</h1>
+    <input type="file" accept="audio/*" onchange="loadAudio(this)">
+    <br>
+    <label for="startLoopTime">Loop start (seconds):</label>
+    <input type="number" id="startLoopTime" value="5" step="0.1">
+    <label for="endLoopTime">Loop end (seconds):</label>
+    <input type="number" id="endLoopTime" value="10" step="0.1">
+    <br>
+    <button onclick="startLoop()">Start Loop</button>
+    <button onclick="stopLoop()">Stop Loop</button>
+
+    <script>
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let audioBuffer = null;
+        let sourceNode = null;
+
+        function loadAudio(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const arrayBuffer = e.target.result;
+                    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function startLoop() {
+            const loopStart = parseFloat(document.getElementById('startLoopTime').value);
+            const loopEnd = parseFloat(document.getElementById('endLoopTime').value);
+
+            if (audioBuffer && loopStart < loopEnd) {
+                if (sourceNode) {
+                    sourceNode.stop(); // Stop previous playback if exists
+                }
+                sourceNode = audioContext.createBufferSource();
+                sourceNode.buffer = audioBuffer;
+                sourceNode.loop = true;
+                sourceNode.loopStart = loopStart;
+                sourceNode.loopEnd = loopEnd;
+                sourceNode.connect(audioContext.destination);
+                sourceNode.start(0);
+            } else {
+                alert('Please ensure the loop start time is less than the end time and the file is loaded.');
+            }
+        }
+
+        function stopLoop() {
+            if (sourceNode) {
+                sourceNode.stop();
+                sourceNode = null;
+            }
+        }
+    </script>
+</body>
+</html>
