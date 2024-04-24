@@ -458,7 +458,9 @@ function startRecording(channel) {
 
 
  
+/*
 
+// bad first change
 
 function loadFile(channel, event) {
     const file = event.target.files[0];
@@ -492,6 +494,46 @@ function loadFile(channel, event) {
         reader.readAsArrayBuffer(file);
     }
 }
+
+    */
+
+
+    function loadFile(channel, event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const arrayBuffer = e.target.result;
+            const audioContext = new AudioContext();
+            audioContext.decodeAudioData(arrayBuffer, (decodedData) => {
+                const duration = decodedData.duration;
+                const startTrim = Math.min(duration - 3, 2); // Trim 2 seconds from the front and 3 seconds from the back
+                let endTrim = Math.max(startTrim + 0.1, duration - 3); // Ensure there's at least 0.1 seconds of runtime
+                if (endTrim > duration) {
+                    endTrim = duration; // If the audio is too short, set endTrim to the end of the audio
+                }
+                const frameCount = (endTrim - startTrim) * decodedData.sampleRate;
+
+                const offlineContext = new OfflineAudioContext(decodedData.numberOfChannels, frameCount, decodedData.sampleRate);
+                const bufferSource = offlineContext.createBufferSource();
+                bufferSource.buffer = decodedData;
+
+                bufferSource.connect(offlineContext.destination);
+                bufferSource.start(0, startTrim, endTrim - startTrim);
+
+                offlineContext.startRendering().then((renderedBuffer) => {
+                    const audioElement = audioElements[channel];
+                    const audioUrl = URL.createObjectURL(bufferToWave(renderedBuffer));
+                    audioElement.src = audioUrl;
+                });
+            }, (error) => {
+                console.error(`Error decoding audio data for channel ${channel}:`, error);
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    }
+}
+
 
 function bufferToWave(abuffer) {
     const numOfChan = abuffer.numberOfChannels;
