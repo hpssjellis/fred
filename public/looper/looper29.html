@@ -50,9 +50,12 @@
            // this.value = 'Record Channel 1'
            document.getElementById('myStart1').style.backgroundColor = 'lime';
         //   document.getElementById('myStop1').style.backgroundColor  = 'green';
-            document.getElementById('myStart1').value = 'Record Channel 1'
-           // console.log(this.value)
 
+           // console.log(this.value)
+            setTimeout(function () {
+                         document.getElementById('myStart1').value = 'Record Channel 1'
+            }, 2000);
+           stopRecording(1, 'myName1');
 
         }
     
