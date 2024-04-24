@@ -27,16 +27,41 @@
 <div>   
     <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(1, event)">
     <input type="text" id="myName1" size=10 value="Channel1.mp3">
+
+
+
+    
     <input id="myStart1" type="button" value="Record Channel 1"  style=" background-Color:lime; " onclick="{
-        document.getElementById('myStart1').style.backgroundColor = 'gray';
-        document.getElementById('myStop1').style.backgroundColor  = 'red';
-        startRecording(1);
+
+
+        if (this.value.substring(0, 3) ===  'Rec') {
+           document.getElementById('myStart1').style.backgroundColor = 'gray';
+           document.getElementById('myStop1').style.backgroundColor  = 'red';
+           startRecording(1);
+           this.value.replace('Record', 'Stop  ')
+        } else {
+           document.getElementById('myStart1').style.backgroundColor = 'gray';
+           document.getElementById('myStop1').style.backgroundColor  = 'green';
+           stopRecording(1, 'myName1');  
+           this.value.replace('Stop  ', 'Record')
+        }
+
+
+
+        
     }">
+
+    
     <input id="myStop1"  type="button"value="Stop Channel 1" onclick="{
         document.getElementById('myStart1').style.backgroundColor = 'gray';
         document.getElementById('myStop1').style.backgroundColor  = 'green';
         stopRecording(1, 'myName1');
     }">    
+
+
+
+
+    
     <input type="button" value="Once" onclick="{
         if (this.value == 'Loop') {
             audioElements[1].loop = false;
