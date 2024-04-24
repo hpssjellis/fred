@@ -11,7 +11,6 @@
     <input type="button" value="Play All Channels" onclick="playAllChannels()">
     <input type=button value="Stop All Audio" onclick="stopAllAudio()">
         <input type="text" id="myMergeName" size=10 value="Merge-All.mp3">
-    <input type="button" value="Merge and Download Tracks" onclick="mergeAndDownloadTracks()">
 
 
 
@@ -351,7 +350,10 @@
 <div>
     <input type="button" value="Play All Channels" onclick="playAllChannels()">
     <input type=button value="Stop All Audio" onclick="stopAllAudio()">
-   <input type="button" value="Merge and Download Tracks" onclick="mergeAndDownloadTracks()">
+
+<!-- Button to merge or concatenate all tracks -->
+<button onclick="processAudioUsingCrunker('merge')">Merge All Tracks</button>
+<button onclick="processAudioUsingCrunker('concat')">Concatenate All Tracks</button>
 </div>
 
 <script>
@@ -538,25 +540,7 @@ function stopTimer(channel) {
 
 
   // for crunker
-/*
-async function processSingleFile(file) {
-    const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
-    const crunker = new Crunker();
 
-    try {
-        // Decode the file to an AudioBuffer
-        const buffer = await file.arrayBuffer();
-        const audioBuffer = await crunker._context.decodeAudioData(buffer);
-
-        // Export the audio buffer to an MP3 file
-        const output = await crunker.export(audioBuffer, 'audio/mp3');
-        crunker.download(output.blob, 'processedFile.mp3');
-    } catch (error) {
-        console.error('Error processing the file:', error);
-        alert('Failed to process the audio file.');
-    }
-}
-*/
 
 
 async function processAudioUsingCrunker(operation, trackId = null) {
@@ -602,32 +586,6 @@ async function processAudioUsingCrunker(operation, trackId = null) {
   
 
 
-    /*
-
-  async function mergeAndDownloadTracks() {
-    if (Object.keys(audioBuffers).length < 2) {
-        alert('Please record at least two tracks before merging.');
-        return;
-    }
-
-    const myMergeFilename = document.getElementById('myMergeName').value    
-    // Dynamically load Crunker only when needed
-    const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
-    const crunker = new Crunker({ sampleRate: 48000 });
-       console.log('Merging tracks...');
-    try {
-        const buffers = Object.values(audioBuffers).filter(b => b); // Filter out any empty slots
-        const mergedAudio = await crunker.mergeAudio(buffers);
-        const output = await crunker.export(mergedAudio, 'audio/mp3');
-        crunker.download(output.blob, myMergeFilename);
-    } catch (error) {
-        console.error('Error during audio processing:', error);
-        alert('Error during audio processing. Please check the console for more details.');
-    }
-    console.log('Done Crunker...');
-}
-
-    */
 </script>
 
 <h6>Use at your own risk<br>
