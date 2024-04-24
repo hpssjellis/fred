@@ -10,13 +10,11 @@
 <div>
     <input type="button" value="Play All Channels" onclick="playAllChannels()">
     <input type=button value="Stop All Audio" onclick="stopAllAudio()">
-        <input type="text" id="myMergeName" size=10 value="Merge-All.mp3">
+    <input type="text" id="myMergeName" size=10 value="Merge-All.mp3">
 
-
-
-<!-- Button to merge or concatenate all tracks -->
-<button onclick="processAudioUsingCrunker('merge')">Merge All Tracks</button>
-<button onclick="processAudioUsingCrunker('concat')">Concatenate All Tracks</button>
+    <!-- Button to merge or concatenate all tracks -->
+    <button onclick="processAudioUsingCrunker('merge')">Merge All Tracks</button>
+    <button onclick="processAudioUsingCrunker('concat')">Concatenate All Tracks</button>
 
 
 
@@ -26,13 +24,12 @@
     
 <div>      
     <input type="text" id="myName1" size=10 value="Channel1.mp3">
-    <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(1, event)">
+    <input type="file" accept="audio/mp3,video/mp4" onchange="{
+        document.getElementById('myStart1').style.backgroundColor = 'gray';
+        loadFile(1, event)
+    }">
 
-
-
-
-    
-    <input id="myStart1" type="button" value="Record Channel 1"  style=" background-Color:lime; " onclick="{
+    <input id="myStart1" type="button" value="Record Channel 1"  style=" background-Color:lime; height:200%; " onclick="{
        if ( this.value.startsWith('Record') ) {
          document.getElementById('myStart1').style.backgroundColor = 'red';
          document.getElementById('myStart1').value = 'Stop Recording 1'
@@ -45,29 +42,6 @@
          stopRecording(1, 'myName1');
        }
     }">
-
-
-
-
-
-
-
-
-
-
-
-    
-
-    <!--
-    <input id="myStop1"  type="button"value="Stop Channel 1" onclick="{
-        document.getElementById('myStart1').style.backgroundColor = 'gray';
-        document.getElementById('myStop1').style.backgroundColor  = 'green';
-        stopRecording(1, 'myName1');
-    }">    -->
-
-
-
-
     
     <input type="button" value="Once" onclick="{
         if (this.value == 'Loop') {
@@ -85,6 +59,9 @@
 
 
 
+
+
+    
     
     <div>
     <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(2, event)">
