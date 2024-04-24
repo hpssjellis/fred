@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Audio Trimmer with AudioWorklet</title>
+</head>
+<body>
+<input type="file" accept="audio/*" onchange="loadAudio(this)">
+<br>
+Start Trim (seconds): <input type="number" id="startTrim" value="0" min="0" step="0.1" onchange="updateTrim()">
+End Trim (seconds): <input type="number" id="endTrim" value="0" min="0" step="0.1" onchange="updateTrim()">
+<br>
+<button onclick="replaceOriginalAudio()">Trim Audio</button>
+<br>
+Trimmed Audio: <audio id="trimmedAudio" controls></audio>
+
+<script>
+let audioContext = new AudioContext();
+let audioBuffer = null;
+let startTrim = 0;
+let endTrim = 0;
+
+async function loadAudio(input) {
+  const file = input.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = async function (e) {
+      const arrayBuffer = e.target.result;
+      audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function updateTrim() {
+  startTrim = parseFloat(document.getElementById('startTrim').value);
+  endTrim = parseFloat(document.getElementById('endTrim').value);
+  if (startTrim >= endTrim) {
+    endTrim = startTrim + 0.1; // Ensure there's at least a small segment
+    document.getElementById('endTrim').value = endTrim;
+  }
+}
+
+async function replaceOriginalAudio() {
+  if (!audioBuffer || startTrim >= endTrim) return;
+
+  const frameCount = (endTrim - startTrim) * audioBuffer.sampleRate;
+  const offlineContext = new OfflineAudioContext(audioBuffer.numberOfChannels, frameCount, audioBuffer.sampleRate);
+  const bufferSource = offlineContext.createBufferSource();
+  bufferSource.buffer = audioBuffer;
+
+  bufferSource.connect(offlineContext.destination);
+  bufferSource.start(0, startTrim, endTrim - startTrim);
+
+  const renderedBuffer = await offlineContext.startRendering();
+  const audioBlob = await bufferToWave(renderedBuffer, frameCount);
+  const audioUrl = URL.createObjectURL(audioBlob);
+  document.getElementById('trimmedAudio').src = audioUrl;
+}
+
+// Helper function to convert AudioBuffer to a WAV file Blob
+function bufferToWave(abuffer, len) {
+  const numOfChan = abuffer.numberOfChannels,
+        length = len * numOfChan * 2 + 44,
+        buffer = new ArrayBuffer(length),
+        view = new DataView(buffer),
+        channels = [], i, sample,
+        offset = 0,
+        pos = 0;
+
+  // write WAVE header
+  setUint32(0x46464952);                         // "RIFF"
+  setUint32(view, 36 + length, true);             // file length - 8
+  setUint32(0x45564157);                         // "WAVE"
+
+  setUint32(0x20746d66);                         // "fmt " chunk
+  setUint32(view, 16, true);                     // length = 16
+  setUint16(view, 1, true);                      // PCM (uncompressed)
+  setUint16(view, numOfChan, true);              // number of channels
+  setUint32(view, abuffer.sampleRate, true);      // sample rate
+  setUint32(view, abuffer.sampleRate * 2 * numOfChan, true); // byte rate
+  setUint16(view, numOfChan * 2, true);          // block align
+  setUint16(view, 16, true);                     // bits per sample
+
+  setUint32(0x61746164);                         // "data" - chunk
+  setUint32(view, length, true);                 // chunk length
+
+  // write interleaved data
+  for(i = 0; i < abuffer.numberOfChannels; i++){
+    channels.push(abuffer.getChannelData(i));
+  }
+
+  while(pos < length){
+    for(i = 0; i < numOfChan; i++){
+      // interleave channels
+      sample = Math.max(-1, Math.min(1, channels[i][offset])); // clamp
+      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0; // scale to 16-bit signed int
+      view.setInt16(pos, sample, true);          // update data chunk
+      pos += 2;
+    }
+    offset++                                     // next source sample
+  }
+
+  // create Blob
+  return new Blob([buffer], {type: "audio/wav"});
+
+}
+
+function setUint16(view, data, offset){
+  view.setUint16(offset, data, true);
+}
+
+function setUint32(view, data, offset){
+  view.setUint32(offset, data, true);
+}
+</script>
+</body>
+</html>
