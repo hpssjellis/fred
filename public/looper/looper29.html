@@ -35,8 +35,8 @@
 
         if (this.value.substring(0, 3) ===  'Rec') {
             console.log('start')
-           document.getElementById('myStart1').style.backgroundColor = 'gray';
-           document.getElementById('myStop1').style.backgroundColor  = 'red';
+           document.getElementById('myStart1').style.backgroundColor = 'red';
+         //  document.getElementById('myStop1').style.backgroundColor  = 'red';
            this.value = this.value.replace('Record', 'Stop  ')
             console.log(this.value)
            startRecording(1);
@@ -44,7 +44,7 @@
         } else {
            console.log('start')
            document.getElementById('myStart1').style.backgroundColor = 'gray';
-           document.getElementById('myStop1').style.backgroundColor  = 'green';
+        //   document.getElementById('myStop1').style.backgroundColor  = 'green';
            this.value = this.value.replace('Stop  ', 'Record')
             console.log(this.value)
            stopRecording(1, 'myName1');  
@@ -56,12 +56,12 @@
         
     }">
 
-    
+    <!--
     <input id="myStop1"  type="button"value="Stop Channel 1" onclick="{
         document.getElementById('myStart1').style.backgroundColor = 'gray';
         document.getElementById('myStop1').style.backgroundColor  = 'green';
         stopRecording(1, 'myName1');
-    }">    
+    }">    -->
 
 
 
@@ -431,7 +431,8 @@ function startRecording(channel) {
         }
     })
     .then(stream => {
-        const options = { mimeType: 'audio/webm;codecs=opus' }; // or 'audio/mp3' if supported
+      //  const options = { mimeType: 'audio/webm;codecs=opus' }; // or 'audio/mp3' if supported
+        const options = { mimeType: 'audio/*' }; // or 'audio/mp3' if supported
         const mediaRecorder = new MediaRecorder(stream, options);
 
         audioChunks[channel] = [];
