@@ -59,34 +59,44 @@
 
 
 
-
-
     
-    
-    <div>
-    <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(2, event)">
-    <input type="text" id="myName2" size=10 value="Channel2.mp3">
-    <input id="myStart2" type="button" value="Record Channel 2"  style=" background-Color:lime; " onclick="{
+<div>      
+    <input type="text" id="myName2" size=10 value="Channel2.mp3" style=" background-Color:lime;">
+    <input type="file" accept="audio/mp3,video/mp4"  size=10  onchange="{
         document.getElementById('myStart2').style.backgroundColor = 'gray';
-        document.getElementById('myStop2').style.backgroundColor  = 'red';
-        startRecording(2);
+        document.getElementById('myName2').style.backgroundColor = 'gray';
+        loadFile(2, event)
     }">
-    <input id="myStop2"  type="button"value="Stop Channel 2" onclick="{
-        document.getElementById('myStart2').style.backgroundColor = 'gray';
-        document.getElementById('myStop2').style.backgroundColor  = 'green';
-        stopRecording(2, 'myName2');
-    }">    
+
+    <input id="myStart2" type="button" value="Record Channel 2"  style=" background-Color:lime; height:75px; " onclick="{
+       if ( this.value.startsWith('Record') ) {
+         document.getElementById('myStart2').style.backgroundColor = 'red';
+         document.getElementById('myStart2').value = 'Stop Recording 2'
+         startRecording(2);         
+       } else {
+         document.getElementById('myStart2').style.backgroundColor = 'lime';
+         setTimeout(function () {
+           document.getElementById('myStart2').value = 'Record Channel 2'
+           document.getElementById('myStart2').style.backgroundColor = 'gray';
+           document.getElementById('myName2').style.backgroundColor = 'gray';
+         }, 500);
+         stopRecording(2, 'myName2');
+       }
+    }">
+    
     <input type="button" value="Once" onclick="{
         if (this.value == 'Loop') {
-            audioElements[2].loop = false;
+            audioElements[1].loop = false;
             this.value = 'Once';
         } else {
-            audioElements[2].loop = true;
+            audioElements[1].loop = true;
             this.value = 'Loop';
         }
     }"><br>
-    <audio id="audio2" controls></audio>
-    <a id="download2" style="display: none;">Download Channel 2</a>
+
+    <audio id="audio1" controls></audio>
+    <a id="download1" style="display: none;">Download Channel 1</a>
+    <br><br>
 </div>
 
 
