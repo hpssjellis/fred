@@ -20,8 +20,6 @@
     
 <div>      
     <input type="text" id="myName1"  value="Channel1.mp3" style=" background-Color:lime;">
-
-
     <input id="myStart1" type="button" value="Record Channel 1"  style=" background-Color:lime; height:75px; " onclick="{
        if ( this.value.startsWith('Record') ) {
          document.getElementById('myStart1').style.backgroundColor = 'red';
@@ -63,11 +61,7 @@
     
 <div>      
     <input type="text" id="myName2"  value="Channel2.mp3" style=" background-Color:lime;">
-    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
-        document.getElementById('myStart2').style.backgroundColor = 'gray';
-        document.getElementById('myName2').style.backgroundColor = 'gray';
-        loadFile(2, event)
-    }">
+
 
     <input id="myStart2" type="button" value="Record Channel 2"  style=" background-Color:lime; height:75px; " onclick="{
        if ( this.value.startsWith('Record') ) {
@@ -93,7 +87,13 @@
             audioElements[2].loop = true;
             this.value = 'Loop';
         }
-    }"><br>
+    }">    
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart2').style.backgroundColor = 'gray';
+        document.getElementById('myName2').style.backgroundColor = 'gray';
+        loadFile(2, event)
+    }">
+    <br>
 
     <audio id="audio2" controls></audio>
     <a id="download2" style="display: none;">Download Channel 2</a>
@@ -106,11 +106,7 @@
     
 <div>      
     <input type="text" id="myName3"  value="Channel3.mp3" style=" background-Color:lime;">
-    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
-        document.getElementById('myStart3').style.backgroundColor = 'gray';
-        document.getElementById('myName3').style.backgroundColor = 'gray';
-        loadFile(3, event)
-    }">
+
 
     <input id="myStart3" type="button" value="Record Channel 3"  style=" background-Color:lime; height:75px; " onclick="{
        if ( this.value.startsWith('Record') ) {
@@ -136,7 +132,13 @@
             audioElements[3].loop = true;
             this.value = 'Loop';
         }
-    }"><br>
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart3').style.backgroundColor = 'gray';
+        document.getElementById('myName3').style.backgroundColor = 'gray';
+        loadFile(3, event)
+    }">
+    <br>
 
     <audio id="audio3" controls></audio>
     <a id="download3" style="display: none;">Download Channel 1</a>
@@ -151,11 +153,7 @@
     
 <div>      
     <input type="text" id="myName4"  value="Channel4.mp3" style=" background-Color:lime;">
-    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
-        document.getElementById('myStart4').style.backgroundColor = 'gray';
-        document.getElementById('myName4').style.backgroundColor = 'gray';
-        loadFile(4, event)
-    }">
+
 
     <input id="myStart4" type="button" value="Record Channel 4"  style=" background-Color:lime; height:75px; " onclick="{
        if ( this.value.startsWith('Record') ) {
@@ -181,7 +179,13 @@
             audioElements[4].loop = true;
             this.value = 'Loop';
         }
-    }"><br>
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart4').style.backgroundColor = 'gray';
+        document.getElementById('myName4').style.backgroundColor = 'gray';
+        loadFile(4, event)
+    }">
+    <br>
 
     <audio id="audio4" controls></audio>
     <a id="download4" style="display: none;">Download Channel 1</a>
@@ -196,11 +200,7 @@
     
 <div>      
     <input type="text" id="myName5"  value="Channel5.mp3" style=" background-Color:lime;">
-    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
-        document.getElementById('myStart5').style.backgroundColor = 'gray';
-        document.getElementById('myName5').style.backgroundColor = 'gray';
-        loadFile(5, event)
-    }">
+    
 
     <input id="myStart5" type="button" value="Record Channel 5"  style=" background-Color:lime; height:75px; " onclick="{
        if ( this.value.startsWith('Record') ) {
@@ -226,7 +226,13 @@
             audioElements[5].loop = true;
             this.value = 'Loop';
         }
-    }"><br>
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart5').style.backgroundColor = 'gray';
+        document.getElementById('myName5').style.backgroundColor = 'gray';
+        loadFile(5, event)
+    }">
+    <br>
 
     <audio id="audio5" controls></audio>
     <a id="download5" style="display: none;">Download Channel 1</a>
@@ -248,11 +254,7 @@
     
 <div>      
     <input type="text" id="myName6"  value="Channel6.mp3" style=" background-Color:lime;">
-    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
-        document.getElementById('myStart6').style.backgroundColor = 'gray';
-        document.getElementById('myName6').style.backgroundColor = 'gray';
-        loadFile(6, event)
-    }">
+    
 
     <input id="myStart6" type="button" value="Record Channel 6"  style=" background-Color:lime; height:75px; " onclick="{
        if ( this.value.startsWith('Record') ) {
@@ -278,7 +280,13 @@
             audioElements[6].loop = true;
             this.value = 'Loop';
         }
-    }"><br>
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart6').style.backgroundColor = 'gray';
+        document.getElementById('myName6').style.backgroundColor = 'gray';
+        loadFile(6, event)
+    }">
+    <br>
 
     <audio id="audio6" controls></audio>
     <a id="download6" style="display: none;">Download Channel 1</a>
@@ -299,11 +307,7 @@
     
 <div>      
     <input type="text" id="myName7"  value="Channel7.mp3" style=" background-Color:lime;">
-    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
-        document.getElementById('myStart7').style.backgroundColor = 'gray';
-        document.getElementById('myName7').style.backgroundColor = 'gray';
-        loadFile(7, event)
-    }">
+    
 
     <input id="myStart7" type="button" value="Record Channel 7"  style=" background-Color:lime; height:75px; " onclick="{
        if ( this.value.startsWith('Record') ) {
@@ -329,7 +333,13 @@
             audioElements[7].loop = true;
             this.value = 'Loop';
         }
-    }"><br>
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart7').style.backgroundColor = 'gray';
+        document.getElementById('myName7').style.backgroundColor = 'gray';
+        loadFile(7, event)
+    }">
+    <br>
 
     <audio id="audio7" controls></audio>
     <a id="download7" style="display: none;">Download Channel 1</a>
@@ -349,11 +359,7 @@
     
 <div>      
     <input type="text" id="myName8"  value="Channel8.mp3" style=" background-Color:lime;">
-    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
-        document.getElementById('myStart8').style.backgroundColor = 'gray';
-        document.getElementById('myName8').style.backgroundColor = 'gray';
-        loadFile(8, event)
-    }">
+    
 
     <input id="myStart8" type="button" value="Record Channel 8"  style=" background-Color:lime; height:75px; " onclick="{
        if ( this.value.startsWith('Record') ) {
@@ -379,7 +385,13 @@
             audioElements[8].loop = true;
             this.value = 'Loop';
         }
-    }"><br>
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart8').style.backgroundColor = 'gray';
+        document.getElementById('myName8').style.backgroundColor = 'gray';
+        loadFile(8, event)
+    }">
+    <br>
 
     <audio id="audio8" controls></audio>
     <a id="download8" style="display: none;">Download Channel 1</a>
@@ -399,11 +411,7 @@
     
 <div>      
     <input type="text" id="myName9"  value="Channel9.mp3" style=" background-Color:lime;">
-    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
-        document.getElementById('myStart9').style.backgroundColor = 'gray';
-        document.getElementById('myName9').style.backgroundColor = 'gray';
-        loadFile(9, event)
-    }">
+    
 
     <input id="myStart9" type="button" value="Record Channel 9"  style=" background-Color:lime; height:75px; " onclick="{
        if ( this.value.startsWith('Record') ) {
@@ -429,7 +437,13 @@
             audioElements[9].loop = true;
             this.value = 'Loop';
         }
-    }"><br>
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart9').style.backgroundColor = 'gray';
+        document.getElementById('myName9').style.backgroundColor = 'gray';
+        loadFile(9, event)
+    }">
+    <br>
 
     <audio id="audio9" controls></audio>
     <a id="download9" style="display: none;">Download Channel 1</a>
