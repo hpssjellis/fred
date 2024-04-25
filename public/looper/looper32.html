@@ -102,8 +102,7 @@
 
 
 
-
-    
+  
 <div>      
     <input type="text" id="myName3"  value="Channel3.mp3" style=" background-Color:lime;">
 
@@ -147,10 +146,7 @@
 
 
 
-
   
-  
-    
 <div>      
     <input type="text" id="myName4"  value="Channel4.mp3" style=" background-Color:lime;">
 
@@ -194,10 +190,7 @@
 
 
 
-
-
-
-    
+  
 <div>      
     <input type="text" id="myName5"  value="Channel5.mp3" style=" background-Color:lime;">
     
@@ -241,17 +234,7 @@
 
 
 
-
-
-
-
-  
-
-
-  
-  
-  
-    
+   
 <div>      
     <input type="text" id="myName6"  value="Channel6.mp3" style=" background-Color:lime;">
     
@@ -295,15 +278,6 @@
 
 
 
-
-
-
-  
-
-
-  
-  
-  
     
 <div>      
     <input type="text" id="myName7"  value="Channel7.mp3" style=" background-Color:lime;">
@@ -348,14 +322,6 @@
 
 
 
-
-
-
-
-  
-
-
-  
     
 <div>      
     <input type="text" id="myName8"  value="Channel8.mp3" style=" background-Color:lime;">
@@ -400,15 +366,7 @@
 
 
 
-
-
-
-  
-
-
-  
-  
-    
+     
 <div>      
     <input type="text" id="myName9"  value="Channel9.mp3" style=" background-Color:lime;">
     
@@ -451,8 +409,8 @@
 </div>
 
 
-  
-    
+
+     
 <div>
     <input type="button" value="Play All Channels" onclick="playAllChannels()">
     <input type=button value="Stop All Audio" onclick="stopAllAudio()"><br>
@@ -526,8 +484,6 @@ function startRecording(channel) {
 }
 
 
-
-
     async function stopRecording(channel, myFileName) {
     mediaRecorders[channel].stop();
     mediaRecorders[channel].onstop = async () => {
@@ -554,9 +510,6 @@ function startRecording(channel) {
         stopTimer(channel);
     };
 }
-
-
- 
 
 
 function loadFile(channel, event) {
@@ -620,8 +573,6 @@ function stopAllAudio() {
 }
 
 
-
-
 function startTimer(channel) {
     let count = 0;
     const buttonId = 'myStart' + channel;
@@ -645,10 +596,7 @@ function stopTimer(channel) {
 }
 
 
-
   // for crunker
-
-
 
 async function processAudioUsingCrunker(operation, trackId = null) {
     if (Object.keys(audioBuffers).length === 0) {
@@ -691,8 +639,6 @@ async function processAudioUsingCrunker(operation, trackId = null) {
 }
 
   
-
-
 </script>
 
 <h6>Use at your own risk<br>
@@ -701,7 +647,6 @@ By Jeremy Ellis   at <a href="https://ca.linkedin.com/in/jeremy-ellis-4237a9bb">
 
 </h6>
     
-    
-    
+      
 </body>
 </html>
