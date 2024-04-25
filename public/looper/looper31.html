@@ -20,11 +20,7 @@
     
 <div>      
     <input type="text" id="myName1"  value="Channel1.mp3" style=" background-Color:lime;">
-    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
-        document.getElementById('myStart1').style.backgroundColor = 'gray';
-        document.getElementById('myName1').style.backgroundColor = 'gray';
-        loadFile(1, event)
-    }">
+
 
     <input id="myStart1" type="button" value="Record Channel 1"  style=" background-Color:lime; height:75px; " onclick="{
        if ( this.value.startsWith('Record') ) {
@@ -50,6 +46,11 @@
             audioElements[1].loop = true;
             this.value = 'Loop';
         }
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart1').style.backgroundColor = 'gray';
+        document.getElementById('myName1').style.backgroundColor = 'gray';
+        loadFile(1, event)
     }"><br>
 
     <audio id="audio1" controls></audio>
