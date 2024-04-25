@@ -23,13 +23,14 @@
 <br>
     
 <div>      
-    <input type="text" id="myName1" size=10 value="Channel1.mp3">
+    <input type="text" id="myName1" size=10 value="Channel1.mp3" style=" background-Color:lime;>
     <input type="file" accept="audio/mp3,video/mp4" onchange="{
         document.getElementById('myStart1').style.backgroundColor = 'gray';
+        document.getElementById('myName1').style.backgroundColor = 'gray';
         loadFile(1, event)
     }">
 
-    <input id="myStart1" type="button" value="Record Channel 1"  style=" background-Color:lime; height:200%; " onclick="{
+    <input id="myStart1" type="button" value="Record Channel 1"  style=" background-Color:lime; height:150px; " onclick="{
        if ( this.value.startsWith('Record') ) {
          document.getElementById('myStart1').style.backgroundColor = 'red';
          document.getElementById('myStart1').value = 'Stop Recording 1'
@@ -39,6 +40,7 @@
          setTimeout(function () {
            document.getElementById('myStart1').value = 'Record Channel 1'
            document.getElementById('myStart1').style.backgroundColor = 'gray';
+           document.getElementById('myName1').style.backgroundColor = 'gray';
          }, 500);
          stopRecording(1, 'myName1');
        }
