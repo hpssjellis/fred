@@ -86,36 +86,45 @@
     
     <input type="button" value="Once" onclick="{
         if (this.value == 'Loop') {
-            audioElements[1].loop = false;
+            audioElements[2].loop = false;
             this.value = 'Once';
         } else {
-            audioElements[1].loop = true;
+            audioElements[2].loop = true;
             this.value = 'Loop';
         }
     }"><br>
 
-    <audio id="audio1" controls></audio>
-    <a id="download1" style="display: none;">Download Channel 1</a>
+    <audio id="audio2" controls></audio>
+    <a id="download2" style="display: none;">Download Channel 2</a>
     <br><br>
 </div>
 
 
 
 
-
-  
-<div>
-    <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(3, event)">
-    <input type="text" id="myName3" size=10 value="Channel3.mp3">
-    <input id="myStart3" type="button" value="Record Channel 3"  style=" background-Color:lime; " onclick="{
+    
+<div>      
+    <input type="text" id="myName3"  value="Channel3.mp3" style=" background-Color:lime;">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
         document.getElementById('myStart3').style.backgroundColor = 'gray';
-        document.getElementById('myStop3').style.backgroundColor  = 'red';
-        startRecording(3);
+        document.getElementById('myName3').style.backgroundColor = 'gray';
+        loadFile(3, event)
     }">
-    <input id="myStop3"  type="button"value="Stop Channel 3" onclick="{
-        document.getElementById('myStart3').style.backgroundColor = 'gray';
-        document.getElementById('myStop3').style.backgroundColor  = 'green';
-        stopRecording(3, 'myName3');
+
+    <input id="myStart3" type="button" value="Record Channel 3"  style=" background-Color:lime; height:75px; " onclick="{
+       if ( this.value.startsWith('Record') ) {
+         document.getElementById('myStart3').style.backgroundColor = 'red';
+         document.getElementById('myStart3').value = 'Stop Recording 3'
+         startRecording(3);         
+       } else {
+         document.getElementById('myStart3').style.backgroundColor = 'lime';
+         setTimeout(function () {
+           document.getElementById('myStart3').value = 'Record Channel 3'
+           document.getElementById('myStart3').style.backgroundColor = 'gray';
+           document.getElementById('myName3').style.backgroundColor = 'gray';
+         }, 500);
+         stopRecording(3, 'myName3');
+       }
     }">
     
     <input type="button" value="Once" onclick="{
@@ -127,8 +136,10 @@
             this.value = 'Loop';
         }
     }"><br>
+
     <audio id="audio3" controls></audio>
-    <a id="download3" style="display: none;">Download Channel 3</a>
+    <a id="download3" style="display: none;">Download Channel 1</a>
+    <br><br>
 </div>
 
 
@@ -136,18 +147,29 @@
 
   
   
-<div>
-    <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(4, event)">
-    <input type="text" id="myName4" size=10 value="Channel4.mp3">
-    <input id="myStart4" type="button" value="Record Channel 4"  style=" background-Color:lime; " onclick="{
+    
+<div>      
+    <input type="text" id="myName4"  value="Channel4.mp3" style=" background-Color:lime;">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
         document.getElementById('myStart4').style.backgroundColor = 'gray';
-        document.getElementById('myStop4').style.backgroundColor  = 'red';
-        startRecording(4);
+        document.getElementById('myName4').style.backgroundColor = 'gray';
+        loadFile(4, event)
     }">
-    <input id="myStop4"  type="button"value="Stop Channel 4" onclick="{
-        document.getElementById('myStart4').style.backgroundColor = 'gray';
-        document.getElementById('myStop4').style.backgroundColor  = 'green';
-        stopRecording(4, 'myName4');
+
+    <input id="myStart4" type="button" value="Record Channel 4"  style=" background-Color:lime; height:75px; " onclick="{
+       if ( this.value.startsWith('Record') ) {
+         document.getElementById('myStart4').style.backgroundColor = 'red';
+         document.getElementById('myStart4').value = 'Stop Recording 4'
+         startRecording(4);         
+       } else {
+         document.getElementById('myStart4').style.backgroundColor = 'lime';
+         setTimeout(function () {
+           document.getElementById('myStart4').value = 'Record Channel 4'
+           document.getElementById('myStart4').style.backgroundColor = 'gray';
+           document.getElementById('myName4').style.backgroundColor = 'gray';
+         }, 500);
+         stopRecording(4, 'myName4');
+       }
     }">
     
     <input type="button" value="Once" onclick="{
@@ -159,9 +181,12 @@
             this.value = 'Loop';
         }
     }"><br>
+
     <audio id="audio4" controls></audio>
-    <a id="download4" style="display: none;">Download Channel 4</a>
+    <a id="download4" style="display: none;">Download Channel 1</a>
+    <br><br>
 </div>
+
 
 
 
