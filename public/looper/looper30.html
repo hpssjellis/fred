@@ -5,9 +5,9 @@
 <title>Channel Looper</title>
 </head>
 <body>
-<h2 align=center>Music Multi Channel Javascript Looper</h2>
+<h2 >Music Multi Channel Javascript Looper</h2>
 
-<div align=center>
+<div >
     <input type="button" value="Play All Channels" onclick="playAllChannels()">
     <input type=button value="Stop All Audio" onclick="stopAllAudio()"><br>
     
@@ -20,7 +20,7 @@
     
 <div>      
     <input type="text" id="myName1" size=10 value="Channel1.mp3" style=" background-Color:lime;">
-    <input type="file" accept="audio/mp3,video/mp4"  size=10 style="width:50px; " onchange="{
+    <input type="file" accept="audio/mp3,video/mp4"  size=10  onchange="{
         document.getElementById('myStart1').style.backgroundColor = 'gray';
         document.getElementById('myName1').style.backgroundColor = 'gray';
         loadFile(1, event)
