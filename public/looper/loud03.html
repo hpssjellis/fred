@@ -4,56 +4,50 @@
 <meta charset="UTF-8">
 <title>Summative Loudness Graph</title>
 <script>
-window.onload = async function() {
-    const myAudioContext = new AudioContext();
+let myAudioContext;
+let mySource;
+let started = false;
+
+function startAudio() {
+    myAudioContext = new AudioContext(); // Create the AudioContext
     const myAnalyser = myAudioContext.createAnalyser();
     myAnalyser.fftSize = 2048; // Set FFT size
     const myCanvas = document.getElementById('myCanvas');
     const myCanvasCtx = myCanvas.getContext('2d');
-    
-    const myAudioData = await fetch('a.mp3').then(r => r.arrayBuffer());
-    const myBuffer = await myAudioContext.decodeAudioData(myAudioData);
-    const mySource = myAudioContext.createBufferSource();
-    mySource.buffer = myBuffer;
-    mySource.connect(myAnalyser);
-    myAnalyser.connect(myAudioContext.destination);
-    mySource.start();
-    mySource.loop = true;
 
-    drawLoudnessGraph();
-};
+    fetch('a.mp3')
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => myAudioContext.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+            mySource = myAudioContext.createBufferSource();
+            mySource.buffer = audioBuffer;
+            mySource.connect(myAnalyser);
+            myAnalyser.connect(myAudioContext.destination);
+            mySource.start();
+            drawLoudnessGraph(myAnalyser, myCanvas, myCanvasCtx);
+        });
+}
 
-function drawLoudnessGraph() {
-    const myCanvas = document.getElementById('myCanvas');
-    const myCanvasCtx = myCanvas.getContext('2d');
-    const myAudioContext = new AudioContext();
-    const myAnalyser = myAudioContext.createAnalyser();
-    myAnalyser.fftSize = 2048;
+function drawLoudnessGraph(myAnalyser, myCanvas, myCanvasCtx) {
     myAnalyser.smoothingTimeConstant = 0.8;
     const bufferLength = myAnalyser.fftSize;
     const dataArray = new Uint8Array(bufferLength);
-    myAnalyser.getByteTimeDomainData(dataArray);
-    
-    const WIDTH = myCanvas.width;
-    const HEIGHT = myCanvas.height;
-    myCanvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
-    
-    function draw() {
-        drawVisual = requestAnimationFrame(draw);
-        myAnalyser.getByteTimeDomainData(dataArray);
 
+    function draw() {
+        requestAnimationFrame(draw);
+        myAnalyser.getByteTimeDomainData(dataArray);
         myCanvasCtx.fillStyle = 'rgb(200, 200, 200)';
-        myCanvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
+        myCanvasCtx.fillRect(0, 0, myCanvas.width, myCanvas.height);
         myCanvasCtx.lineWidth = 2;
         myCanvasCtx.strokeStyle = 'rgb(0, 0, 0)';
         
         myCanvasCtx.beginPath();
-        var sliceWidth = WIDTH * 1.0 / bufferLength;
+        var sliceWidth = myCanvas.width * 1.0 / bufferLength;
         var x = 0;
         
         for(var i = 0; i < bufferLength; i++) {
             var v = dataArray[i] / 128.0;
-            var y = v * HEIGHT/2;
+            var y = v * myCanvas.height/2;
             if(i === 0) {
                 myCanvasCtx.moveTo(x, y);
             } else {
@@ -74,6 +68,7 @@ function drawLoudnessGraph() {
 </style>
 </head>
 <body>
+<button onclick="startAudio()">Start</button>
 <canvas id="myCanvas"></canvas>
 </body>
 </html>
