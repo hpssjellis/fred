@@ -138,10 +138,10 @@ function drawTrimLines() {
 }
 
 function drawTimestamps(ctx, width, height) {
-    const interval = 5;
+    const interval = 1;
     const numberOfLabels = Math.floor(myAudioBuffer.duration / interval);
     ctx.fillStyle = 'rgb(0, 0, 0)';
-    ctx.font = '12px Arial';
+    ctx.font = '8px Arial';
     for (let i = 0; i <= numberOfLabels; i++) {
         const x = (width / myAudioBuffer.duration) * (i * interval);
         ctx.fillText(i * interval + 's', x, height - 5);
