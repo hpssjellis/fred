@@ -59,6 +59,39 @@ function playTrimmedAudio(start, end) {
     mySource.start(0, start, end - start);
 }
 
+
+
+
+
+let loopTimeout; // Variable to hold the timeout, so we can clear it if needed
+
+function loopAudio() {
+    let start = parseFloat(document.getElementById('startSlider').value);
+    let end = parseFloat(document.getElementById('endSlider').value);
+    stopAudio(); // Stop currently playing audio including clearing any existing loop
+
+    mySource = myAudioContext.createBufferSource();
+    mySource.buffer = myAudioBuffer;
+    mySource.connect(myAudioContext.destination);
+    mySource.start(0, start, end - start);
+
+    // Calculate duration of the segment to loop
+    let duration = (end - start) * 1000; // Convert to milliseconds
+    loopTimeout = setTimeout(loopAudio, duration); // Set timeout to restart playback at the end of the segment
+}
+
+function stopAudio() {
+    if (mySource) {
+        mySource.stop();
+        mySource = null; // Clear the source
+    }
+    clearTimeout(loopTimeout); // Clear the looping timeout
+}
+
+
+
+
+   /* 
 function loopAudio() {
     let start = parseFloat(document.getElementById('startSlider').value);
     let end = parseFloat(document.getElementById('endSlider').value);
@@ -79,7 +112,12 @@ function stopAudio() {
         isLooping = false;
     }
 }
+*/
 
+
+
+
+    
 function drawTrimLines() {
     const canvas = document.getElementById('myCanvas');
     const ctx = canvas.getContext('2d');
