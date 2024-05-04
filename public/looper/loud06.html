@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Audio Trimmer with Waveform Display</title>
+<script>
+let myAudioContext;
+let myAudioBuffer;
+let mySource;
+
+async function loadAudio() {
+    myAudioContext = new AudioContext();
+    const response = await fetch('a.mp3'); // Replace 'a.mp3' with the path to your audio file
+    const arrayBuffer = await response.arrayBuffer();
+    myAudioBuffer = await myAudioContext.decodeAudioData(arrayBuffer);
+    document.getElementById('startSlider').max = myAudioBuffer.duration;
+    document.getElementById('endSlider').max = myAudioBuffer.duration;
+    document.getElementById('endSlider').value = myAudioBuffer.duration;
+    drawWaveform();
+}
+
+function drawWaveform() {
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    const data = myAudioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / WIDTH);
+    const amp = HEIGHT / 2;
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.beginPath();
+    ctx.strokeStyle = '#0000FF';
+    ctx.moveTo(0, amp);
+    for (let i = 0; i < WIDTH; i++) {
+        let min = 1.0;
+        let max = -1.0;
+        for (let j = 0; j < step; j++) {
+            const datum = data[(i * step) + j];
+            if (datum < min) min = datum;
+            if (datum > max) max = datum;
+        }
+        ctx.lineTo(i, (1 + min) * amp);
+        ctx.lineTo(i, (1 + max) * amp);
+    }
+    ctx.stroke();
+    drawTrimLines();
+}
+
+function playTrimmedAudio(start, end) {
+    if (mySource) {
+        mySource.stop();
+    }
+    mySource = myAudioContext.createBufferSource();
+    mySource.buffer = myAudioBuffer;
+    mySource.connect(myAudioContext.destination);
+    mySource.start(0, start, end - start);
+}
+
+function drawTrimLines() {
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+    const WIDTH = canvas.width;
+    const startTrimX = WIDTH * (document.getElementById('startSlider').value / myAudioBuffer.duration);
+    const endTrimX = WIDTH * (document.getElementById('endSlider').value / myAudioBuffer.duration);
+    ctx.strokeStyle = 'rgb(0, 255, 0)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(startTrimX, 0);
+    ctx.lineTo(startTrimX, canvas.height);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgb(255, 0, 0)';
+    ctx.beginPath();
+    ctx.moveTo(endTrimX, 0);
+    ctx.lineTo(endTrimX, canvas.height);
+    ctx.stroke();
+}
+
+function updateTrimLines() {
+    drawWaveform();
+}
+
+window.onload = loadAudio;
+</script>
+<style>
+#myCanvas { width: 100%; height: 200px; background-color: #eee; }
+</style>
+</head>
+<body>
+<canvas id="myCanvas"></canvas>
+<label for="startSlider">Start Trim (seconds):</label>
+<input type="range" id="startSlider" min="0" step="0.01" oninput="updateTrimLines()"><br>
+<label for="endSlider">End Trim (seconds):</label>
+<input type="range" id="endSlider" min="0" step="0.01" oninput="updateTrimLines()"><br>
+<input type="button" value="Trim Audio" onclick="playTrimmedAudio(parseFloat(document.getElementById('startSlider').value), parseFloat(document.getElementById('endSlider').value))">
+</body>
+</html>
