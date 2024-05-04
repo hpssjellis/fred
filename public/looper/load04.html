@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Waveform Display</title>
+<script>
+let myAudioContext;
+let mySource;
+let myAnalyser;
+let myDataArray;
+let animationId;
+
+function startAudio() {
+    myAudioContext = new AudioContext();
+    myAnalyser = myAudioContext.createAnalyser();
+    myAnalyser.fftSize = 2048;
+    const bufferLength = myAnalyser.fftSize;
+    myDataArray = new Uint8Array(bufferLength);
+
+    fetch('path_to_your_audio.mp3')  // Replace with the actual path to your audio file
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => myAudioContext.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+            if (mySource) {
+                mySource.stop();
+                cancelAnimationFrame(animationId);
+            }
+            mySource = myAudioContext.createBufferSource();
+            mySource.buffer = audioBuffer;
+            mySource.connect(myAnalyser);
+            myAnalyser.connect(myAudioContext.destination);
+            mySource.start();
+            drawWaveform();
+        });
+}
+
+function drawWaveform() {
+    const canvas = document.getElementById('waveformCanvas');
+    const ctx = canvas.getContext('2d');
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+    function draw() {
+        animationId = requestAnimationFrame(draw);
+        myAnalyser.getByteTimeDomainData(myDataArray);
+
+        ctx.fillStyle = 'rgb(200, 200, 200)';
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgb(0, 0, 0)';
+
+        ctx.beginPath();
+
+        var sliceWidth = WIDTH * 1.0 / myAnalyser.fftSize;
+        var x = 0;
+
+        for(var i = 0; i < myAnalyser.fftSize; i++) {
+            var v = myDataArray[i] / 128.0; // Centering the waveform
+            var y = v * HEIGHT/2;
+
+            if(i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+            x += sliceWidth;
+        }
+        ctx.lineTo(canvas.width, canvas.height/2);
+        ctx.stroke();
+    }
+
+    draw();
+}
+</script>
+<style>
+#waveformCanvas { width: 100%; height: 200px; background-color: #f8f8f8; }
+</style>
+</head>
+<body>
+<button onclick="startAudio()">Load and Play Audio</button>
+<canvas id="waveformCanvas"></canvas>
+</body>
+</html>
