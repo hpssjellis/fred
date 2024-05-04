@@ -8,7 +8,7 @@ let myAudioContext;
 
 async function startAudio() {
     myAudioContext = new AudioContext();
-    const response = await fetch('path_to_your_audio.mp3');  // Replace with your audio file path
+    const response = await fetch('a.mp3');  // Replace with your audio file path
     const arrayBuffer = await response.arrayBuffer();
     const audioBuffer = await myAudioContext.decodeAudioData(arrayBuffer);
     
