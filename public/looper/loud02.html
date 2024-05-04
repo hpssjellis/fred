@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Audio Trimmer with Visual Feedback</title>
+<script>
+window.onload = async function() {
+    const myAudioContext = new AudioContext();
+    const myAnalyser = myAudioContext.createAnalyser();
+    const myCanvas = document.getElementById('myCanvas');
+    const myCanvasCtx = myCanvas.getContext('2d');
+    const myStartSlider = document.getElementById('startSlider');
+    const myEndSlider = document.getElementById('endSlider');
+    const myAudioData = await fetch('path_to_your_audio.mp3').then(r => r.arrayBuffer());
+    const myBuffer = await myAudioContext.decodeAudioData(myAudioData);
+    let mySource;
+
+    function playTrimmedAudio(start, end) {
+        if (mySource) {
+            mySource.stop();
+        }
+        mySource = myAudioContext.createBufferSource();
+        mySource.buffer = myBuffer;
+        mySource.connect(myAudioContext.destination);
+        mySource.start(0, start, end - start);
+    }
+
+    function drawLoudnessGraph() {
+        requestAnimationFrame(drawLoudnessGraph);
+        const myDataArray = new Uint8Array(myAnalyser.frequencyBinCount);
+        myAnalyser.getByteFrequencyData(myDataArray);
+        myCanvasCtx.fillStyle = 'rgb(255, 255, 255)';
+        myCanvasCtx.fillRect(0, 0, myCanvas.width, myCanvas.height);
+        let barWidth = (myCanvas.width / myDataArray.length) * 2.5;
+        let barHeight;
+        let x = 0;
+
+        for (let i = 0; i < myDataArray.length; i++) {
+            barHeight = myDataArray[i];
+            myCanvasCtx.fillStyle = 'rgb(' + (barHeight + 100) + ',50,50)';
+            myCanvasCtx.fillRect(x, myCanvas.height - barHeight / 2, barWidth, barHeight / 2);
+            x += barWidth + 1;
+        }
+
+        // Draw start and end trim lines
+        const startTrimX = myCanvas.width * (myStartSlider.value / myBuffer.duration);
+        const endTrimX = myCanvas.width * (myEndSlider.value / myBuffer.duration);
+        myCanvasCtx.strokeStyle = 'rgb(0, 255, 0)';
+        myCanvasCtx.lineWidth = 2;
+        myCanvasCtx.beginPath();
+        myCanvasCtx.moveTo(startTrimX, 0);
+        myCanvasCtx.lineTo(startTrimX, myCanvas.height);
+        myCanvasCtx.stroke();
+
+        myCanvasCtx.strokeStyle = 'rgb(255, 0, 0)';
+        myCanvasCtx.beginPath();
+        myCanvasCtx.moveTo(endTrimX, 0);
+        myCanvasCtx.lineTo(endTrimX, myCanvas.height);
+        myCanvasCtx.stroke();
+    }
+
+    myStartSlider.max = myEndSlider.max = myBuffer.duration;
+    myStartSlider.oninput = myEndSlider.oninput = function() {
+        drawLoudnessGraph();
+    }
+    document.getElementById('trimButton').onclick = function() {
+        playTrimmedAudio(parseFloat(myStartSlider.value), parseFloat(myEndSlider.value));
+    };
+
+    drawLoudnessGraph();
+}
+</script>
+<style>
+#myCanvas { width: 100%; height: 100px; background-color: #eee; }
+</style>
+</head>
+<body>
+<canvas id="myCanvas"></canvas>
+<label for="startSlider">Start Trim (seconds):</label>
+<input type="range" id="startSlider" min="0" step="0.01"><br>
+<label for="endSlider">End Trim (seconds):</label>
+<input type="range" id="endSlider" min="0" step="0.01"><br>
+<input type="button" id="trimButton" value="Trim Audio">
+</body>
+</html>
+
+
