@@ -12,7 +12,7 @@ window.onload = async function() {
     const myCanvasCtx = myCanvas.getContext('2d');
 
     // Load your audio file
-    const myAudioData = await fetch('path_to_your_audio.mp3').then(r => r.arrayBuffer());
+    const myAudioData = await fetch('a.mp3').then(r => r.arrayBuffer());
     const myBuffer = await myAudioContext.decodeAudioData(myAudioData);
     const mySource = myAudioContext.createBufferSource();
     mySource.buffer = myBuffer;
