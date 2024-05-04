@@ -1,0 +1,63 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Audio Trimmer with Loudness Graph</title>
+<script>
+window.onload = async function() {
+    const myAudioContext = new AudioContext();
+    const myAnalyser = myAudioContext.createAnalyser();
+    const myCanvas = document.getElementById('myCanvas');
+    const myCanvasCtx = myCanvas.getContext('2d');
+
+    // Load your audio file
+    const myAudioData = await fetch('path_to_your_audio.mp3').then(r => r.arrayBuffer());
+    const myBuffer = await myAudioContext.decodeAudioData(myAudioData);
+    const mySource = myAudioContext.createBufferSource();
+    mySource.buffer = myBuffer;
+    mySource.connect(myAnalyser);
+    myAnalyser.connect(myAudioContext.destination);
+    mySource.start();
+
+    function drawLoudnessGraph() {
+        requestAnimationFrame(drawLoudnessGraph);
+        const myDataArray = new Uint8Array(myAnalyser.frequencyBinCount);
+        myAnalyser.getByteFrequencyData(myDataArray);
+
+        myCanvasCtx.fillStyle = 'rgb(255, 255, 255)';
+        myCanvasCtx.fillRect(0, 0, myCanvas.width, myCanvas.height);
+
+        let barWidth = (myCanvas.width / myDataArray.length) * 2.5;
+        let barHeight;
+        let x = 0;
+
+        for(let i = 0; i < myDataArray.length; i++) {
+            barHeight = myDataArray[i];
+            myCanvasCtx.fillStyle = 'rgb(' + (barHeight+100) + ',50,50)';
+            myCanvasCtx.fillRect(x, myCanvas.height - barHeight / 2, barWidth, barHeight / 2);
+
+            x += barWidth + 1;
+        }
+    }
+
+    drawLoudnessGraph();
+}
+
+function myTrimAudio() {
+    // Implement trimming logic here
+    alert('Trimming logic not implemented yet.');
+}
+</script>
+<style>
+#myCanvas { width: 100%; height: 100px; background-color: #eee; }
+</style>
+</head>
+<body>
+<canvas id="myCanvas"></canvas>
+<input type="button" value="Trim Audio" onclick="myTrimAudio()">
+</body>
+</html>
+
+
+
