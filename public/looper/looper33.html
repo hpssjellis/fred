@@ -62,9 +62,9 @@
 
 <div>
   <canvas id="myCanvas"></canvas>
-  <label for="startSlider">Start Trim (seconds):</label>
+  <label for="startSlider">Start Trim :</label>
   <input type="range" id="startSlider" style="accent-color:green;" value="0" min="0" step="0.01" oninput="updateTrimLines()"><br>
-  <label for="endSlider">End Trim (seconds):</label>
+  <label for="endSlider">End Trim :</label>
   <input type="range" id="endSlider" min="0" step="0.01" style="accent-color:red;" oninput="updateTrimLines()"><br>
   <input type="button" value="Trim Audio" onclick="playTrimmedAudio(parseFloat(document.getElementById('startSlider').value), parseFloat(document.getElementById('endSlider').value))">
   <input type="button" value="Stop Audio" onclick="stopAudio()">
@@ -193,36 +193,7 @@ function stopAudio() {
     clearTimeout(loopTimeout); // Clear the looping timeout
 }
 
-
-
-
-   /* 
-function loopAudio() {
-    let start = parseFloat(document.getElementById('startSlider').value);
-    let end = parseFloat(document.getElementById('endSlider').value);
-    stopAudio();
-    isLooping = true;
-    mySource = myAudioContext.createBufferSource();
-    mySource.buffer = myAudioBuffer;
-    mySource.loop = true;
-    mySource.loopStart = start;
-    mySource.loopEnd = end;
-    mySource.connect(myAudioContext.destination);
-    mySource.start(0, start, end - start);
-}
-
-function stopAudio() {
-    if (mySource) {
-        mySource.stop();
-        isLooping = false;
-    }
-}
-*/
-
-
-
-
-    
+  
 function drawTrimLines() {
     const canvas = document.getElementById('myCanvas');
     const ctx = canvas.getContext('2d');
