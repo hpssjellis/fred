@@ -17,7 +17,7 @@
 
 </div><br><br>
 
-<!-- one of the old looper sections for reference only
+
   
 <div>      
     <input type="text" id="myName1"  value="Channel1.mp3" style=" background-Color:lime;">
@@ -57,7 +57,6 @@
     <br><br>
 </div>
 
--->
 
 
 <div>
@@ -227,6 +226,218 @@ function drawTimestamps(ctx, width, height) {
 function updateTrimLines() {
     drawWaveform();
 }
+
+
+
+
+
+
+
+
+
+
+function startRecording(channel) {
+    navigator.mediaDevices.getUserMedia({
+        audio: {
+            sampleRate: 48000,
+            noiseSuppression: true,
+            echoCancellation: true
+        }
+    })
+    .then(stream => {
+        const options = { mimeType: 'audio/webm;codecs=opus' }; // or 'audio/mp3' if supported
+       // const options = { mimeType: 'audio/*' }; // or 'audio/mp3' if supported
+        const mediaRecorder = new MediaRecorder(stream, options);
+
+        audioChunks[channel] = [];
+        mediaRecorder.ondataavailable = event => {
+            audioChunks[channel].push(event.data);
+        };
+
+        startTimer(channel);
+        mediaRecorder.start();
+        mediaRecorders[channel] = mediaRecorder;
+    })
+    .catch(error => {
+        console.error("Error accessing media devices:", error);
+    });
+}
+
+
+    async function stopRecording(channel, myFileName) {
+    mediaRecorders[channel].stop();
+    mediaRecorders[channel].onstop = async () => {
+        const audioBlob = new Blob(audioChunks[channel], { type: 'audio/mp3' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        audioElements[channel].src = audioUrl;
+
+        // Decode audio data to AudioBuffer when the MediaRecorder stops
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        audioContext.decodeAudioData(arrayBuffer, (decodedData) => {
+            audioBuffers[channel] = decodedData;
+        });
+
+        const fileName = document.getElementById(myFileName).value;
+        downloadLinks[channel].href = audioUrl;
+        downloadLinks[channel].download = fileName;
+        downloadLinks[channel].style.display = 'inline';
+        downloadLinks[channel].textContent = `Download ${fileName}`;
+
+        delete mediaRecorders[channel];
+        delete audioChunks[channel];
+
+        // Stop the timer
+        stopTimer(channel);
+    };
+}
+
+
+function loadFile(channel, event) {
+    const file = event.target.files[0];
+    if (file) {
+        const fileUrl = URL.createObjectURL(file);
+        audioElements[channel].src = fileUrl;
+
+        // Set the download link, although this might not be needed for MP4 as you won't download it as audio
+        downloadLinks[channel].href = fileUrl;
+        downloadLinks[channel].download = file.name;
+        downloadLinks[channel].style.display = 'inline';
+
+        // Update the link text to reflect the new file name
+        downloadLinks[channel].textContent = `Download ${file.name}`;
+
+        // Update the text box with the uploaded file's name
+        const textBoxId = `myName${channel}`;
+        document.getElementById(textBoxId).value = file.name;
+
+        // Additionally, decode the audio data to an AudioBuffer for Crunker use
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const arrayBuffer = e.target.result;
+            audioContext.decodeAudioData(arrayBuffer, (decodedData) => {
+                audioBuffers[channel] = decodedData;
+                console.log(`Audio data loaded and decoded for channel ${channel}.`);
+            }, (error) => {
+                console.error(`Error decoding audio data for channel ${channel}:`, error);
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    }
+}
+
+
+function playAllChannels() {
+    console.log('Object.values(audioElements)')
+    console.log(Object.values(audioElements))
+    console.log(audioElements)
+    console.log('audioElements')
+    Object.values(audioElements).forEach(audio => {
+        if (!audio.paused) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+        audio.play();
+    });
+}
+    
+
+function stopAllAudio() {
+    const audios = [1, 2, 3, 4, 5, 6, 7, 8, 9]; // Array of audio element IDs suffixes
+    audios.forEach(num => {
+        const audioPlayer = document.getElementById('audio' + num);
+        if (audioPlayer) {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+        }
+    });
+}
+
+
+function startTimer(channel) {
+    let count = 0;
+    const buttonId = 'myStart' + channel;
+    const button = document.getElementById(buttonId);
+    myLatestValue = button.value
+    button.value = myLatestValue +', ' + count + ':00 s';  // Initialize button label
+
+    timers[channel] = setInterval(() => {
+        count++;
+        myLatestCount = count
+        button.value = myLatestValue +', ' + count + ':00 s';  // Update the button label every second
+        //console.log(button.value)
+    }, 1000);
+}
+
+function stopTimer(channel) {
+    clearInterval(timers[channel]);  // Stop the timer
+    const buttonId = 'myStart' + channel;
+    const button = document.getElementById(buttonId);
+    button.value = myLatestValue +', ' + myLatestCount + ':00 s';  // Reset button label
+}
+
+
+  // for crunker
+
+async function processAudioUsingCrunker(operation, trackId = null) {
+    if (Object.keys(audioBuffers).length === 0) {
+        alert('No audio loaded.');
+        return;
+    }
+    let myCrunkerFilename = 'default.mp3'
+    const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
+    const crunker = new Crunker({ sampleRate: 48000 });
+
+    try {
+        let buffers = Object.values(audioBuffers).filter(buffer => buffer);
+        
+        if (buffers.length === 0) {
+            alert('Please load at least one track.');
+            return;
+        }
+
+        let processedAudio;
+        if (trackId !== null && audioBuffers[trackId]) {
+            processedAudio = audioBuffers[trackId];  // Use the specific buffer if a track ID is provided
+            myCrunkerFilename = document.getElementById('myName'+trackId).value  
+        } else if (operation === "merge" && buffers.length > 1) {
+            processedAudio = await crunker.mergeAudio(buffers);
+            myCrunkerFilename = document.getElementById('myMergeName').value  
+        } else if (operation === "concat" && buffers.length > 1) {
+            processedAudio = await crunker.concatAudio(buffers);
+            myCrunkerFilename = document.getElementById('myMergeName').value  
+        } else {
+            throw new Error("Invalid operation specified or invalid track ID.");
+        }
+
+        const output = await crunker.export(processedAudio, 'audio/mp3');
+       // crunker.download(output.blob, `${trackId ? `Track${trackId}` : operation}Audio.mp3`);
+        crunker.download(output.blob, myCrunkerFilename);
+    } catch (error) {
+        console.error('Error during audio processing:', error);
+        alert('Error during audio processing. Please check the console for more details.');
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 
 window.onload = loadAudio;
 
