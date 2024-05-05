@@ -9,9 +9,9 @@ let myAudioBuffer;
 let mySource;
 let isLooping = false;
 
-async function loadAudio() {
+async function myLoadToTrim(myInFileName) {
     myAudioContext = new AudioContext();
-    const response = await fetch('a.mp3'); // Replace 'a.mp3' with the path to your audio file
+    const response = await fetch(myInFileName); // Replace 'a.mp3' with the path to your audio file
     const arrayBuffer = await response.arrayBuffer();
     myAudioBuffer = await myAudioContext.decodeAudioData(arrayBuffer);
     document.getElementById('startSlider').max = myAudioBuffer.duration;
@@ -91,29 +91,6 @@ function stopAudio() {
 
 
 
-   /* 
-function loopAudio() {
-    let start = parseFloat(document.getElementById('startSlider').value);
-    let end = parseFloat(document.getElementById('endSlider').value);
-    stopAudio();
-    isLooping = true;
-    mySource = myAudioContext.createBufferSource();
-    mySource.buffer = myAudioBuffer;
-    mySource.loop = true;
-    mySource.loopStart = start;
-    mySource.loopEnd = end;
-    mySource.connect(myAudioContext.destination);
-    mySource.start(0, start, end - start);
-}
-
-function stopAudio() {
-    if (mySource) {
-        mySource.stop();
-        isLooping = false;
-    }
-}
-*/
-
 
 
 
@@ -152,14 +129,16 @@ function updateTrimLines() {
     drawWaveform();
 }
 
-window.onload = loadAudio;
+//window.onload = loadAudio;
 </script>
 <style>
 #myCanvas { width: 100%; height: 200px; background-color: #eee; }
 </style>
 </head>
 <body>
-<canvas id="myCanvas"></canvas>
+<canvas id="myCanvas"></canvas><br>
+<input type="text" id="myTrim1"  value="Trim.mp3" style=" background-Color:lime;">  
+<input type=button value="Load" onclick="{myLoadToTrim(document.getElementById('myTrim1').value );  }">    
 <label for="startSlider">Start Trim (seconds):</label>
 <input type="range" id="startSlider" style="accent-color:green;" value="0" min="0" step="0.01" oninput="updateTrimLines()"><br>
 <label for="endSlider">End Trim (seconds):</label>
@@ -167,5 +146,13 @@ window.onload = loadAudio;
 <input type="button" value="Trim Audio" onclick="playTrimmedAudio(parseFloat(document.getElementById('startSlider').value), parseFloat(document.getElementById('endSlider').value))">
 <input type="button" value="Stop Audio" onclick="stopAudio()">
 <input type="button" value="Loop Audio" onclick="loopAudio()">
+<input type="file" accept="audio/mp3,video/mp4"  onchange="{
+  //  document.getElementById('myStart4').style.backgroundColor = 'gray';
+  //  document.getElementById('myName4').style.backgroundColor = 'gray';
+  //  loadFile(4, event)
+  document.getElementById('myTrim1').value = this.value
+  document.getElementById('mmTrim1').style.backgroundColor = 'gray';
+  myLoadToTrim(this.value);  
+}">    
 </body>
 </html>
