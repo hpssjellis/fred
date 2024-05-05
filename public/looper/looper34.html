@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Single Channel Audio Looper and Trimmer</title>
+<style>
+#myCanvas { width: 100%; height: 200px; background-color: #eee; }
+</style>
+</head>
+<body>
+<h2>Music Channel Javascript Looper and Trimmer</h2>
+
+<div id="channel1">
+    <canvas id="waveform"></canvas>
+    <label for="startSlider">Start Trim:</label>
+    <input type="range" id="startSlider" style="accent-color: green;" value="0" min="0" step="0.01" oninput="updateTrimLines()"><br>
+    <label for="endSlider">End Trim:</label>
+    <input type="range" id="endSlider" style="accent-color: red;" min="0" step="0.01" oninput="updateTrimLines()"><br>
+    <input type="button" value="Trim Audio" onclick="playTrimmedAudio()">
+    <input type="button" value="Stop Audio" onclick="stopAudio()">
+    <input type="button" value="Loop Audio" onclick="loopAudio()">
+</div> 
+
+<script>
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let audioBuffer;
+let source;
+let loopTimeout;
+
+async function loadAudio() {
+    try {
+        const response = await fetch('a.mp3');
+        const arrayBuffer = await response.arrayBuffer();
+        audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        setupInitialUI();
+        drawWaveform();
+    } catch (error) {
+        console.error('Error loading and decoding audio:', error);
+    }
+}
+
+function setupInitialUI() {
+    const startSlider = document.getElementById('startSlider');
+    const endSlider = document.getElementById('endSlider');
+    startSlider.max = audioBuffer.duration;
+    endSlider.max = audioBuffer.duration;
+    endSlider.value = audioBuffer.duration;
+}
+
+function drawWaveform() {
+    const canvas = document.getElementById('waveform');
+    const ctx = canvas.getContext('2d');
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.beginPath();
+    ctx.strokeStyle = '#0000FF';
+    const data = audioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / WIDTH);
+    const amp = HEIGHT / 2;
+    for (let i = 0; i < WIDTH; i++) {
+        let min = 1.0;
+        let max = -1.0;
+        for (let j = 0; j < step; j++) {
+            const datum = data[(i * step) + j];
+            if (datum < min) min = datum;
+            if (datum > max) max = datum;
+        }
+        ctx.lineTo(i, (1 + min) * amp);
+        ctx.lineTo(i, (1 + max) * amp);
+    }
+    ctx.stroke();
+    updateTrimLines();
+}
+
+function playTrimmedAudio() {
+    stopAudio();
+    const start = parseFloat(document.getElementById('startSlider').value);
+    const end = parseFloat(document.getElementById('endSlider').value);
+    source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioContext.destination);
+    source.start(0, start, end - start);
+}
+
+function loopAudio() {
+    const start = parseFloat(document.getElementById('startSlider').value);
+    const end = parseFloat(document.getElementById('endSlider').value);
+    stopAudio();
+    source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.loop = true;
+    source.loopStart = start;
+    source.loopEnd = end;
+    source.connect(audioContext.destination);
+    source.start();
+}
+
+function stopAudio() {
+    if (source) {
+        source.stop();
+        source = null;
+    }
+    clearTimeout(loopTimeout);
+}
+
+function updateTrimLines() {
+    drawWaveform();  // Redraw waveform to update trim lines visually
+}
+
+window.onload = loadAudio;
+</script>
+</body>
+</html>
