@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Channel Looper</title>
+</head>
+<body>
+<h2 >Music Multi Channel Javascript Looper</h2>
+
+<div >
+    <input type="button" value="Play All Channels" onclick="playAllChannels()">
+    <input type=button value="Stop All Audio" onclick="stopAllAudio()"><br>
+    
+    <input type="text" id="myMergeName" size=10 value="Merge-All.mp3"  style=" background-Color:lime;">
+    <button onclick="processAudioUsingCrunker('merge')">Merge All Tracks</button>
+    <button onclick="processAudioUsingCrunker('concat')">Concatenate All Tracks</button>
+
+</div><br><br>
+
+<!-- one of the old looper sections for reference only
+  
+<div>      
+    <input type="text" id="myName1"  value="Channel1.mp3" style=" background-Color:lime;">
+    <input id="myStart1" type="button" value="Record Channel 1"  style=" background-Color:lime; height:75px; " onclick="{
+       if ( this.value.startsWith('Record') ) {
+         document.getElementById('myStart1').style.backgroundColor = 'red';
+         document.getElementById('myStart1').value = 'Stop Recording 1'
+         startRecording(1);         
+       } else {
+         document.getElementById('myStart1').style.backgroundColor = 'lime';
+         setTimeout(function () {
+           document.getElementById('myStart1').value = 'Record Channel 1'
+           document.getElementById('myStart1').style.backgroundColor = 'gray';
+           document.getElementById('myName1').style.backgroundColor = 'gray';
+         }, 500);
+         stopRecording(1, 'myName1');
+       }
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[1].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[1].loop = true;
+            this.value = 'Loop';
+        }
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart1').style.backgroundColor = 'gray';
+        document.getElementById('myName1').style.backgroundColor = 'gray';
+        loadFile(1, event)
+    }"><br>
+
+    <audio id="audio1" controls></audio>
+    <a id="download1" style="display: none;">Download Channel 1</a>
+    <br><br>
+</div>
+
+-->
+
+
+<div>
+  <canvas id="myCanvas"></canvas>
+  <label for="startSlider">Start Trim :</label>
+  <input type="range" id="startSlider" style="accent-color:green;" value="0" min="0" step="0.01" oninput="updateTrimLines()"><br>
+  <label for="endSlider">End Trim :</label>
+  <input type="range" id="endSlider" min="0" step="0.01" style="accent-color:red;" oninput="updateTrimLines()"><br>
+  <input type="button" value="Trim Audio" onclick="playTrimmedAudio(parseFloat(document.getElementById('startSlider').value), parseFloat(document.getElementById('endSlider').value))">
+  <input type="button" value="Stop Audio" onclick="stopAudio()">
+  <input type="button" value="Loop Audio" onclick="loopAudio()">
+</div> 
+
+
+
+<script>
+const audioContext = new AudioContext();
+    
+let timers = {};  // Keeps track of timers for different channels
+let myLatestValue = ''
+let myLatestCount = 0;
+    
+const mediaRecorders = {};
+const audioChunks = {};
+const audioBuffers = {};  // This will store the AudioBuffers accessible to any function
+
+const audioElements = {
+    1: document.getElementById('audio1'),
+    2: document.getElementById('audio2'),
+    3: document.getElementById('audio3'),
+    4: document.getElementById('audio4'),
+    5: document.getElementById('audio5'),
+    6: document.getElementById('audio6'),
+    7: document.getElementById('audio7'),
+    8: document.getElementById('audio8'),
+    9: document.getElementById('audio9')
+};
+    
+const downloadLinks = {
+    1: document.getElementById('download1'),
+    2: document.getElementById('download2'),
+    3: document.getElementById('download3'),
+    4: document.getElementById('download4'),
+    5: document.getElementById('download5'),
+    6: document.getElementById('download6'),
+    7: document.getElementById('download7'),
+    8: document.getElementById('download8'),
+    9: document.getElementById('download9')
+};
+
+
+let myAudioContext;
+let myAudioBuffer;
+let mySource;
+let isLooping = false;
+
+async function loadAudio() {
+    myAudioContext = new AudioContext();
+    const response = await fetch('a.mp3'); // Replace 'a.mp3' with the path to your audio file
+    const arrayBuffer = await response.arrayBuffer();
+    myAudioBuffer = await myAudioContext.decodeAudioData(arrayBuffer);
+    document.getElementById('startSlider').max = myAudioBuffer.duration;
+    document.getElementById('endSlider').max = myAudioBuffer.duration;
+    document.getElementById('endSlider').value = myAudioBuffer.duration;
+    drawWaveform();
+}
+
+function drawWaveform() {
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    const data = myAudioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / WIDTH);
+    const amp = HEIGHT / 2;
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.beginPath();
+    ctx.strokeStyle = '#0000FF';
+    ctx.moveTo(0, amp);
+    for (let i = 0; i < WIDTH; i++) {
+        let min = 1.0;
+        let max = -1.0;
+        for (let j = 0; j < step; j++) {
+            const datum = data[(i * step) + j];
+            if (datum < min) min = datum;
+            if (datum > max) max = datum;
+        }
+        ctx.lineTo(i, (1 + min) * amp);
+        ctx.lineTo(i, (1 + max) * amp);
+    }
+    ctx.stroke();
+    drawTrimLines();
+    drawTimestamps(ctx, WIDTH, HEIGHT);
+}
+
+function playTrimmedAudio(start, end) {
+    stopAudio();
+    isLooping = false;
+    mySource = myAudioContext.createBufferSource();
+    mySource.buffer = myAudioBuffer;
+    mySource.connect(myAudioContext.destination);
+    mySource.start(0, start, end - start);
+}
+
+
+
+
+
+let loopTimeout; // Variable to hold the timeout, so we can clear it if needed
+
+function loopAudio() {
+    let start = parseFloat(document.getElementById('startSlider').value);
+    let end = parseFloat(document.getElementById('endSlider').value);
+    stopAudio(); // Stop currently playing audio including clearing any existing loop
+
+    mySource = myAudioContext.createBufferSource();
+    mySource.buffer = myAudioBuffer;
+    mySource.connect(myAudioContext.destination);
+    mySource.start(0, start, end - start);
+
+    // Calculate duration of the segment to loop
+    let duration = (end - start) * 1000; // Convert to milliseconds
+    loopTimeout = setTimeout(loopAudio, duration); // Set timeout to restart playback at the end of the segment
+}
+
+function stopAudio() {
+    if (mySource) {
+        mySource.stop();
+        mySource = null; // Clear the source
+    }
+    clearTimeout(loopTimeout); // Clear the looping timeout
+}
+
+  
+function drawTrimLines() {
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+    const WIDTH = canvas.width;
+    const startTrimX = WIDTH * (document.getElementById('startSlider').value / myAudioBuffer.duration);
+    const endTrimX = WIDTH * (document.getElementById('endSlider').value / myAudioBuffer.duration);
+    ctx.strokeStyle = 'rgb(0, 255, 0)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(startTrimX, 0);
+    ctx.lineTo(startTrimX, canvas.height);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgb(255, 0, 0)';
+    ctx.beginPath();
+    ctx.moveTo(endTrimX, 0);
+    ctx.lineTo(endTrimX, canvas.height);
+    ctx.stroke();
+}
+
+function drawTimestamps(ctx, width, height) {
+    const interval = 1;
+    const numberOfLabels = Math.floor(myAudioBuffer.duration / interval);
+    ctx.fillStyle = 'rgb(0, 0, 0)';
+    ctx.font = '8px Arial';
+    for (let i = 0; i <= numberOfLabels; i++) {
+        const x = (width / myAudioBuffer.duration) * (i * interval);
+        ctx.fillText(i * interval + 's', x, height - 5);
+    }
+}
+
+function updateTrimLines() {
+    drawWaveform();
+}
+
+window.onload = loadAudio;
+
+  
+  
+</script>
+
+    
+      
+</body>
+</html>
