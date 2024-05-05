@@ -140,10 +140,10 @@ function updateTrimLines() {
 <canvas id="myCanvas"></canvas><br>
 <input type="text" id="myTrim1"  value="Trim.mp3" style=" background-Color:lime;">  
 <input type=button value="Load" onclick="{myLoadToTrim(document.getElementById('myTrim1').value );  }">    
-<label for="startSlider">Start Trim (seconds):</label>
-<input type="range" id="startSlider" style="accent-color:green;" value="0" min="0" step="0.01" oninput="updateTrimLines()"><br>
-<label for="endSlider">End Trim (seconds):</label>
-<input type="range" id="endSlider" min="0" step="0.01" style="accent-color:red;" oninput="updateTrimLines()"><br>
+<label for="startSlider">Start Trim:</label>
+<input type="range" id="startSlider" style="accent-color:green;" value="0" min="0" step="0.001" oninput="updateTrimLines()"><br>
+<label for="endSlider">End Trim:</label>
+<input type="range" id="endSlider" min="0" step="0.001" style="accent-color:red;" oninput="updateTrimLines()"><br>
 <input type="button" value="Trim Audio" onclick="playTrimmedAudio(parseFloat(document.getElementById('startSlider').value), parseFloat(document.getElementById('endSlider').value))">
 <input type="button" value="Stop Audio" onclick="stopAudio()">
 <input type="button" value="Loop Audio" onclick="loopAudio()">
