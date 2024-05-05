@@ -130,6 +130,7 @@ function updateTrimLines() {
 }
 
 //window.onload = loadAudio;
+    window.onload =   myLoadToTrim('a.mp3')
 </script>
 <style>
 #myCanvas { width: 100%; height: 200px; background-color: #eee; }
@@ -151,7 +152,7 @@ function updateTrimLines() {
   //  document.getElementById('myName4').style.backgroundColor = 'gray';
   //  loadFile(4, event)
   document.getElementById('myTrim1').value = this.value
-  document.getElementById('mmTrim1').style.backgroundColor = 'gray';
+  document.getElementById('myTrim1').style.backgroundColor = 'gray';
   myLoadToTrim(this.value);  
 }">    
 </body>
