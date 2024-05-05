@@ -9,7 +9,7 @@
 
 <script>
 
-async function mySaveTrim() {
+async function mySaveTrim(mySaveFileName) {
     const start = parseFloat(document.getElementById('startSlider').value);
     const end = parseFloat(document.getElementById('endSlider').value);
     const trimmedAudio = myAudioBuffer.getChannelData(0).slice(start * myAudioBuffer.sampleRate, end * myAudioBuffer.sampleRate);
@@ -19,7 +19,7 @@ async function mySaveTrim() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'trimmed_audio.mp3';
+    a.download = 'mySaveFileName';
     a.click();
     URL.revokeObjectURL(url);
 }
@@ -42,9 +42,7 @@ async function myLoadToTrim(myInFileName) {
     drawWaveform();
 }
 
-async function mySaveTrim(myInFileName) {
 
-}
     
 
 function drawWaveform() {
