@@ -149,6 +149,9 @@ function drawTimestamps(ctx, width, height) {
 }
 
 function updateTrimLines() {
+    if (document.getElementById('startSlider').value > document.getElementById('endSlider').value ){
+        document.getElementById('endSlider').value = document.getElementById('startSlider').value + 0.2
+    }
     drawWaveform();
 }
 
