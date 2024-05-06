@@ -11,11 +11,11 @@ let isLooping = false;
 
 
 
-    /*
-async function loadAudio() {
+
+async function loadLocalAudio(myLocalFile) {
     myAudioContext = new AudioContext();   
     console.log(document.getElementById('myLocalFileName').value)
-    const response = await fetch(document.getElementById('myLocalFileName').value); // Replace 'a.mp3' with the path to your audio file
+    const response = await fetch(myLocalFile); // Replace 'a.mp3' with the path to your audio file
     const arrayBuffer = await response.arrayBuffer();
     myAudioBuffer = await myAudioContext.decodeAudioData(arrayBuffer);
     document.getElementById('startSlider').max = myAudioBuffer.duration;
@@ -27,7 +27,7 @@ async function loadAudio() {
 
 
 
-    */
+
 
 
  
@@ -35,7 +35,11 @@ async function loadAudio(file) {
     myAudioContext = new AudioContext();
     const arrayBuffer = await file.arrayBuffer();
     myAudioBuffer = await myAudioContext.decodeAudioData(arrayBuffer);
-    // Rest of your loadAudio function...
+    document.getElementById('startSlider').max = myAudioBuffer.duration;
+    document.getElementById('startSlider').value = 0;
+    document.getElementById('endSlider').max = myAudioBuffer.duration;
+    document.getElementById('endSlider').value = myAudioBuffer.duration;
+    drawWaveform();
 }
 
 function handleFileSelect(event) {
@@ -229,7 +233,7 @@ async function processAudioUsingCrunker(operation, trackId = null) {
 <body>
 <canvas id="myCanvas"></canvas>
 <input type=text id="myLocalFileName" value="a.mp3">
-<input type=button value="Load Local" onclick="loadAudio(document.getElementById('myLocalFileName').value)"><br>
+<input type=button value="Load Local" onclick="loadLocalAudio(document.getElementById('myLocalFileName').value)"><br>
 <label for="startSlider">Start Trim:</label>
 <input type="range" id="startSlider" style="accent-color:green;" value="0" min="0" step="0.001" oninput="updateTrimLines()"><br>
 <label for="endSlider">End Trim:</label>
