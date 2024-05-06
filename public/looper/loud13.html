@@ -251,6 +251,8 @@ async function processAudioUsingCrunker(operation, trackId = null) {
 */
 
 
+
+    /*
 async function processAudioUsingCrunker(operation, trackId = null, trimmedBuffer = null, filename = null) {
     if (Object.keys(audioBuffers).length === 0 && !trimmedBuffer) {
         alert('No audio loaded.');
@@ -304,9 +306,64 @@ async function processAudioUsingCrunker(operation, trackId = null, trimmedBuffer
     }
 }
 
+*/
 
 
 
+
+    async function processAudioUsingCrunkerTrim(trimmedBuffer, filename = 'trimmed_audio.mp3') {
+    if (!trimmedBuffer) {
+        alert('No audio to save.');
+        return;
+    }
+
+    const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
+    const crunker = new Crunker({ sampleRate: 48000 });
+
+    try {
+        const output = await crunker.export(trimmedBuffer, 'audio/mp3');
+        crunker.download(output.blob, filename);
+    } catch (error) {
+        console.error('Error during audio processing:', error);
+        alert('Error during audio processing. Please check the console for more details.');
+    }
+}
+
+
+async function SaveTrimmedAudio(filename) {
+    const start = parseFloat(document.getElementById('startSlider').value);
+    const end = parseFloat(document.getElementById('endSlider').value);
+    
+    // Calculate the duration of the trimmed audio in seconds
+    const duration = end - start;
+
+    // Calculate the number of frames for the trimmed audio
+    const startFrame = Math.floor(start * myAudioBuffer.sampleRate);
+    const endFrame = Math.floor(end * myAudioBuffer.sampleRate);
+    const frameCount = endFrame - startFrame;
+
+    // Create a new AudioBuffer to hold the trimmed audio
+    const audioCtx = new AudioContext();
+    const trimmedBuffer = audioCtx.createBuffer(
+        myAudioBuffer.numberOfChannels,
+        frameCount,
+        myAudioBuffer.sampleRate
+    );
+
+    // Copy data from the original buffer to the trimmed buffer
+    for (let channel = 0; channel < myAudioBuffer.numberOfChannels; channel++) {
+        const channelData = myAudioBuffer.getChannelData(channel);
+        const trimmedChannelData = trimmedBuffer.getChannelData(channel);
+        for (let i = 0; i < frameCount; i++) {
+            trimmedChannelData[i] = channelData[startFrame + i];
+        }
+    }
+
+    // Process and save trimmed audio using Crunker
+    await processAudioUsingCrunkerTrim(trimmedBuffer, filename);
+}
+
+    
 
 //window.onload = loadAudio;
 </script>
