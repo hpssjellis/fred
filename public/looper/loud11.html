@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Channel Looper</title>
+</head>
+<body>
+<h2>Music Multi Channel Javascript Looper</h2>
+
+<div>
+    <input type="button" value="Play All Channels" onclick="playAllChannels()">
+    <input type="button" value="Stop All Audio" onclick="stopAllAudio()"><br>
+    
+    <input type="text" id="myMergeName" size="10" value="Merge-All.mp3" style="background-color: lime;">
+    <button onclick="processAudioUsingCrunker('merge')">Merge All Tracks</button>
+    <button onclick="processAudioUsingCrunker('concat')">Concatenate All Tracks</button>
+
+</div><br><br>
+
+
+  
+<div>      
+    <input type="text" id="myName1" value="Channel1.mp3" style="background-color: lime;">
+    <input id="myStart1" type="button" value="Record Channel 1" style="background-color: lime; height:75px;" onclick="recordOrStopRecording(1)">
+    
+    <input type="button" value="Once" onclick="toggleLoop(1)">
+    <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(1, event)"><br>
+
+    <audio id="audio1" controls></audio>
+    <a id="download1" style="display: none;">Download Channel 1</a>
+    <br><br>
+</div>
+
+
+
+<div>
+  <canvas id="myCanvas"></canvas>
+  <label for="startSlider">Start Trim :</label>
+  <input type="range" id="startSlider" style="accent-color:green;" value="0" min="0" step="0.01" oninput="updateTrimLines()"><br>
+  <label for="endSlider">End Trim :</label>
+  <input type="range" id="endSlider" min="0" step="0.01" style="accent-color:red;" oninput="updateTrimLines()"><br>
+  <input type="button" value="Trim Audio" onclick="playTrimmedAudio()">
+  <input type="button" value="Stop Audio" onclick="stopAudio()">
+  <input type="button" value="Loop Audio" onclick="loopAudio()">
+</div> 
+
+
+
+<script>
+
+
+
+function recordOrStopRecording(channel) {
+    const button = document.getElementById(`myStart${channel}`);
+    if (button.value.startsWith('Record')) {
+        button.style.backgroundColor = 'red';
+        button.value = `Stop Recording ${channel}`;
+        startRecording(channel);
+    } else {
+        button.style.backgroundColor = 'lime';
+        setTimeout(() => {
+            button.value = `Record Channel ${channel}`;
+            button.style.backgroundColor = 'gray';
+            document.getElementById(`myName${channel}`).style.backgroundColor = 'gray';
+        }, 500);
+        stopRecording(channel, `myName${channel}`);
+    }
+}
+
+
+
+
+function toggleLoop(channel) {
+    const button = document.getElementById(`loopButton${channel}`);
+    const audio = document.getElementById(`audio${channel}`);
+    if (button.value === 'Loop') {
+        audio.loop = false;
+        button.value = 'Once';
+    } else {
+        audio.loop = true;
+        button.value = 'Loop';
+    }
+}
+
+
+
+
+
+
+  
+</script>
+
+</body>
+</html>
