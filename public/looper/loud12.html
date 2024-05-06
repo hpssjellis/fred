@@ -122,7 +122,7 @@ let isLooping = false;
 
 async function loadAudio() {
     myAudioContext = new AudioContext();
-    const response = await fetch(document.getWElementById(myTrimLocalName).value); // Replace 'a.mp3' with the path to your audio file
+    const response = await fetch(document.getElementById(myTrimLocalName).value); // Replace 'a.mp3' with the path to your audio file
     const arrayBuffer = await response.arrayBuffer();
     myAudioBuffer = await myAudioContext.decodeAudioData(arrayBuffer);
     document.getElementById('startSlider').max = myAudioBuffer.duration;
