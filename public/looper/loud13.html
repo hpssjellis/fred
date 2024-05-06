@@ -9,6 +9,9 @@ let myAudioBuffer;
 let mySource;
 let isLooping = false;
 
+
+
+    /*
 async function loadAudio() {
     myAudioContext = new AudioContext();   
     console.log(document.getElementById('myLocalFileName').value)
@@ -22,6 +25,28 @@ async function loadAudio() {
     drawWaveform();
 }
 
+
+
+    */
+
+
+ 
+async function loadAudio(file) {
+    myAudioContext = new AudioContext();
+    const arrayBuffer = await file.arrayBuffer();
+    myAudioBuffer = await myAudioContext.decodeAudioData(arrayBuffer);
+    // Rest of your loadAudio function...
+}
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        loadAudio(file);
+    }
+}
+
+
+    
 function drawWaveform() {
     const canvas = document.getElementById('myCanvas');
     const ctx = canvas.getContext('2d');
@@ -144,6 +169,57 @@ function updateTrimLines() {
 }
 
 
+
+    
+async function processAudioUsingCrunker(operation, trackId = null) {
+    if (Object.keys(audioBuffers).length === 0) {
+        alert('No audio loaded.');
+        return;
+    }
+    let myCrunkerFilename = 'default.mp3'
+    const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
+    const crunker = new Crunker({ sampleRate: 48000 });
+
+    try {
+        let buffers = Object.values(audioBuffers).filter(buffer => buffer);
+        
+        if (buffers.length === 0) {
+            alert('Please load at least one track.');
+            return;
+        }
+
+        let processedAudio;
+        if (trackId !== null && audioBuffers[trackId]) {
+            processedAudio = audioBuffers[trackId];  // Use the specific buffer if a track ID is provided
+            myCrunkerFilename = document.getElementById('myName'+trackId).value  
+        } else if (operation === "merge" && buffers.length > 1) {
+            processedAudio = await crunker.mergeAudio(buffers);
+            myCrunkerFilename = document.getElementById('myMergeName').value  
+        } else if (operation === "concat" && buffers.length > 1) {
+            processedAudio = await crunker.concatAudio(buffers);
+            myCrunkerFilename = document.getElementById('myMergeName').value  
+        } else {
+            throw new Error("Invalid operation specified or invalid track ID.");
+        }
+
+        const output = await crunker.export(processedAudio, 'audio/mp3');
+       // crunker.download(output.blob, `${trackId ? `Track${trackId}` : operation}Audio.mp3`);
+        crunker.download(output.blob, myCrunkerFilename);
+    } catch (error) {
+        console.error('Error during audio processing:', error);
+        alert('Error during audio processing. Please check the console for more details.');
+    }
+}
+
+
+
+
+
+
+
+
+
+
 //window.onload = loadAudio;
 </script>
 <style>
@@ -153,7 +229,7 @@ function updateTrimLines() {
 <body>
 <canvas id="myCanvas"></canvas>
 <input type=text id="myLocalFileName" value="a.mp3">
-<input type=button value="Load Local" onclick="loadAudio()"><br>
+<input type=button value="Load Local" onclick="loadAudio(document.getElementById('myLocalFileName').value)"><br>
 <label for="startSlider">Start Trim:</label>
 <input type="range" id="startSlider" style="accent-color:green;" value="0" min="0" step="0.001" oninput="updateTrimLines()"><br>
 <label for="endSlider">End Trim:</label>
@@ -161,5 +237,12 @@ function updateTrimLines() {
 <input type="button" value="Trim Audio" onclick="playTrimmedAudio(parseFloat(document.getElementById('startSlider').value), parseFloat(document.getElementById('endSlider').value))">
 <input type="button" value="Stop Audio" onclick="stopAudio()">
 <input type="button" value="Loop Audio" onclick="loopAudio()">
+<input type="file" accept="audio/mp3,video/mp4"  onchange="{
+    document.getElementById('myStart1').style.backgroundColor = 'gray';
+    document.getElementById('myName1').style.backgroundColor = 'gray';
+   // loadFile(1, event)
+   // loadAudio(event)
+    handleFileSelect(event)
+}"><br>  
 </body>
 </html>
