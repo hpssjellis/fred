@@ -22,6 +22,7 @@
 <div>      
     <input type="text" id="myName1" value="Channel1.mp3" style="background-color: lime;">
     <input id="myStart1" type="button" value="Record Channel 1" style="background-color: lime; height:75px;" onclick="recordOrStopRecording(1)">
+    <input type="button" value="Move to Trim" onclick="moveAudioToTrim(1)">
     
     <input type="button" value="Once" onclick="toggleLoop(1)">
     <input type="file" accept="audio/mp3,video/mp4" onchange="loadFile(1, event)"><br>
@@ -42,14 +43,14 @@
   <input type="button" value="Trim Audio" onclick="playTrimmedAudio()">
   <input type="button" value="Stop Audio" onclick="stopAudio()">
   <input type="button" value="Loop Audio" onclick="loopAudio()">
+  <input type="button" value="Move to Audio" onclick="moveTrimmedAudioToAudio()">
 </div> 
 
 
 
 <script>
 
-
-
+/*
 function recordOrStopRecording(channel) {
     const button = document.getElementById(`myStart${channel}`);
     if (button.value.startsWith('Record')) {
@@ -82,7 +83,7 @@ function toggleLoop(channel) {
     }
 }
 
-
+*/
 
 const audioContext = new AudioContext();
     
@@ -437,6 +438,23 @@ async function processAudioUsingCrunker(operation, trackId = null) {
 
 
 
+function moveAudioToTrim(channel) {
+    const audioElement = document.getElementById(`audio${channel}`);
+    const startSlider = document.getElementById('startSlider');
+    const endSlider = document.getElementById('endSlider');
+
+    startSlider.value = 0;
+    endSlider.value = audioElement.duration;
+    updateTrimLines();
+}
+
+function moveTrimmedAudioToAudio() {
+    const startSlider = document.getElementById('startSlider');
+    const endSlider = document.getElementById('endSlider');
+    const audioElement = document.getElementById('audio1');
+
+    playTrimmedAudio(parseFloat(startSlider.value), parseFloat(endSlider.value));
+}
 
 
 
