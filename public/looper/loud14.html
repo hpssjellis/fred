@@ -33,6 +33,7 @@ async function loadAudio(file) {
     document.getElementById('startSlider').value = 0;
     document.getElementById('endSlider').max = myAudioBuffer.duration;
     document.getElementById('endSlider').value = myAudioBuffer.duration;
+    document.getElementById('myLocalFileName').value = file.filename;
     drawWaveform();
 }
 
