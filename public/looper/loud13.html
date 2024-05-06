@@ -16,6 +16,7 @@ async function loadAudio() {
     const arrayBuffer = await response.arrayBuffer();
     myAudioBuffer = await myAudioContext.decodeAudioData(arrayBuffer);
     document.getElementById('startSlider').max = myAudioBuffer.duration;
+    document.getElementById('startSlider').value = 0;
     document.getElementById('endSlider').max = myAudioBuffer.duration;
     document.getElementById('endSlider').value = myAudioBuffer.duration;
     drawWaveform();
@@ -125,10 +126,12 @@ function drawTimestamps(ctx, width, height) {
 }
 
 function updateTrimLines() {
+    
+    console.log(document.getElementById('startSlider').value)
+    console.log(document.getElementById('endSlider').value)
     if (document.getElementById('startSlider').value > document.getElementById('endSlider').value ){
-        document.getElementById('endSlider').value = document.getElementById('startSlider').value + 0.02
+        document.getElementById('endSlider').value = document.getElementById('startSlider').value + 0.0002
     }
-
     drawWaveform();
 }
 
