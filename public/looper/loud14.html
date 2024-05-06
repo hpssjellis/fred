@@ -9,41 +9,6 @@ let myAudioBuffer;
 let mySource;
 let isLooping = false;
 
-async function SaveTrimmedAudio(filename) {
-    filename = filename.replace(".mp3", "");
-    const start = parseFloat(document.getElementById('startSlider').value);
-    const end = parseFloat(document.getElementById('endSlider').value);
-    
-    // Calculate the duration of the trimmed audio in seconds
-    const duration = end - start;
-
-    // Calculate the number of frames for the trimmed audio
-    const startFrame = Math.floor(start * myAudioBuffer.sampleRate);
-    const endFrame = Math.floor(end * myAudioBuffer.sampleRate);
-    const frameCount = endFrame - startFrame;
-
-    // Create a new AudioBuffer to hold the trimmed audio
-    const audioCtx = new AudioContext();
-    const trimmedBuffer = audioCtx.createBuffer(
-        myAudioBuffer.numberOfChannels,
-        frameCount,
-        myAudioBuffer.sampleRate
-    );
-
-    // Copy data from the original buffer to the trimmed buffer
-    for (let channel = 0; channel < myAudioBuffer.numberOfChannels; channel++) {
-        const channelData = myAudioBuffer.getChannelData(channel);
-        const trimmedChannelData = trimmedBuffer.getChannelData(channel);
-        for (let i = 0; i < frameCount; i++) {
-            trimmedChannelData[i] = channelData[startFrame + i];
-        }
-    }
-
-    // Process and save trimmed audio using Crunker
-    await processAudioUsingCrunker('trim', trimmedBuffer, filename);
-}
-
-
 
 async function loadLocalAudio(myLocalFile) {
     myAudioContext = new AudioContext();   
@@ -57,10 +22,6 @@ async function loadLocalAudio(myLocalFile) {
     document.getElementById('endSlider').value = myAudioBuffer.duration;
     drawWaveform();
 }
-
-
-
-
 
 
  
@@ -218,7 +179,8 @@ function updateTrimLines() {
 }
 
 
-async function SaveTrimmedAudio(filename) {
+async function SaveTrimmedAudio(filenameCheck) {
+    let filename = filenameFix.replace('.mp3', '');
     const start = parseFloat(document.getElementById('startSlider').value);
     const end = parseFloat(document.getElementById('endSlider').value);
     
