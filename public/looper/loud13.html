@@ -12,10 +12,34 @@ let isLooping = false;
 async function SaveTrimmedAudio(filename) {
     const start = parseFloat(document.getElementById('startSlider').value);
     const end = parseFloat(document.getElementById('endSlider').value);
-    const trimmedAudio = myAudioBuffer.slice(start, end);
+    
+    // Calculate the duration of the trimmed audio in seconds
+    const duration = end - start;
+
+    // Calculate the number of frames for the trimmed audio
+    const startFrame = Math.floor(start * myAudioBuffer.sampleRate);
+    const endFrame = Math.floor(end * myAudioBuffer.sampleRate);
+    const frameCount = endFrame - startFrame;
+
+    // Create a new AudioBuffer to hold the trimmed audio
+    const audioCtx = new AudioContext();
+    const trimmedBuffer = audioCtx.createBuffer(
+        myAudioBuffer.numberOfChannels,
+        frameCount,
+        myAudioBuffer.sampleRate
+    );
+
+    // Copy data from the original buffer to the trimmed buffer
+    for (let channel = 0; channel < myAudioBuffer.numberOfChannels; channel++) {
+        const channelData = myAudioBuffer.getChannelData(channel);
+        const trimmedChannelData = trimmedBuffer.getChannelData(channel);
+        for (let i = 0; i < frameCount; i++) {
+            trimmedChannelData[i] = channelData[startFrame + i];
+        }
+    }
 
     // Process and save trimmed audio using Crunker
-    await processAudioUsingCrunker('trim', trimmedAudio, filename);
+    await processAudioUsingCrunker('trim', trimmedBuffer, filename);
 }
 
 
@@ -181,7 +205,7 @@ function updateTrimLines() {
 }
 
 
-
+/*
     
 async function processAudioUsingCrunker(operation, trackId = null) {
     if (Object.keys(audioBuffers).length === 0) {
@@ -224,9 +248,61 @@ async function processAudioUsingCrunker(operation, trackId = null) {
 }
 
 
+*/
 
 
+async function processAudioUsingCrunker(operation, trackId = null, trimmedBuffer = null, filename = null) {
+    if (Object.keys(audioBuffers).length === 0 && !trimmedBuffer) {
+        alert('No audio loaded.');
+        return;
+    }
 
+    let myCrunkerFilename = 'default.mp3';
+    const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
+    const crunker = new Crunker({ sampleRate: 48000 });
+
+    try {
+        let buffers;
+        if (operation === "trim" && trimmedBuffer) {
+            buffers = [trimmedBuffer];
+            myCrunkerFilename = filename || 'default.mp3';
+        } else {
+            buffers = Object.values(audioBuffers).filter(buffer => buffer);
+            if (buffers.length === 0) {
+                alert('Please load at least one track.');
+                return;
+            }
+            if (trackId !== null && audioBuffers[trackId]) {
+                myCrunkerFilename = document.getElementById('myName'+trackId).value;
+            } else if (operation === "merge" && buffers.length > 1) {
+                myCrunkerFilename = document.getElementById('myMergeName').value;
+            } else if (operation === "concat" && buffers.length > 1) {
+                myCrunkerFilename = document.getElementById('myMergeName').value;
+            } else {
+                throw new Error("Invalid operation specified or invalid track ID.");
+            }
+        }
+
+        let processedAudio;
+        if (operation === "trim" && trimmedBuffer) {
+            processedAudio = trimmedBuffer;
+        } else {
+            if (operation === "merge") {
+                processedAudio = await crunker.mergeAudio(buffers);
+            } else if (operation === "concat") {
+                processedAudio = await crunker.concatAudio(buffers);
+            } else {
+                throw new Error("Invalid operation specified.");
+            }
+        }
+
+        const output = await crunker.export(processedAudio, 'audio/mp3');
+        crunker.download(output.blob, myCrunkerFilename);
+    } catch (error) {
+        console.error('Error during audio processing:', error);
+        alert('Error during audio processing. Please check the console for more details.');
+    }
+}
 
 
 
