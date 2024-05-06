@@ -9,6 +9,14 @@ let myAudioBuffer;
 let mySource;
 let isLooping = false;
 
+async function SaveTrimmedAudio(filename) {
+    const start = parseFloat(document.getElementById('startSlider').value);
+    const end = parseFloat(document.getElementById('endSlider').value);
+    const trimmedAudio = myAudioBuffer.slice(start, end);
+
+    // Process and save trimmed audio using Crunker
+    await processAudioUsingCrunker('trim', trimmedAudio, filename);
+}
 
 
 
