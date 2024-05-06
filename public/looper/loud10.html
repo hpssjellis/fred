@@ -19,7 +19,7 @@ async function mySaveTrim(mySaveFileName) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'mySaveFileName';
+    a.download = mySaveFileName;
     a.click();
     URL.revokeObjectURL(url);
 }
