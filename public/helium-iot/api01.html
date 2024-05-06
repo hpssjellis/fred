@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Helium IoT API Access Example</title>
+</head>
+<body>
+
+<h1>Helium IoT API Access</h1>
+<p>Press the button to fetch data from the Helium IoT API.</p>
+<input type="button" value="Fetch Device Data" onclick="fetchMyDeviceData()">
+
+<script>
+  async function fetchMyDeviceData() {
+    const myAPIUrl = 'https://console.helium-iot.eu/api/v1/devices';  // Adjust this URL based on your API endpoint
+    const myAccessToken = 'YOUR_ACCESS_TOKEN_HERE';  // Replace with your actual access token
+
+    try {
+      const myResponse = await fetch(myAPIUrl, {
+        headers: {
+          'Authorization': `Bearer ${myAccessToken}`
+        }
+      });
+      
+      if (myResponse.ok) {
+        const myData = await myResponse.json();
+        console.log('Device Data:', myData);
+        alert(`Fetched ${myData.length} devices successfully.`);
+      } else {
+        console.error('Failed to fetch device data', myResponse.status, myResponse.statusText);
+      }
+    } catch (myError) {
+      console.error('Error fetching device data:', myError);
+    }
+  }
+</script>
+
+</body>
+</html>
