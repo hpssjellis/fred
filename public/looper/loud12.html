@@ -446,13 +446,7 @@ function moveAudioToTrim(channel) {
     updateTrimLines();
 }
 
-function moveTrimmedAudioToAudio() {
-    const startSlider = document.getElementById('startSlider');
-    const endSlider = document.getElementById('endSlider');
-    const audioElement = document.getElementById('audio1');
 
-    playTrimmedAudio(parseFloat(startSlider.value), parseFloat(endSlider.value));
-}
 
 
 
@@ -461,7 +455,7 @@ function moveTrimmedAudioToAudio() {
     const endSlider = document.getElementById('endSlider');
     const audioElement = document.getElementById('audio1');
 
-    // Stop any currently playing audio
+    // Pause and reset the audio control
     audioElement.pause();
     audioElement.currentTime = 0;
 
@@ -478,7 +472,7 @@ function moveTrimmedAudioToAudio() {
 
     
 
-window.onload = loadAudio;
+//window.onload = loadAudio;
 
   
   
