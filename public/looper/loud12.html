@@ -130,11 +130,53 @@ async function loadAudio() {
     drawWaveform();
 }
 
+    /*
+
 function drawWaveform() {
     const canvas = document.getElementById('myCanvas');
     const ctx = canvas.getContext('2d');
     const WIDTH = canvas.width;
     const HEIGHT = canvas.height;
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    const data = myAudioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / WIDTH);
+    const amp = HEIGHT / 2;
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.beginPath();
+    ctx.strokeStyle = '#0000FF';
+    ctx.moveTo(0, amp);
+    for (let i = 0; i < WIDTH; i++) {
+        let min = 1.0;
+        let max = -1.0;
+        for (let j = 0; j < step; j++) {
+            const datum = data[(i * step) + j];
+            if (datum < min) min = datum;
+            if (datum > max) max = datum;
+        }
+        ctx.lineTo(i, (1 + min) * amp);
+        ctx.lineTo(i, (1 + max) * amp);
+    }
+    ctx.stroke();
+    drawTrimLines();
+    drawTimestamps(ctx, WIDTH, HEIGHT);
+}
+
+
+    */
+
+        function drawWaveform() {
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+
+    // Check if the audio buffer is loaded and decoded
+    if (!myAudioBuffer) {
+        console.error("Audio buffer is not loaded or decoded.");
+        return;
+    }
+
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     const data = myAudioBuffer.getChannelData(0);
     const step = Math.ceil(data.length / WIDTH);
@@ -430,11 +472,25 @@ async function processAudioUsingCrunker(operation, trackId = null) {
 
 
 
+function moveAudioToTrim(channel) {
+    const audioElement = document.getElementById(`audio${channel}`);
+    const startSlider = document.getElementById('startSlider');
+    const endSlider = document.getElementById('endSlider');
+
+    // Check if myAudioBuffer is defined
+    if (myAudioBuffer) {
+        startSlider.value = 0;
+        endSlider.value = audioElement.duration;
+        updateTrimLines();
+    } else {
+        console.error('Audio buffer is not defined.');
+    }
+}
 
 
 
 
-
+/*
 
 function moveAudioToTrim(channel) {
     const audioElement = document.getElementById(`audio${channel}`);
@@ -447,7 +503,7 @@ function moveAudioToTrim(channel) {
 }
 
 
-
+*/
 
 
 function moveTrimmedAudioToAudio() {
