@@ -638,6 +638,260 @@ async function processAudioUsingCrunker(operation, trackId = null) {
     }
 }
 
+
+
+
+////////////////////////////////////////////////// loud14.html //////////////////////////////////////////////////
+
+
+
+let myAudioContext;
+let myAudioBuffer;
+let mySource;
+let isLooping = false;
+
+
+async function loadLocalAudio(myLocalFile) {
+    myAudioContext = new AudioContext();   
+    console.log(document.getElementById('myLocalFileName').value)
+    const response = await fetch(myLocalFile); // Replace 'a.mp3' with the path to your audio file
+    const arrayBuffer = await response.arrayBuffer();
+    myAudioBuffer = await myAudioContext.decodeAudioData(arrayBuffer);
+    document.getElementById('startSlider').max = myAudioBuffer.duration;
+    document.getElementById('startSlider').value = 0;
+    document.getElementById('endSlider').max = myAudioBuffer.duration;
+    document.getElementById('endSlider').value = myAudioBuffer.duration;
+    drawWaveform();
+}
+
+
+ 
+async function loadAudio(file) {
+    myAudioContext = new AudioContext();
+    const arrayBuffer = await file.arrayBuffer();
+    myAudioBuffer = await myAudioContext.decodeAudioData(arrayBuffer);
+    document.getElementById('startSlider').max = myAudioBuffer.duration;
+    document.getElementById('startSlider').value = 0;
+    document.getElementById('endSlider').max = myAudioBuffer.duration;
+    document.getElementById('endSlider').value = myAudioBuffer.duration;
+    document.getElementById('myLocalFileName').value = file.name;
+    drawWaveform();
+}
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        loadAudio(file);
+    }
+}
+
+
+    
+function drawWaveform() {
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    const data = myAudioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / WIDTH);
+    const amp = HEIGHT / 2;
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.beginPath();
+    ctx.strokeStyle = '#0000FF';
+    ctx.moveTo(0, amp);
+    for (let i = 0; i < WIDTH; i++) {
+        let min = 1.0;
+        let max = -1.0;
+        for (let j = 0; j < step; j++) {
+            const datum = data[(i * step) + j];
+            if (datum < min) min = datum;
+            if (datum > max) max = datum;
+        }
+        ctx.lineTo(i, (1 + min) * amp);
+        ctx.lineTo(i, (1 + max) * amp);
+    }
+    ctx.stroke();
+    drawTrimLines();
+    drawTimestamps(ctx, WIDTH, HEIGHT);
+}
+
+function playTrimmedAudio(start, end) {
+    stopAudio();
+    isLooping = false;
+    mySource = myAudioContext.createBufferSource();
+    mySource.buffer = myAudioBuffer;
+    mySource.connect(myAudioContext.destination);
+    mySource.start(0, start, end - start);
+}
+
+
+let loopTimeout; // Variable to hold the timeout, so we can clear it if needed
+
+function loopAudio() {
+    let start = parseFloat(document.getElementById('startSlider').value);
+    let end = parseFloat(document.getElementById('endSlider').value);
+    stopAudio(); // Stop currently playing audio including clearing any existing loop
+
+    mySource = myAudioContext.createBufferSource();
+    mySource.buffer = myAudioBuffer;
+    mySource.connect(myAudioContext.destination);
+    mySource.start(0, start, end - start);
+
+    // Calculate duration of the segment to loop
+    let duration = (end - start) * 1000; // Convert to milliseconds
+    loopTimeout = setTimeout(loopAudio, duration); // Set timeout to restart playback at the end of the segment
+}
+
+function stopAudio() {
+    if (mySource) {
+        mySource.stop();
+        mySource = null; // Clear the source
+    }
+    clearTimeout(loopTimeout); // Clear the looping timeout
+}
+
+    
+function drawTrimLines() {
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+    const WIDTH = canvas.width;
+    const startTrimX = WIDTH * (document.getElementById('startSlider').value / myAudioBuffer.duration);
+    const endTrimX = WIDTH * (document.getElementById('endSlider').value / myAudioBuffer.duration);
+    ctx.strokeStyle = 'rgb(0, 255, 0)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(startTrimX, 0);
+    ctx.lineTo(startTrimX, canvas.height);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgb(255, 0, 0)';
+    ctx.beginPath();
+    ctx.moveTo(endTrimX, 0);
+    ctx.lineTo(endTrimX, canvas.height);
+    ctx.stroke();
+}
+
+function drawTimestamps(ctx, width, height) {
+    const interval = 1;
+    const numberOfLabels = Math.floor(myAudioBuffer.duration / interval);
+    ctx.fillStyle = 'rgb(0, 0, 0)';
+    ctx.font = '8px Arial';
+    for (let i = 0; i <= numberOfLabels; i++) {
+        const x = (width / myAudioBuffer.duration) * (i * interval);
+        ctx.fillText(i * interval + 's', x, height - 5);
+    }
+}
+
+function updateTrimLines() {
+    const startSlider = document.getElementById('startSlider');
+    const endSlider = document.getElementById('endSlider');
+    
+    // Convert values to numbers
+    const startValue = parseFloat(startSlider.value);
+    const endValue = parseFloat(endSlider.value);
+    
+    // Check if start value is greater than or equal to end value
+    if (startValue >= endValue) {
+        // Set the end value to be slightly greater than the start value
+        endSlider.value = (startValue + 0.005).toFixed(3);
+    }
+    
+    // Redraw the waveform with updated trim lines
+    drawWaveform();
+}
+
+
+    async function processAudioUsingCrunkerTrim(trimmedBuffer, filename = 'trimmed_audio.mp3') {
+    if (!trimmedBuffer) {
+        alert('No audio to save.');
+        return;
+    }
+
+    const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
+    const crunker = new Crunker({ sampleRate: 48000 });
+
+    try {
+        const output = await crunker.export(trimmedBuffer, 'audio/mp3');
+        crunker.download(output.blob, filename);
+    } catch (error) {
+        console.error('Error during audio processing:', error);
+        alert('Error during audio processing. Please check the console for more details.');
+    }
+}
+
+
+async function SaveTrimmedAudio(filenameCheck) {
+    let filename = filenameCheck.replace('.mp3', '');
+    const start = parseFloat(document.getElementById('startSlider').value);
+    const end = parseFloat(document.getElementById('endSlider').value);
+    
+    // Calculate the duration of the trimmed audio in seconds
+    const duration = end - start;
+
+    // Calculate the number of frames for the trimmed audio
+    const startFrame = Math.floor(start * myAudioBuffer.sampleRate);
+    const endFrame = Math.floor(end * myAudioBuffer.sampleRate);
+    const frameCount = endFrame - startFrame;
+
+    // Create a new AudioBuffer to hold the trimmed audio
+    const audioCtx = new AudioContext();
+    const trimmedBuffer = audioCtx.createBuffer(
+        myAudioBuffer.numberOfChannels,
+        frameCount,
+        myAudioBuffer.sampleRate
+    );
+
+    // Copy data from the original buffer to the trimmed buffer
+    for (let channel = 0; channel < myAudioBuffer.numberOfChannels; channel++) {
+        const channelData = myAudioBuffer.getChannelData(channel);
+        const trimmedChannelData = trimmedBuffer.getChannelData(channel);
+        for (let i = 0; i < frameCount; i++) {
+            trimmedChannelData[i] = channelData[startFrame + i];
+        }
+    }
+
+    // Process and save trimmed audio using Crunker
+    await processAudioUsingCrunkerTrim(trimmedBuffer, filename);
+}
+
+    
+
+//window.onload = loadAudio;
+</script>
+<style>
+#myCanvas { width: 100%; height: 200px; background-color: #eee; }
+</style>
+</head>
+<body>
+<canvas id="myCanvas"></canvas>
+<input type=text id="myLocalFileName" value="a.mp3">
+<input type=button value="Load Local" onclick="loadLocalAudio(document.getElementById('myLocalFileName').value)"><br>
+<input type=button value="Save Trimmed as .mp3" onclick="SaveTrimmedAudio(document.getElementById('myLocalFileName').value)"><br>
+<label for="startSlider">Start Trim:</label>
+<input type="range" id="startSlider" style="accent-color:green;" value="0" min="0" step="0.001" oninput="updateTrimLines()">
+<label for="endSlider">End Trim:</label>
+<input type="range" id="endSlider" min="0" step="0.001" style="accent-color:red;" oninput="updateTrimLines()"><br>
+<input type="button" value="Trim Audio" onclick="playTrimmedAudio(parseFloat(document.getElementById('startSlider').value), parseFloat(document.getElementById('endSlider').value))">
+<input type="button" value="Stop Audio" onclick="stopAudio()">
+<input type="button" value="Loop Audio" onclick="loopAudio()">
+<input type="file" accept="audio/mp3,video/mp4"  onchange="{
+ //   document.getElementById('myStart1').style.backgroundColor = 'gray';
+    handleFileSelect(event)
+}"><br>  
+
+
+
+
+    
+
+
+
+
+
+
+
+    
   
 </script>
 
