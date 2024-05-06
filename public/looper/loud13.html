@@ -10,7 +10,7 @@ let mySource;
 let isLooping = false;
 
 async function loadAudio() {
-    myAudioContext = new AudioContext();
+    myAudioContext = new AudioContext();   
     const response = await fetch(document.getElementById(myLocalFileName).value); // Replace 'a.mp3' with the path to your audio file
     const arrayBuffer = await response.arrayBuffer();
     myAudioBuffer = await myAudioContext.decodeAudioData(arrayBuffer);
