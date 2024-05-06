@@ -126,14 +126,23 @@ function drawTimestamps(ctx, width, height) {
 }
 
 function updateTrimLines() {
+    const startSlider = document.getElementById('startSlider');
+    const endSlider = document.getElementById('endSlider');
     
-    console.log(document.getElementById('startSlider').value)
-    console.log(document.getElementById('endSlider').value)
-    if (document.getElementById('startSlider').value > document.getElementById('endSlider').value ){
-        document.getElementById('endSlider').value = document.getElementById('startSlider').value + 0.0002
+    // Convert values to numbers
+    const startValue = parseFloat(startSlider.value);
+    const endValue = parseFloat(endSlider.value);
+    
+    // Check if start value is greater than or equal to end value
+    if (startValue >= endValue) {
+        // Set the end value to be slightly greater than the start value
+        endSlider.value = (startValue + 0.001).toFixed(3);
     }
+    
+    // Redraw the waveform with updated trim lines
     drawWaveform();
 }
+
 
 //window.onload = loadAudio;
 </script>
