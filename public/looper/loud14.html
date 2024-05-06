@@ -180,7 +180,7 @@ function updateTrimLines() {
 
 
 async function SaveTrimmedAudio(filenameCheck) {
-    let filename = filenameFix.replace('.mp3', '');
+    let filename = filenameCheck.replace('.mp3', '');
     const start = parseFloat(document.getElementById('startSlider').value);
     const end = parseFloat(document.getElementById('endSlider').value);
     
