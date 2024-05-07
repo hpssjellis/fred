@@ -540,15 +540,92 @@ async function SaveTrimmedAudio(filenameCheck) {
     await processAudioUsingCrunkerTrim(trimmedBuffer, filename);
 }
 
+async function myTrimThis(channelNumber) {
+    // Get the audio element of the specified channel
+    const audioElement = audioElements[channelNumber];
+    if (!audioElement) {
+        alert('Audio element does not exist for this channel.');
+        return;
+    }
 
-async function myTrimThis(channelNumber){
+    // Set the source of the audio in the trim controls
+    const audioSrc = audioElement.src;
+    const trimAudioElement = document.getElementById('audioTrimControl'); // Assume this is your trim control audio element
+    trimAudioElement.src = audioSrc;
 
+    // Load this audio into the trim context (updating UI if necessary)
+    loadLocalAudio(audioSrc);
 }
 
+async function myReturnTrim(channelNumber) {
+    const start = parseFloat(document.getElementById('startSlider').value);
+    const end = parseFloat(document.getElementById('endSlider').value);
+    const duration = end - start;
+    if (duration <= 0) {
+        alert('Invalid trim range.');
+        return;
+    }
 
-async function myReturnTrim(channelNumber){
+    const trimmedBuffer = await createTrimmedAudioBuffer(start, end);
+    if (!trimmedBuffer) {
+        alert('Failed to create trimmed audio.');
+        return;
+    }
 
+    // Convert the trimmed AudioBuffer back to an audio source and set it to the original channel's audio element
+    const blob = await bufferToBlob(trimmedBuffer);
+    const url = URL.createObjectURL(blob);
+    audioElements[channelNumber].src = url;
+
+    // Update the download link for the channel
+    downloadLinks[channelNumber].href = url;
+    downloadLinks[channelNumber].download = `Channel${channelNumber}_Trimmed.mp3`;
 }
+
+async function createTrimmedAudioBuffer(start, end) {
+    const trimAudioContext = new AudioContext();
+    const originalBuffer = myAudioBuffer; // Assume this is where the original full audio buffer is stored
+
+    const startFrame = Math.floor(start * originalBuffer.sampleRate);
+    const endFrame = Math.floor(end * originalBuffer.sampleRate);
+    const frameCount = endFrame - startFrame;
+
+    const trimmedBuffer = trimAudioContext.createBuffer(
+        originalBuffer.numberOfChannels,
+        frameCount,
+        originalBuffer.sampleRate
+    );
+
+    for (let channel = 0; channel < originalBuffer.numberOfChannels; channel++) {
+        const originalData = originalBuffer.getChannelData(channel);
+        const trimmedData = trimmedBuffer.getChannelData(channel);
+        for (let i = 0; i < frameCount; i++) {
+            trimmedData[i] = originalData[startFrame + i];
+        }
+    }
+
+    return trimmedBuffer;
+}
+
+async function bufferToBlob(audioBuffer) {
+    const audioContext = new AudioContext();
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    const dest = audioContext.createMediaStreamDestination();
+    source.connect(dest);
+    source.start(0);
+
+    const recorder = new MediaRecorder(dest.stream);
+    const chunks = [];
+    recorder.ondataavailable = e => chunks.push(e.data);
+    recorder.start();
+
+    await new Promise(resolve => recorder.onstop = resolve);
+    recorder.stop();
+
+    return new Blob(chunks, { type: 'audio/mp3' });
+}
+
 
     
 
