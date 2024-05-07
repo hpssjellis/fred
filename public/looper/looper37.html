@@ -558,6 +558,8 @@ async function myTrimThis(channelNumber) {
 }
 
 async function myReturnTrim(channelNumber) {
+    console.log('channelNumber')
+    console.log(channelNumber)
     const start = parseFloat(document.getElementById('startSlider').value);
     const end = parseFloat(document.getElementById('endSlider').value);
     const duration = end - start;
