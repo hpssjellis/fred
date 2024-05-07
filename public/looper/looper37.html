@@ -541,21 +541,26 @@ async function SaveTrimmedAudio(filenameCheck) {
 }
 
 async function myTrimThis(channelNumber) {
-    // Get the audio element of the specified channel
     const audioElement = audioElements[channelNumber];
     if (!audioElement) {
         alert('Audio element does not exist for this channel.');
         return;
     }
 
-    // Set the source of the audio in the trim controls
-    const audioSrc = audioElement.src;
-    const trimAudioElement = document.getElementById('audioTrimControl'); // Assume this is your trim control audio element
-    trimAudioElement.src = audioSrc;
+    // Check if the trim control element exists
+    const trimAudioElement = document.getElementById('audioTrimControl');
+    if (!trimAudioElement) {
+        alert('Trim control audio element does not exist.');
+        return;
+    }
 
-    // Load this audio into the trim context (updating UI if necessary)
-    loadLocalAudio(audioSrc);
+    // Set the source from the specified channel's audio to the trim control
+    trimAudioElement.src = audioElement.src;
+
+    // Optionally, if there's a need to load or reset the UI for trimming
+    loadLocalAudio(audioElement.src); // Assuming this function resets necessary UI components for trimming
 }
+
 
 async function myReturnTrim(channelNumber) {
     console.log('channelNumber')
