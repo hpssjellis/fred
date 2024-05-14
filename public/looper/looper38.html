@@ -144,7 +144,7 @@ const downloadLinks = {
 function startRecording(channel) {
     navigator.mediaDevices.getUserMedia({
         audio: {
-            sampleRate: 48000,
+            sampleRate: 192000,
             noiseSuppression: true,
             echoCancellation: true
         }
@@ -290,7 +290,7 @@ async function processAudioUsingCrunker(operation, trackId = null) {
     }
     let myCrunkerFilename = 'default.mp3'
     const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
-    const crunker = new Crunker({ sampleRate: 48000 });
+    const crunker = new Crunker({ sampleRate: 192000 });
 
     try {
         let buffers = Object.values(audioBuffers).filter(buffer => buffer);
@@ -494,7 +494,7 @@ function updateTrimLines() {
     }
 
     const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
-    const crunker = new Crunker({ sampleRate: 48000 });
+    const crunker = new Crunker({ sampleRate: 192000 });
 
     try {
         const output = await crunker.export(trimmedBuffer, 'audio/mp3');
