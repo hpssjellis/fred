@@ -146,7 +146,8 @@ function startRecording(channel) {
         audio: {
             sampleRate: 192000,
             noiseSuppression: true,
-            echoCancellation: true
+            echoCancellation: true,
+            autoGainControl: false // Disable automatic gain control
         }
     })
     .then(stream => {
@@ -290,7 +291,12 @@ async function processAudioUsingCrunker(operation, trackId = null) {
     }
     let myCrunkerFilename = 'default.mp3'
     const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
-    const crunker = new Crunker({ sampleRate: 192000 });
+    const crunker = new Crunker({
+            sampleRate: 192000,
+            noiseSuppression: true,
+            echoCancellation: true,
+            autoGainControl: false // Disable automatic gain control
+        });
 
     try {
         let buffers = Object.values(audioBuffers).filter(buffer => buffer);
@@ -494,7 +500,12 @@ function updateTrimLines() {
     }
 
     const { default: Crunker } = await import('https://unpkg.com/crunker@latest/dist/crunker.esm.js');
-    const crunker = new Crunker({ sampleRate: 192000 });
+    const crunker = new Crunker({
+            sampleRate: 192000,
+            noiseSuppression: true,
+            echoCancellation: true,
+            autoGainControl: false // Disable automatic gain control
+        });
 
     try {
         const output = await crunker.export(trimmedBuffer, 'audio/mp3');
