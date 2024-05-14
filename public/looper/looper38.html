@@ -35,7 +35,7 @@
          stopRecording(1, 'myName1');
        }
     }">
-    <input type=button value="Trim this" onclick="myTrimThis(1)">
+    
     <input type="button" value="Once" onclick="{
         if (this.value == 'Loop') {
             audioElements[1].loop = false;
@@ -77,8 +77,8 @@
          }, 500);
          stopRecording(2, 'myName2');
        }
-    }">  
-    <input type=button value="Trim this" onclick="myTrimThis(2)">
+    }">
+    
     <input type="button" value="Once" onclick="{
         if (this.value == 'Loop') {
             audioElements[2].loop = false;
@@ -101,9 +101,324 @@
 </div>
 
 
-// remaining 3-9 div's have been removed for simplicity
+
+  
+<div>      
+    <input type="text" id="myName3"  value="Channel3.mp3" style=" background-Color:lime;">
 
 
+    <input id="myStart3" type="button" value="Record Channel 3"  style=" background-Color:lime; height:75px; " onclick="{
+       if ( this.value.startsWith('Record') ) {
+         document.getElementById('myStart3').style.backgroundColor = 'red';
+         document.getElementById('myStart3').value = 'Stop Recording 3'
+         startRecording(3);         
+       } else {
+         document.getElementById('myStart3').style.backgroundColor = 'lime';
+         setTimeout(function () {
+           document.getElementById('myStart3').value = 'Record Channel 3'
+           document.getElementById('myStart3').style.backgroundColor = 'gray';
+           document.getElementById('myName3').style.backgroundColor = 'gray';
+         }, 500);
+         stopRecording(3, 'myName3');
+       }
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[3].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[3].loop = true;
+            this.value = 'Loop';
+        }
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart3').style.backgroundColor = 'gray';
+        document.getElementById('myName3').style.backgroundColor = 'gray';
+        loadFile(3, event)
+    }">
+    <br>
+
+    <audio id="audio3" controls></audio>
+    <a id="download3" style="display: none;">Download Channel 1</a>
+    <br><br>
+</div>
+
+
+
+  
+<div>      
+    <input type="text" id="myName4"  value="Channel4.mp3" style=" background-Color:lime;">
+
+
+    <input id="myStart4" type="button" value="Record Channel 4"  style=" background-Color:lime; height:75px; " onclick="{
+       if ( this.value.startsWith('Record') ) {
+         document.getElementById('myStart4').style.backgroundColor = 'red';
+         document.getElementById('myStart4').value = 'Stop Recording 4'
+         startRecording(4);         
+       } else {
+         document.getElementById('myStart4').style.backgroundColor = 'lime';
+         setTimeout(function () {
+           document.getElementById('myStart4').value = 'Record Channel 4'
+           document.getElementById('myStart4').style.backgroundColor = 'gray';
+           document.getElementById('myName4').style.backgroundColor = 'gray';
+         }, 500);
+         stopRecording(4, 'myName4');
+       }
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[4].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[4].loop = true;
+            this.value = 'Loop';
+        }
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart4').style.backgroundColor = 'gray';
+        document.getElementById('myName4').style.backgroundColor = 'gray';
+        loadFile(4, event)
+    }">
+    <br>
+
+    <audio id="audio4" controls></audio>
+    <a id="download4" style="display: none;">Download Channel 1</a>
+    <br><br>
+</div>
+
+
+
+  
+<div>      
+    <input type="text" id="myName5"  value="Channel5.mp3" style=" background-Color:lime;">
+    
+
+    <input id="myStart5" type="button" value="Record Channel 5"  style=" background-Color:lime; height:75px; " onclick="{
+       if ( this.value.startsWith('Record') ) {
+         document.getElementById('myStart5').style.backgroundColor = 'red';
+         document.getElementById('myStart5').value = 'Stop Recording 5'
+         startRecording(5);         
+       } else {
+         document.getElementById('myStart5').style.backgroundColor = 'lime';
+         setTimeout(function () {
+           document.getElementById('myStart5').value = 'Record Channel 5'
+           document.getElementById('myStart5').style.backgroundColor = 'gray';
+           document.getElementById('myName5').style.backgroundColor = 'gray';
+         }, 500);
+         stopRecording(5, 'myName5');
+       }
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[5].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[5].loop = true;
+            this.value = 'Loop';
+        }
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart5').style.backgroundColor = 'gray';
+        document.getElementById('myName5').style.backgroundColor = 'gray';
+        loadFile(5, event)
+    }">
+    <br>
+
+    <audio id="audio5" controls></audio>
+    <a id="download5" style="display: none;">Download Channel 1</a>
+    <br><br>
+</div>
+
+
+
+   
+<div>      
+    <input type="text" id="myName6"  value="Channel6.mp3" style=" background-Color:lime;">
+    
+
+    <input id="myStart6" type="button" value="Record Channel 6"  style=" background-Color:lime; height:75px; " onclick="{
+       if ( this.value.startsWith('Record') ) {
+         document.getElementById('myStart6').style.backgroundColor = 'red';
+         document.getElementById('myStart6').value = 'Stop Recording 6'
+         startRecording(6);         
+       } else {
+         document.getElementById('myStart6').style.backgroundColor = 'lime';
+         setTimeout(function () {
+           document.getElementById('myStart6').value = 'Record Channel 6'
+           document.getElementById('myStart6').style.backgroundColor = 'gray';
+           document.getElementById('myName6').style.backgroundColor = 'gray';
+         }, 500);
+         stopRecording(6, 'myName6');
+       }
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[6].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[6].loop = true;
+            this.value = 'Loop';
+        }
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart6').style.backgroundColor = 'gray';
+        document.getElementById('myName6').style.backgroundColor = 'gray';
+        loadFile(6, event)
+    }">
+    <br>
+
+    <audio id="audio6" controls></audio>
+    <a id="download6" style="display: none;">Download Channel 1</a>
+    <br><br>
+</div>
+
+
+
+    
+<div>      
+    <input type="text" id="myName7"  value="Channel7.mp3" style=" background-Color:lime;">
+    
+
+    <input id="myStart7" type="button" value="Record Channel 7"  style=" background-Color:lime; height:75px; " onclick="{
+       if ( this.value.startsWith('Record') ) {
+         document.getElementById('myStart7').style.backgroundColor = 'red';
+         document.getElementById('myStart7').value = 'Stop Recording 7'
+         startRecording(7);         
+       } else {
+         document.getElementById('myStart7').style.backgroundColor = 'lime';
+         setTimeout(function () {
+           document.getElementById('myStart7').value = 'Record Channel 7'
+           document.getElementById('myStart7').style.backgroundColor = 'gray';
+           document.getElementById('myName7').style.backgroundColor = 'gray';
+         }, 500);
+         stopRecording(7, 'myName7');
+       }
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[7].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[7].loop = true;
+            this.value = 'Loop';
+        }
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart7').style.backgroundColor = 'gray';
+        document.getElementById('myName7').style.backgroundColor = 'gray';
+        loadFile(7, event)
+    }">
+    <br>
+
+    <audio id="audio7" controls></audio>
+    <a id="download7" style="display: none;">Download Channel 1</a>
+    <br><br>
+</div>
+
+
+
+    
+<div>      
+    <input type="text" id="myName8"  value="Channel8.mp3" style=" background-Color:lime;">
+    
+
+    <input id="myStart8" type="button" value="Record Channel 8"  style=" background-Color:lime; height:75px; " onclick="{
+       if ( this.value.startsWith('Record') ) {
+         document.getElementById('myStart8').style.backgroundColor = 'red';
+         document.getElementById('myStart8').value = 'Stop Recording 8'
+         startRecording(8);         
+       } else {
+         document.getElementById('myStart8').style.backgroundColor = 'lime';
+         setTimeout(function () {
+           document.getElementById('myStart8').value = 'Record Channel 8'
+           document.getElementById('myStart8').style.backgroundColor = 'gray';
+           document.getElementById('myName8').style.backgroundColor = 'gray';
+         }, 500);
+         stopRecording(8, 'myName8');
+       }
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[8].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[8].loop = true;
+            this.value = 'Loop';
+        }
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart8').style.backgroundColor = 'gray';
+        document.getElementById('myName8').style.backgroundColor = 'gray';
+        loadFile(8, event)
+    }">
+    <br>
+
+    <audio id="audio8" controls></audio>
+    <a id="download8" style="display: none;">Download Channel 1</a>
+    <br><br>
+</div>
+
+
+
+     
+<div>      
+    <input type="text" id="myName9"  value="Channel9.mp3" style=" background-Color:lime;">
+    
+
+    <input id="myStart9" type="button" value="Record Channel 9"  style=" background-Color:lime; height:75px; " onclick="{
+       if ( this.value.startsWith('Record') ) {
+         document.getElementById('myStart9').style.backgroundColor = 'red';
+         document.getElementById('myStart9').value = 'Stop Recording 9'
+         startRecording(9);         
+       } else {
+         document.getElementById('myStart9').style.backgroundColor = 'lime';
+         setTimeout(function () {
+           document.getElementById('myStart9').value = 'Record Channel 9'
+           document.getElementById('myStart9').style.backgroundColor = 'gray';
+           document.getElementById('myName9').style.backgroundColor = 'gray';
+         }, 500);
+         stopRecording(9, 'myName9');
+       }
+    }">
+    
+    <input type="button" value="Once" onclick="{
+        if (this.value == 'Loop') {
+            audioElements[9].loop = false;
+            this.value = 'Once';
+        } else {
+            audioElements[9].loop = true;
+            this.value = 'Loop';
+        }
+    }">
+    <input type="file" accept="audio/mp3,video/mp4"  onchange="{
+        document.getElementById('myStart9').style.backgroundColor = 'gray';
+        document.getElementById('myName9').style.backgroundColor = 'gray';
+        loadFile(9, event)
+    }">
+    <br>
+
+    <audio id="audio9" controls></audio>
+    <a id="download9" style="display: none;">Download Channel 1</a>
+    <br><br>
+</div>
+
+
+
+     
+<div>
+    <input type="button" value="Play All Channels" onclick="playAllChannels()">
+    <input type=button value="Stop All Audio" onclick="stopAllAudio()"><br>
+
+<!-- Button to merge or concatenate all tracks -->
+<button onclick="processAudioUsingCrunker('merge')">Merge All Tracks</button>
+<button onclick="processAudioUsingCrunker('concat')">Concatenate All Tracks</button>
+</div>
 
 <script>
 const audioContext = new AudioContext();
@@ -551,100 +866,6 @@ async function SaveTrimmedAudio(filenameCheck) {
     await processAudioUsingCrunkerTrim(trimmedBuffer, filename);
 }
 
-async function myTrimThis(channelNumber) {
-    const audioElement = audioElements[channelNumber];
-    if (!audioElement) {
-        alert('Audio element does not exist for this channel.');
-        return;
-    }
-
-    // Check if the trim control element exists
-    const trimAudioElement = document.getElementById('audioTrimControl');
-    if (!trimAudioElement) {
-        alert('Trim control audio element does not exist.');
-        return;
-    }
-
-    // Set the source from the specified channel's audio to the trim control
-    trimAudioElement.src = audioElement.src;
-
-    // Optionally, if there's a need to load or reset the UI for trimming
-    loadLocalAudio(audioElement.src); // Assuming this function resets necessary UI components for trimming
-}
-
-
-async function myReturnTrim(channelNumber) {
-    console.log('channelNumber')
-    console.log(channelNumber)
-    const start = parseFloat(document.getElementById('startSlider').value);
-    const end = parseFloat(document.getElementById('endSlider').value);
-    const duration = end - start;
-    if (duration <= 0) {
-        alert('Invalid trim range.');
-        return;
-    }
-
-    const trimmedBuffer = await createTrimmedAudioBuffer(start, end);
-    if (!trimmedBuffer) {
-        alert('Failed to create trimmed audio.');
-        return;
-    }
-
-    // Convert the trimmed AudioBuffer back to an audio source and set it to the original channel's audio element
-    const blob = await bufferToBlob(trimmedBuffer);
-    const url = URL.createObjectURL(blob);
-    audioElements[channelNumber].src = url;
-
-    // Update the download link for the channel
-    downloadLinks[channelNumber].href = url;
-    downloadLinks[channelNumber].download = `Channel${channelNumber}_Trimmed.mp3`;
-}
-
-async function createTrimmedAudioBuffer(start, end) {
-    const trimAudioContext = new AudioContext();
-    const originalBuffer = myAudioBuffer; // Assume this is where the original full audio buffer is stored
-
-    const startFrame = Math.floor(start * originalBuffer.sampleRate);
-    const endFrame = Math.floor(end * originalBuffer.sampleRate);
-    const frameCount = endFrame - startFrame;
-
-    const trimmedBuffer = trimAudioContext.createBuffer(
-        originalBuffer.numberOfChannels,
-        frameCount,
-        originalBuffer.sampleRate
-    );
-
-    for (let channel = 0; channel < originalBuffer.numberOfChannels; channel++) {
-        const originalData = originalBuffer.getChannelData(channel);
-        const trimmedData = trimmedBuffer.getChannelData(channel);
-        for (let i = 0; i < frameCount; i++) {
-            trimmedData[i] = originalData[startFrame + i];
-        }
-    }
-
-    return trimmedBuffer;
-}
-
-async function bufferToBlob(audioBuffer) {
-    const audioContext = new AudioContext();
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    const dest = audioContext.createMediaStreamDestination();
-    source.connect(dest);
-    source.start(0);
-
-    const recorder = new MediaRecorder(dest.stream);
-    const chunks = [];
-    recorder.ondataavailable = e => chunks.push(e.data);
-    recorder.start();
-
-    await new Promise(resolve => recorder.onstop = resolve);
-    recorder.stop();
-
-    return new Blob(chunks, { type: 'audio/mp3' });
-}
-
-
     
 
 //window.onload = loadAudio;
@@ -657,8 +878,7 @@ async function bufferToBlob(audioBuffer) {
 <canvas id="myCanvas"></canvas>
 <input type=text id="myLocalFileName" value="a.mp3">
 <input type=button value="Load Local" onclick="loadLocalAudio(document.getElementById('myLocalFileName').value)"><br>
-<input type=button value="Save Trimmed as .mp3" onclick="SaveTrimmedAudio(document.getElementById('myLocalFileName').value)">
-<select size=1 onChange="myReturnTrim(this.value)"><option value=0></option><option value=1>1</option>  <option value=2>2</option> </select>   <br>
+<input type=button value="Save Trimmed as .mp3" onclick="SaveTrimmedAudio(document.getElementById('myLocalFileName').value)"><br>
 <label for="startSlider">Start Trim:</label>
 <input type="range" id="startSlider" style="accent-color:green;" value="0" min="0" step="0.001" oninput="updateTrimLines()">
 <label for="endSlider">End Trim:</label>
