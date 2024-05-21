@@ -11,6 +11,7 @@
 </head>
 <body>
     <h2>Bitcoin Logarithmic Graph with Extrapolation</h2>
+    <input type=button value = graph onclick=" plotGraph();">
     <div id="myGraph" style="width:100%;height:600px;"></div>
 
     <script>
@@ -94,7 +95,7 @@
             Plotly.newPlot('myGraph', data, layout);
         }
 
-        plotGraph();
+
     </script>
 </body>
 </html>
