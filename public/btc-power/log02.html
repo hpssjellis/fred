@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log-Log Graph with Plotly</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div id="myGraphDiv" style="width: 600px; height: 400px;"></div>
+    <input type="button" value="Plot Log-Log Graph" onclick="plotLogLogGraph()">
+
+    <script>
+        function plotLogLogGraph() {
+            const myXValues = [1, 10, 100, 1000, 10000];
+            const myYValues = [10, 100, 1000, 10000, 100000];
+
+            const myTrace = {
+                x: myXValues,
+                y: myYValues,
+                mode: 'lines+markers', // other modes: 'lines', 'markers'
+                type: 'scatter' // other types: 'bar', 'pie', 'heatmap', 'surface'
+            };
+
+            const myLayout = {
+                title: 'Log-Log Graph',
+                xaxis: {
+                    title: 'X Axis',
+                    type: 'log' // other types: 'linear', 'date', 'category'
+                },
+                yaxis: {
+                    title: 'Y Axis',
+                    type: 'log' // other types: 'linear', 'date', 'category'
+                }
+            };
+
+            Plotly.newPlot('myGraphDiv', [myTrace], myLayout);
+        }
+    </script>
+</body>
+</html>
