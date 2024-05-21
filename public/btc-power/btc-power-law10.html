@@ -128,8 +128,10 @@
                 },
                 yaxis: {
                     title: 'Price (in $)',
-                    tickvals: Array.from({ length: maxYAxis / 10000 + 1 }, (_, i) => i * 10000),
-                    ticktext: Array.from({ length: maxYAxis / 10000 + 1 }, (_, i) => `$${(i * 10000).toFixed(0)}`),
+                  //  tickvals: Array.from({ length: maxYAxis / 10000 + 1 }, (_, i) => i * 10000),
+                 //   ticktext: Array.from({ length: maxYAxis / 10000 + 1 }, (_, i) => `$${(i * 10000).toFixed(0)}`),
+                    tickvals: Array.from({length: maxYAxis / 10000 + 1}, (_, i) => Math.log(i * 10000)).filter(val => val !== -Infinity),
+                    ticktext: Array.from({length: maxYAxis / 10000 + 1}, (_, i) => `$${(i * 10000).toFixed(0)}`).filter(val => val !== '$NaN'),
                     autorange: true,
                     range: [0, Math.log(maxYAxis)] // Adjusted to start from zero
                 },
