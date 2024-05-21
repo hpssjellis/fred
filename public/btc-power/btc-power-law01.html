@@ -1,1 +1,52 @@
-test
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bitcoin Price Graph</title>
+    <script src="https://cdn.plot.ly/plotly-1.47.4.min.js"></script>
+</head>
+<body>
+    <h1>Bitcoin Price Graph</h1>
+    <div id="myPlot" style="width:100%;height:600px;"></div>
+
+    <input type="button" value="Load Bitcoin Prices" onclick="loadBitcoinPrices()">
+
+    <script>
+        async function fetchBitcoinPrices() {
+            const response = await fetch('https://api.coindesk.com/v1/bpi/historical/close.json');
+            const data = await response.json();
+            return data.bpi;
+        }
+
+        async function loadBitcoinPrices() {
+            const bitcoinPrices = await fetchBitcoinPrices();
+            const dates = Object.keys(bitcoinPrices);
+            const prices = Object.values(bitcoinPrices);
+
+            const logDates = dates.map(date => Math.log(new Date(date).getTime()));
+            const logPrices = prices.map(price => Math.log(price));
+
+            const trace = {
+                x: logDates,
+                y: logPrices,
+                mode: 'lines+markers',
+                type: 'scatter'
+            };
+
+            const layout = {
+                title: 'Bitcoin Price (Logarithmic)',
+                xaxis: {
+                    title: 'Date (Logarithmic)',
+                    autorange: true
+                },
+                yaxis: {
+                    title: 'Price (Logarithmic)',
+                    autorange: true
+                }
+            };
+
+            Plotly.newPlot('myPlot', [trace], layout);
+        }
+    </script>
+</body>
+</html>
