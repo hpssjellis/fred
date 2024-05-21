@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Log-Log Sinusoidal Plot</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Log-Log Sinusoidal Plot</h1>
+    <div id="myPlot" style="width: 100%; height: 500px;"></div>
+    <input type="button" value="Plot Sinusoidal" onclick="plotSinusoidal()">
+    <script>
+        function plotSinusoidal() {
+            const myXValues = [];
+            const myYValues = [];
+            for (let myX = 0.1; myX <= 100; myX += 0.1) {
+                myXValues.push(myX);
+                myYValues.push(Math.sin(myX));
+            }
+
+            const myTrace = {
+                x: myXValues,
+                y: myYValues,
+                mode: 'lines',
+                type: 'scatter'
+            };
+
+            const myLayout = {
+                xaxis: {
+                    type: 'log',
+                    title: 'Logarithmic X-Axis'
+                },
+                yaxis: {
+                    type: 'log',
+                    title: 'Logarithmic Y-Axis'
+                },
+                title: 'Log-Log Plot of Sinusoidal Function'
+            };
+
+            Plotly.newPlot('myPlot', [myTrace], myLayout);
+        }
+    </script>
+</body>
+</html>
