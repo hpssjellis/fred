@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bitcoin Price Graph</title>
+    <script src="https://cdn.plot.ly/plotly-1.47.4.min.js"></script>
+</head>
+<body>
+    <h1>Bitcoin Price Graph</h1>
+    
+    <label for="labelDuration">Choose Date Label Duration:</label>
+    <select id="labelDuration">
+        <option value="30">Monthly</option>
+        <option value="90" selected>Every 3 Months</option>
+        <option value="180">Every 6 Months</option>
+        <option value="365">Yearly</option>
+    </select>
+    
+    <label for="extraYears">Choose Extra Years for Extrapolation:</label>
+    <select id="extraYears">
+        <option value="5">5 Years</option>
+        <option value="10" selected>10 Years</option>
+        <option value="15">15 Years</option>
+        <option value="20">20 Years</option>
+    </select>
+
+    <label for="maxYAxis">Choose Maximum Y-Axis Value:</label>
+    <select id="maxYAxis">
+        <option value="100000">100,000</option>
+        <option value="200000" selected>200,000</option>
+        <option value="300000">300,000</option>
+        <option value="400000">400,000</option>
+    </select>
+
+    <br>
+    <label for="maxLineEquation">Max Line Equation (y = mx + b):</label>
+    <input type="text" id="maxLineEquation" value="y = 0.001x + 11.5">
+    
+    <label for="minLineEquation">Min Line Equation (y = mx + b):</label>
+    <input type="text" id="minLineEquation" value="y = 0.0008x + 11">
+    
+    <br>
+    <input type="button" value="Load Bitcoin Prices" onclick="loadBitcoinPrices()">
+    <div id="myPlot" style="width:100%;height:600px;"></div>
+
+    <script>
+        async function fetchBitcoinPrices() {
+            const endDate = new Date().toISOString().split('T')[0];
+            const startDate = new Date();
+            startDate.setFullYear(startDate.getFullYear() - 10);
+            const startDateString = startDate.toISOString().split('T')[0];
+            
+            const response = await fetch(`https://api.coindesk.com/v1/bpi/historical/close.json?start=${startDateString}&end=${endDate}`);
+            const data = await response.json();
+            return data.bpi;
+        }
+
+        function parseEquation(equation) {
+            const match = equation.match(/y\s*=\s*([\d.]+)x\s*\+\s*([\d.]+)/);
+            if (match) {
+                return {
+                    slope: parseFloat(match[1]),
+                    intercept: parseFloat(match[2])
+                };
+            } else {
+                return null;
+            }
+        }
+
+        async function loadBitcoinPrices() {
+            const bitcoinPrices = await fetchBitcoinPrices();
+            const dates = Object.keys(bitcoinPrices);
+            const prices = Object.values(bitcoinPrices); // No scaling
+
+            // User-selected extra years for extrapolation
+            const extraYears = parseInt(document.getElementById('extraYears').value);
+
+            // Add extra years of dates for extrapolation
+            const lastDate = new Date(dates[dates.length - 1]);
+            for (let i = 1; i <= extraYears; i++) {
+                const newDate = new Date(lastDate);
+                newDate.setFullYear(newDate.getFullYear() + i);
+                dates.push(newDate.toISOString().split('T')[0]);
+                prices.push(null); // Placeholder for future extrapolation
+            }
+
+            // Convert dates to log scale values
+            const logDates = dates.map(date => Math.log(new Date(date).getTime()));
+            // Convert prices to log scale values
+            const logPrices = prices.map(price => price ? Math.log(price) : null);
+
+            // User-selected date label duration
+            const labelDuration = parseInt(document.getElementById('labelDuration').value);
+            const maxYAxis = parseInt(document.getElementById('maxYAxis').value);
+
+            const trace = {
+                x: logDates,
+                y: logPrices,
+                mode: 'lines+markers',
+                type: 'scatter',
+                text: dates.map((date, index) => `Date: ${date}<br>Price: $${prices[index] ? prices[index].toFixed(0) : 'N/A'}`),
+                hoverinfo: 'text',
+                line: {
+                    width: 1 // Thinner line
+                }
+            };
+
+            // Parse equations for min and max lines
+            const maxLineEquation = document.getElementById('maxLineEquation').value;
+            const minLineEquation = document.getElementById('minLineEquation').value;
+            const maxParams = parseEquation(maxLineEquation);
+            const minParams = parseEquation(minLineEquation);
+
+            const maxLine = {
+                x: logDates,
+                y: logDates.map(x => maxParams.slope * x + maxParams.intercept),
+                mode: 'lines',
+                type: 'scatter',
+                name: 'Max Line',
+                line: {
+                    dash: 'dashdot',
+                    width: 2,
+                    color: 'red'
+                }
+            };
+
+            const minLine = {
+                x: logDates,
+                y: logDates.map(x => minParams.slope * x + minParams.intercept),
+                mode: 'lines',
+                type: 'scatter',
+                name: 'Min Line',
+                line: {
+                    dash: 'dashdot',
+                    width: 2,
+                    color: 'blue'
+                }
+            };
+
+            const layout = {
+                title: `Bitcoin Price (Logarithmic) - Last 10 Years + ${extraYears} Years Extrapolation`,
+                xaxis: {
+                    title: 'Date',
+                    type: 'log',
+                    tickvals: logDates.filter((_, i) => i % labelDuration === 0), // User-selected label duration
+                    ticktext: dates.filter((_, i) => i % labelDuration === 0),
+                    autorange: true
+                },
+                yaxis: {
+                    title: 'Price (in $)',
+                    tickvals: Array.from({ length: maxYAxis / 10000 + 1 }, (_, i) => Math.log(i * 10000 + 1)), // Add 1 to avoid log(0)
+                    ticktext: Array.from({ length: maxYAxis / 10000 + 1 }, (_, i) => `$${(i * 10000).toFixed(0)}`),
+                    autorange: true,
+                    range: [0, Math.log(maxYAxis + 1)] // Adjusted to start from zero
+                },
+                shapes: [
+                    {
+                        type: 'line',
+                        x0: logDates[0],
+                        y0: 0,
+                        x1: logDates[logDates.length - 1],
+                        y1: 0,
+                        line: {
+                            color: 'black',
+                            width: 2,
+                            dash: 'dash'
+                        }
+                    }
+                ],
+                dragmode: 'select' // Enable drag mode for selecting points
+            };
+
+            Plotly.newPlot('myPlot', [trace, minLine, maxLine], layout);
+        }
+    </script>
+</body>
+</html>
