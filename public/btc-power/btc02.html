@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Log-Log Plot with Plotly</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Log-Log Plot of y = 1.0117e-17 * (days ^ 5.82)</h1>
+    <div id="myPlot" style="width: 100%; height: 600px;"></div>
+    <input type="button" value="Plot" onclick="plotGraph()">
+
+    <script>
+        function plotGraph() {
+            const myDays = [];
+            const myY = [];
+            for (let i = 0.1; i <= 1000; i += 0.1) {
+                myDays.push(i);
+                myY.push(1.0117e-17 * Math.pow(i, 5.82));
+            }
+
+            const trace = {
+                x: myDays,
+                y: myY,
+                mode: 'lines',
+                name: 'y = 1.0117e-17 * (days ^ 5.82)'
+            };
+
+            const layout = {
+                title: 'Log-Log Plot of y = 1.0117e-17 * (days ^ 5.82)',
+                xaxis: {
+                    title: 'Days',
+                    type: 'log'
+                },
+                yaxis: {
+                    title: 'y',
+                    type: 'log'
+                }
+            };
+
+            Plotly.newPlot('myPlot', [trace], layout);
+        }
+    </script>
+</body>
+</html>
