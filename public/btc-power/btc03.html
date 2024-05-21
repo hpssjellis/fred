@@ -42,8 +42,10 @@
             let sinusoidalData = generateSinusoidalData(new Date("2011-02-03"), new Date("2030-01-01"), 50000, 0.1, 0, 1000);
 
             let trace1 = {
-                x: btcDates,
-                y: btcPrices,
+              //  x: btcDates,
+             //   y: btcPrices,
+                x: btcRunDates,
+                y: btcRunPrices,
                 mode: 'lines+markers',
                 name: 'Price end of day',
                 line: { shape: 'spline' },
@@ -77,7 +79,8 @@
                 type: 'scatter'
             };
 
-            let data = [trace1, trace2, minTrace, maxTrace];
+        //    let data = [trace1, trace2, minTrace, maxTrace];
+            let data = [trace1, minTrace, maxTrace];
 
             let layout = {
                 title: 'Bitcoin Logarithmic Graph',
