@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bitcoin Price Graph</title>
+    <script src="https://cdn.plot.ly/plotly-1.47.4.min.js"></script>
+</head>
+<body>
+    <h1>Bitcoin Price Graph</h1>
+    
+    <label for="labelDuration">Choose Date Label Duration:</label>
+    <select id="labelDuration">
+        <option value="30">Monthly</option>
+        <option value="90" selected>Every 3 Months</option>
+        <option value="180">Every 6 Months</option>
+        <option value="365">Yearly</option>
+    </select>
+    
+    <label for="extraYears">Choose Extra Years for Extrapolation:</label>
+    <select id="extraYears">
+        <option value="5">5 Years</option>
+        <option value="10" selected>10 Years</option>
+        <option value="15">15 Years</option>
+        <option value="20">20 Years</option>
+    </select>
+
+    <label for="maxYAxis">Choose Maximum Y-Axis Value:</label>
+    <select id="maxYAxis">
+        <option value="100000">100,000</option>
+        <option value="200000" selected>200,000</option>
+        <option value="300000">300,000</option>
+        <option value="400000">400,000</option>
+    </select>
+
+    <input type="button" value="Load Bitcoin Prices" onclick="loadBitcoinPrices()">
+    <div id="myPlot" style="width:100%;height:600px;"></div>
+
+    <script>
+        async function fetchBitcoinPrices() {
+            const endDate = new Date().toISOString().split('T')[0];
+            const startDate = new Date();
+            startDate.setFullYear(startDate.getFullYear() - 10);
+            const startDateString = startDate.toISOString().split('T')[0];
+            
+            const response = await fetch(`https://api.coindesk.com/v1/bpi/historical/close.json?start=${startDateString}&end=${endDate}`);
+            const data = await response.json();
+            return data.bpi;
+        }
+
+        async function loadBitcoinPrices() {
+            const bitcoinPrices = await fetchBitcoinPrices();
+            const dates = Object.keys(bitcoinPrices);
+            const prices = Object.values(bitcoinPrices); // No scaling
+
+            // User-selected extra years for extrapolation
+            const extraYears = parseInt(document.getElementById('extraYears').value);
+
+            // Add extra years of dates for extrapolation
+            const lastDate = new Date(dates[dates.length - 1]);
+            for (let i = 1; i <= extraYears; i++) {
+                const newDate = new Date(lastDate);
+                newDate.setFullYear(newDate.getFullYear() + i);
+                dates.push(newDate.toISOString().split('T')[0]);
+                prices.push(null); // Placeholder for future extrapolation
+            }
+
+            // Convert dates to log scale values
+            const logDates = dates.map(date => Math.log(new Date(date).getTime()));
+            // Convert prices to log scale values
+            const logPrices = prices.map(price => price ? Math.log(price) : null);
+
+            // User-selected date label duration
+            const labelDuration = parseInt(document.getElementById('labelDuration').value);
+            const maxYAxis = parseInt(document.getElementById('maxYAxis').value);
+
+            const trace = {
+                x: logDates,
+                y: logPrices,
+                mode: 'lines+markers',
+                type: 'scatter',
+                text: dates.map((date, index) => `Date: ${date}<br>Price: $${prices[index] ? prices[index].toFixed(0) : 'N/A'}`),
+                hoverinfo: 'text',
+                line: {
+                    width: 1 // Thinner line
+                }
+            };
+
+            // Find the minimum and maximum prices in the original data
+            const validPrices = prices.filter(price => price !== null);
+            const minPrice = Math.min(...validPrices);
+            const maxPrice = Math.max(...validPrices);
+
+            // Calculate the min and max lines
+            const minLogPrice = Math.log(minPrice);
+            const maxLogPrice = Math.log(maxPrice);
+            const minLine = {
+                x: logDates,
+                y: Array(logDates.length).fill(minLogPrice),
+                mode: 'lines',
+                type: 'scatter',
+                name: 'Min Line',
+                line: {
+                    dash: 'dashdot',
+                    width: 2,
+                    color: 'blue'
+                }
+            };
+            const maxLine = {
+                x: logDates,
+                y: Array(logDates.length).fill(maxLogPrice),
+                mode: 'lines',
+                type: 'scatter',
+                name: 'Max Line',
+                line: {
+                    dash: 'dashdot',
+                    width: 2,
+                    color: 'red'
+                }
+            };
+
+            const layout = {
+                title: `Bitcoin Price (Logarithmic) - Last 10 Years + ${extraYears} Years Extrapolation`,
+                xaxis: {
+                    title: 'Date',
+                    tickvals: logDates.filter((_, i) => i % labelDuration === 0), // User-selected label duration
+                    ticktext: dates.filter((_, i) => i % labelDuration === 0),
+                    autorange: true
+                },
+                yaxis: {
+                    title: 'Price (in $)',
+                    tickvals: Array.from({ length: maxYAxis / 10000 + 1 }, (_, i) => i * 10000),
+                    ticktext: Array.from({ length: maxYAxis / 10000 + 1 }, (_, i) => `$${(i * 10000).toFixed(0)}`),
+                    autorange: true,
+                    range: [0, Math.log(maxYAxis)] // Adjusted to start from zero
+                },
+                shapes: [
+                    {
+                        type: 'line',
+                        x0: logDates[0],
+                        y0: 0,
+                        x1: logDates[logDates.length - 1],
+                        y1: 0,
+                        line: {
+                            color: 'black',
+                            width: 2,
+                            dash: 'dash'
+                        }
+                    }
+                ]
+            };
+
+            Plotly.newPlot('myPlot', [trace, minLine, maxLine], layout);
+        }
+    </script>
+</body>
+</html>
