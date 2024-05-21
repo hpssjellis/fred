@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotated Sinusoidal Graph with Plotly</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div id="myGraphDiv" style="width: 600px; height: 400px;"></div>
+    <input type="button" value="Plot Rotated Sinusoidal Graph" onclick="plotRotatedSinusoidalGraph()">
+
+    <script>
+        function plotRotatedSinusoidalGraph() {
+            const myXValues = [];
+            const myYValues = [];
+            const myRotatedXValues = [];
+            const myRotatedYValues = [];
+            const myA = 1; // Amplitude
+            const myB = 2; // Frequency
+            const myC = 0; // Horizontal shift
+            const myD = 0; // Vertical shift
+            const sqrt2 = Math.sqrt(2);
+
+            for (let myX = 0; myX <= 10; myX += 0.1) {
+                const myY = myA * Math.sin(myB * (myX - myC)) + myD;
+                myXValues.push(myX);
+                myYValues.push(myY);
+                // Rotating the point (myX, myY) by 45 degrees
+                myRotatedXValues.push((myX - myY) / sqrt2);
+                myRotatedYValues.push((myX + myY) / sqrt2);
+            }
+
+            const myTrace = {
+                x: myRotatedXValues,
+                y: myRotatedYValues,
+                mode: 'lines', // other modes: 'lines+markers', 'markers'
+                type: 'scatter' // other types: 'bar', 'pie', 'heatmap', 'surface'
+            };
+
+            const myLayout = {
+                title: 'Rotated Sinusoidal Graph',
+                xaxis: {
+                    title: 'X Axis',
+                    type: 'linear' // other types: 'log', 'date', 'category'
+                },
+                yaxis: {
+                    title: 'Y Axis',
+                    type: 'linear' // other types: 'log', 'date', 'category'
+                }
+            };
+
+            Plotly.newPlot('myGraphDiv', [myTrace], myLayout);
+        }
+    </script>
+</body>
+</html>
