@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bitcoin Price Graph</title>
+    <script src="https://cdn.plot.ly/plotly-1.47.4.min.js"></script>
+</head>
+<body>
+    <h1>Bitcoin Price Graph</h1>
+    
+    <input type="button" value="Load Bitcoin Prices" onclick="loadBitcoinPrices()">
+    <div id="myPlot" style="width:100%;height:600px;"></div>
+
+    <script>
+        async function fetchBitcoinPrices() {
+            const endDate = new Date().toISOString().split('T')[0];
+            const startDate = new Date();
+            startDate.setFullYear(startDate.getFullYear() - 10);
+            const startDateString = startDate.toISOString().split('T')[0];
+            
+            const response = await fetch(`https://api.coindesk.com/v1/bpi/historical/close.json?start=${startDateString}&end=${endDate}`);
+            const data = await response.json();
+            return data.bpi;
+        }
+
+        async function loadBitcoinPrices() {
+            const bitcoinPrices = await fetchBitcoinPrices();
+            const dates = Object.keys(bitcoinPrices);
+            const prices = Object.values(bitcoinPrices);
+
+            // Convert dates to log scale values
+            const logDates = dates.map(date => Math.log(new Date(date).getTime()));
+            // Convert prices to log scale values
+            const logPrices = prices.map(price => Math.log(price));
+
+            const trace = {
+                x: logDates,
+                y: logPrices,
+                mode: 'lines+markers',
+                type: 'scatter',
+                text: dates.map((date, index) => `Date: ${date}<br>Price: $${prices[index].toFixed(2)}`),
+                hoverinfo: 'text'
+            };
+
+            const layout = {
+                title: 'Bitcoin Price (Logarithmic) - Last 10 Years',
+                xaxis: {
+                    title: 'Date',
+                    tickvals: logDates,
+                    ticktext: dates,
+                    autorange: true
+                },
+                yaxis: {
+                    title: 'Price',
+                    tickvals: logPrices,
+                    ticktext: prices.map(price => `$${price.toFixed(2)}`),
+                    autorange: true
+                }
+            };
+
+            Plotly.newPlot('myPlot', [trace], layout);
+        }
+    </script>
+</body>
+</html>
