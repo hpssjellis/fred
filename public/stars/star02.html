@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GitHub Stars Counter</title>
+</head>
+<body>
+    <h1>GitHub Stars Counter</h1>
+    <label for="repoInput">GitHub Repository (e.g., owner/repo):</label>
+    <input type="text" id="repoInput" placeholder="owner/repo">
+    <input type="button" value="Get Stars" onclick="fetchGitHubStars()">
+    <p id="starsCount">Stars: N/A</p>
+
+    <script>
+        async function fetchGitHubStars() {
+            const myRepoInput = document.getElementById('repoInput').value;
+            if (!myRepoInput) {
+                alert("Please enter a GitHub repository in the format 'owner/repo'.");
+                return;
+            }
+
+            const myApiUrl = `https://api.github.com/repos/${myRepoInput}`;
+            try {
+                const myResponse = await fetch(myApiUrl);
+                if (!myResponse.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const myRepoData = await myResponse.json();
+                const myStarsCount = myRepoData.stargazers_count;
+                document.getElementById('starsCount').innerText = `Stars: ${myStarsCount}`;
+            } catch (myError) {
+                console.error('Error fetching the GitHub repo data:', myError);
+                alert('Failed to fetch the GitHub repo data. Please check the repository name and try again.');
+            }
+        }
+    </script>
+</body>
+</html>
