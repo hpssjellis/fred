@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Translation</title>
+</head>
+<body>
+    <h1>Real-Time Translation</h1>
+    <input type="button" value="Start" onclick="startTranslation()">
+    <input type="button" value="Stop" onclick="stopTranslation()">
+    <p id="originalText">Original Text: </p>
+    <p id="translatedText">Translated Text: </p>
+
+    <script>
+        let myRecognition;
+        let myTranslationInterval;
+
+        async function startTranslation() {
+            if ('webkitSpeechRecognition' in window) {
+                myRecognition = new webkitSpeechRecognition();
+            } else {
+                myRecognition = new SpeechRecognition();
+            }
+
+            myRecognition.lang = 'en-US';
+            myRecognition.continuous = true;
+            myRecognition.interimResults = true;
+
+            myRecognition.onresult = async function(event) {
+                let myInterimTranscript = '';
+                let myFinalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        myFinalTranscript += event.results[i][0].transcript;
+                    } else {
+                        myInterimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                document.getElementById('originalText').innerText = "Original Text: " + myInterimTranscript;
+
+                const myTranslation = await translateText(myInterimTranscript);
+                document.getElementById('translatedText').innerText = "Translated Text: " + myTranslation;
+            };
+
+            myRecognition.start();
+        }
+
+        function stopTranslation() {
+            if (myRecognition) {
+                myRecognition.stop();
+            }
+            clearInterval(myTranslationInterval);
+        }
+
+        async function translateText(myText) {
+            const myApiKey = 'YOUR_GOOGLE_CLOUD_TRANSLATE_API_KEY';
+            const myUrl = `https://translation.googleapis.com/language/translate/v2?key=${myApiKey}`;
+
+            const myResponse = await fetch(myUrl, {
+                method: 'POST',
+                body: JSON.stringify({
+                    q: myText,
+                    target: 'es', // Change to your desired target language
+                }),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const myData = await myResponse.json();
+            return myData.data.translations[0].translatedText;
+        }
+    </script>
+</body>
+</html>
