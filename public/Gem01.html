@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera SPA</title>
+</head>
+<body>
+    <video id="video" autoplay></video>
+    <canvas id="canvas" hidden></canvas>
+    <button id="captureButton">Capture</button>
+    <img id="capturedImage" src="" alt="Captured Image">
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureButton = document.getElementById('captureButton');
+        const capturedImage = document.getElementById('capturedImage');
+
+        // Request access to the user's devices (camera and microphone)
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user-front" } })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(error => {
+                console.error('Error accessing camera:', error);
+            });
+
+        // Capture and display the image when the button is clicked
+        captureButton.addEventListener('click', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert canvas to image data URL
+            const imageDataURL = canvas.toDataURL('image/png');
+
+            // Display the captured image
+            capturedImage.src = imageDataURL;
+            capturedImage.hidden = false;
+        });
+    </script>
+</body>
+</html>
