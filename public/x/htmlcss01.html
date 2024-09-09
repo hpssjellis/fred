@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Useful CSS Commands</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .box {
+            width: 100px;
+            height: 100px;
+            background-color: #4CAF50;
+            margin: 10px;
+            display: inline-block;
+            transition: transform 0.3s;
+        }
+        .box:hover {
+            transform: scale(1.2);
+        }
+        .flex-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .text {
+            font-size: 1.2em;
+            color: #555;
+            line-height: 1.6;
+        }
+        .button {
+            background-color: #008CBA;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .button:hover {
+            background-color: #005f73;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Useful CSS Commands</h1>
+        <div class="flex-container">
+            <div class="box"></div>
+            <div class="box"></div>
+            <div class="box"></div>
+        </div>
+        <div class="grid-container">
+            <div class="box"></div>
+            <div class="box"></div>
+            <div class="box"></div>
+        </div>
+        <p class="text">This is an example of some useful CSS commands. You can see how to use flexbox, grid, transitions, and more.</p>
+        <a href="#" class="button">Click Me</a>
+    </div>
+</body>
+</html>
