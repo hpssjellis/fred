@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone Orientation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        #status {
+            font-size: 24px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Phone Orientation</h1>
+    <img src="https://github.com/user-attachments/assets/0e02ce1b-ecf2-4810-bcf8-0324efa8f18e" width=200>
+    <div id="status">Waiting for accelerometer data...</div>
+
+    <script>
+        function handleMotionEvent(event) {
+            let x = event.accelerationIncludingGravity.x;
+            let y = event.accelerationIncludingGravity.y;
+            let z = event.accelerationIncludingGravity.z;
+
+            let status = document.getElementById('status');
+
+            if (Math.abs(z) > Math.abs(x) && Math.abs(z) > Math.abs(y)) {
+                if (z > 0) {
+                    status.textContent = "Phone is flat and upside down.";
+                } else {
+                    status.textContent = "Phone is flat and upright.";
+                }
+            } else if (Math.abs(x) > Math.abs(y)) {
+                if (x > 0) {
+                    status.textContent = "Phone is held upright.";
+                } else {
+                    status.textContent = "Phone is held sideways.";
+                }
+            } else {
+                if (y > 0) {
+                    status.textContent = "Phone is held upright.";
+                } else {
+                    status.textContent = "Phone is held upside down.";
+                }
+            }
+        }
+
+        function init() {
+            if (window.DeviceMotionEvent) {
+                if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                    // iOS 13+ devices
+                    DeviceMotionEvent.requestPermission()
+                        .then(permissionState => {
+                            if (permissionState === 'granted') {
+                                window.addEventListener('devicemotion', handleMotionEvent);
+                            } else {
+                                document.getElementById('status').textContent = "Permission to access device motion was denied.";
+                            }
+                        })
+                        .catch(console.error);
+                } else {
+                    // Non-iOS 13+ devices
+                    window.addEventListener('devicemotion', handleMotionEvent);
+                }
+            } else {
+                document.getElementById('status').textContent = "DeviceMotionEvent is not supported on your device.";
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
