@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generic WebUSB Interface</title>
+</head>
+<body>
+  <button id="connectButton">Connect to Device</button>
+  <button id="disconnectButton" disabled>Disconnect</button>
+  <div id="deviceList"></div>
+  <div id="status"></div>
+  <script>
+    const connectButton = document.getElementById('connectButton');
+    const disconnectButton = document.getElementById('disconnectButton');
+    const deviceList = document.getElementById('deviceList');
+    const statusDiv = document.getElementById('status');
+
+    let device;
+
+    async function connectDevice(selectedDevice) {
+      try {
+        // Open a session with the selected device
+        await selectedDevice.open({ vid: 0x1234, pid: 0x5678 }); // Replace with your device's VID and PID if known
+
+        // Claim an interface
+        await selectedDevice.claimInterface(0); // Replace with the desired interface index
+
+        // Send a simple control transfer (e.g., a vendor-specific command)
+        await selectedDevice.controlTransferOut({
+          requestType: 'vendor',
+          recipient: 'device',
+          request: 0x01, // Replace with your command
+          value: 0,
+          index: 0,
+        }, new Uint8Array([0x12, 0x34]));
+
+        statusDiv.textContent = 'Connected to ' + selectedDevice.productName;
+        connectButton.disabled = true;
+        disconnectButton.disabled = false;
+      } catch (error) {
+        console.error('Error connecting to device:', error);
+        statusDiv.textContent = 'Connection failed.';
+      }
+    }
+
+    async function disconnectDevice() {
+      try {
+        await device.releaseInterface(0);
+        await device.close();
+        statusDiv.textContent = 'Disconnected.';
+        connectButton.disabled = false;
+        disconnectButton.disabled = true;
+      } catch (error) {
+        console.error('Error disconnecting from device:', error);
+      }
+    }
+
+    async function listDevices() {
+      try {
+        const devices = await navigator.usb.requestDevice({ filters: [] });
+
+        deviceList.innerHTML = '';
+        devices.forEach((device) => {
+          const option = document.createElement('option');
+          option.value = device.productId; // Use a unique identifier for each device
+          option.textContent = device.productName;
+          deviceList.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error listing devices:', error);
+      }
+    }
+
+    connectButton.addEventListener('click', () => {
+      const selectedDeviceId = deviceList.value;
+      const selectedDevice = devices.find(d => d.productId === selectedDeviceId);
+      connectDevice(selectedDevice);
+    });
+
+    disconnectButton.addEventListener('click', disconnectDevice);
+
+    listDevices();
+  </script>
+</body>
+</html>
+
+
