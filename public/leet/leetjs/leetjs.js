@@ -1,4 +1,24 @@
-        // Utility Functions
+
+/*
+
+Sorting
+
+
+Helper
+
+
+
+
+
+
+
+
+
+*/
+
+
+
+// Utility Functions
 
         // Merge Sort
         function myMergeSort(arr) {
@@ -75,3 +95,50 @@
             const result = myQuickSelect(arr, k);
             document.getElementById("myQuickSelectResult").textContent = result;
         }
+
+
+
+
+
+// HLEPER FUNCITONS
+
+// Deep Clone Function
+function myDeepClone(obj) {
+    return JSON.parse(JSON.stringify(obj));
+}
+
+// Longest Common Subsequence Length
+function myLCSLength(str1, str2) {
+    const m = str1.length, n = str2.length;
+    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (str1[i - 1] === str2[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+
+    return dp[m][n];
+}
+
+// Balanced Binary Search Tree Check
+function myIsBalancedBST(root) {
+    function height(node) {
+        if (!node) return 0;
+        const leftHeight = height(node.left);
+        const rightHeight = height(node.right);
+        if (leftHeight === -1 || rightHeight === -1 || Math.abs(leftHeight - rightHeight) > 1) return -1;
+        return Math.max(leftHeight, rightHeight) + 1;
+    }
+
+    return height(root) !== -1;
+}
+
+// K-th Largest Element (Quick Select)
+function myKthLargest(arr, k) {
+    function partition(arr, left
+
