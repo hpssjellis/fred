@@ -140,5 +140,56 @@ function myIsBalancedBST(root) {
 
 // K-th Largest Element (Quick Select)
 function myKthLargest(arr, k) {
-    function partition(arr, left
+    function partition(arr, left, right) {
+        const pivot = arr[right];
+        let i = left;
+        for (let j = left; j < right; j++) {
+            if (arr[j] >= pivot) {
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+                i++;
+            }
+        }
+        [arr[i], arr[right]] = [arr[right], arr[i]];
+        return i;
+    }
+
+    function quickSelect(arr, left, right, k) {
+        if (left <= right) {
+            const pivotIndex = partition(arr, left, right);
+            if (pivotIndex === k) return arr[pivotIndex];
+            else if (pivotIndex < k) return quickSelect(arr, pivotIndex + 1, right, k);
+            else return quickSelect(arr, left, pivotIndex - 1, k);
+        }
+        return null;
+    }
+
+    return quickSelect(arr, 0, arr.length - 1, k - 1);
+}
+
+// UI Functions
+function runDeepClone() {
+    const input = JSON.parse(document.getElementById("myDeepCloneInput").value);
+    const clonedObj = myDeepClone(input);
+    document.getElementById("myDeepCloneResult").textContent = JSON.stringify(clonedObj);
+}
+
+function runLCSLength() {
+    const str1 = document.getElementById("myLCSLengthStr1").value;
+    const str2 = document.getElementById("myLCSLengthStr2").value;
+    const result = myLCSLength(str1, str2);
+    document.getElementById("myLCSLengthResult").textContent = result;
+}
+
+function runIsBalancedBST() {
+    const input = JSON.parse(document.getElementById("myIsBalancedBSTInput").value);
+    const result = myIsBalancedBST(input);
+    document.getElementById("myIsBalancedBSTResult").textContent = result;
+}
+
+function runKthLargest() {
+    const arr = document.getElementById("myKthLargestArray").value.split(",").map(Number);
+    const k = parseInt(document.getElementById("myKthLargestK").value);
+    const result = myKthLargest(arr, k);
+    document.getElementById("myKthLargestResult").textContent = result;
+}
 
