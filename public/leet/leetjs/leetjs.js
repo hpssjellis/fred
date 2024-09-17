@@ -53,6 +53,27 @@ runKthLargest
 DYNAMIC
 
 
+runDeepClone
+
+runLCSLength
+
+runIsBalancedBST
+
+runKthLargest
+
+myMemoize
+
+myFib
+
+runMemoize
+
+myKnapsack
+
+runKnapsack
+
+myLongestCommonSubsequence
+
+runLCS
 
 
 
