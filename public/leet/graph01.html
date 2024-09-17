@@ -20,6 +20,17 @@
         main {
             padding: 2em;
         }
+        button {
+            margin: 1em 0;
+            padding: 0.5em 1em;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555;
+        }
     </style>
 </head>
 <body>
@@ -28,13 +39,22 @@
     </header>
     <main>
         <h2>Dijkstra's Shortest Path</h2>
+        <button onclick="runDijkstra()">Run Dijkstra</button>
         <pre id="dijkstra"></pre>
+        
         <h2>Topological Sort</h2>
+        <button onclick="runTopologicalSort()">Run Topological Sort</button>
         <pre id="topologicalSort"></pre>
+        
         <h2>Floyd-Warshall</h2>
+        <button onclick="runFloydWarshall()">Run Floyd-Warshall</button>
         <pre id="floydWarshall"></pre>
     </main>
-    <script>
+    <script >
+
+
+
+
 
 // Dijkstra's Shortest Path Algorithm
 function myDijkstra(graph, start) {
@@ -145,41 +165,20 @@ class PriorityQueue {
 }
 
 // Example usage
-document.addEventListener('DOMContentLoaded', () => {
+function runDijkstra() {
     const graph = {
-        A: { B: 1, C: 4 },
-        B: { C: 2, D: 5 },
-        C: { D: 1 },
-        D: {}
-    };
-
-    const dijkstraResult = myDijkstra(graph, 'A');
-    document.getElementById('dijkstra').textContent = JSON.stringify(dijkstraResult, null, 2);
-
-    const topoGraph = {
-        A: ['B', 'C'],
-        B: ['D'],
-        C: ['D'],
-        D: []
-    };
-
-    const topoResult = myTopologicalSort(topoGraph);
-    document.getElementById('topologicalSort').textContent = JSON.stringify(topoResult, null, 2);
-
-    const floydGraph = {
-        A: { B: 1, C: 4 },
-        B: { C: 2, D: 5 },
-        C: { D: 1 },
-        D: {}
-    };
-
-    const floydResult = myFloydWarshall(floydGraph);
-    document.getElementById('floydWarshall').textContent = JSON.stringify(floydResult, null, 2);
-});
+        A: { B
 
 
 
-      
+
+
+
+
+
+
+
+        
     </script>
 </body>
 </html>
