@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Miscellaneous Helpers</title>
+    <script src="leetjs/leetjs.js"></script>
+</head>
+<body>
+    <h1>LeetCode Miscellaneous Helpers</h1>
+
+    <!-- Deep Clone -->
+    <h2>myDeepClone</h2>
+    <p>Input Object/Array (JSON format):</p>
+    <textarea id="myDeepCloneInput">{"a": 1, "b": [2, 3], "c": {"d": 4}}</textarea>
+    <input type="button" value="Clone Object/Array" onclick="runDeepClone()">
+    <p>Cloned Output: <span id="myDeepCloneResult"></span></p>
+
+    <!-- Longest Common Subsequence -->
+    <h2>myLCSLength</h2>
+    <p>Input first string:</p>
+    <input type="text" id="myLCSLengthStr1" value="AGGTAB">
+    <p>Input second string:</p>
+    <input type="text" id="myLCSLengthStr2" value="GXTXAYB">
+    <input type="button" value="Find LCS Length" onclick="runLCSLength()">
+    <p>LCS Length: <span id="myLCSLengthResult"></span></p>
+
+    <!-- Balanced Binary Search Tree -->
+    <h2>myIsBalancedBST</h2>
+    <p>Input Binary Search Tree (JSON format):</p>
+    <textarea id="myIsBalancedBSTInput">{"val": 10, "left": {"val": 5}, "right": {"val": 15}}</textarea>
+    <input type="button" value="Check if Balanced" onclick="runIsBalancedBST()">
+    <p>Is Balanced? <span id="myIsBalancedBSTResult"></span></p>
+
+    <!-- K-th Largest Element -->
+    <h2>myKthLargest</h2>
+    <p>Input an array of numbers (comma-separated):</p>
+    <input type="text" id="myKthLargestArray" value="3, 2, 1, 5, 6, 4">
+    <p>Input k (k-th largest element):</p>
+    <input type="text" id="myKthLargestK" value="2">
+    <input type="button" value="Find k-th Largest" onclick="runKthLargest()">
+    <p>k-th Largest Element: <span id="myKthLargestResult"></span></p>
+</body>
+</html>
