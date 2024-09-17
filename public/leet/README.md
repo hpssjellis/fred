@@ -16,6 +16,12 @@ https://hpssjellis.github.io/fred/public/leet/leet02.html
 
 
 https://hpssjellis.github.io/fred/public/leet/dynamic01.html  
+https://hpssjellis.github.io/fred/public/leet/dynamic02.html  
+
+
+
+https://hpssjellis.github.io/fred/public/leet/graph01.html  
+https://hpssjellis.github.io/fred/public/leet/graph02.html  
 
 
 
