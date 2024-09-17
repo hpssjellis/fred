@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generic WebUSB and Web Serial Interface</title>
+</head>
+<body>
+  <button id="connectButton">Connect to Device</button>
+  <button id="disconnectButton" disabled>Disconnect</button>
+  <select id="deviceList"></select>
+  <div id="status"></div>
+  <div id="myDiv01"></div>
+  <textarea id="myArea01"></textarea>
+  <input type="text" id="mySendText">
+  <button id="sendButton">Send</button>
+  <script>
+    const connectButton = document.getElementById('connectButton');
+    const disconnectButton = document.getElementById('disconnectButton');
+    const deviceList = document.getElementById('deviceList');
+    const statusDiv = document.getElementById('status');
+    const sendButton = document.getElementById('sendButton');
+    let device;
+    let port;
+
+    connectButton.addEventListener('click', () => {
+      if (navigator.usb) {
+        connectUSB();
+      } else if (navigator.serial) {
+        connectSerial();
+      } else {
+        document.getElementById('myDiv01').innerHTML = 'Neither WebUSB nor Web Serial API is supported.';
+      }
+    });
+
+    async function connectUSB() {
+      try {
+        const selectedDevice = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x1234 }] });
+        device = selectedDevice;
+        await device.open();
+        await device.selectConfiguration(1);
+        await device.claimInterface(0);
+
+        await device.controlTransferOut({
+          requestType: 'vendor',
+          recipient: 'device',
+          request: 0x01,
+          value: 0,
+          index: 0,
+        }, new Uint8Array([0x12, 0x34]));
+
+        statusDiv.textContent = 'Connected to ' + device.productName;
+        connectButton.disabled = true;
+        disconnectButton.disabled = false;
+      } catch (error) {
+        console.error('Error connecting to USB device:', error);
+        statusDiv.textContent = 'Connection failed.';
+      }
+    }
+
+    async function connectSerial() {
+      try {
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 115200 });
+
+        const decoder = new TextDecoderStream();
+        port.readable.pipeTo(decoder.writable);
+
+        const inputStream = decoder.readable;
+        const reader = inputStream.getReader();
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (value) {
+            document.getElementById('myArea01').value += value;
+          }
+          if (done) {
+            reader.releaseLock();
+            break;
+          }
+        }
+      } catch (error) {
+        document.getElementById('myArea01').value = error;
+      }
+    }
+
+    async function disconnectDevice() {
+      try {
+        if (device) {
+          await device.releaseInterface(0);
+          await device.close();
+          statusDiv.textContent = 'Disconnected.';
+        } else if (port) {
+          await port.close();
+          statusDiv.textContent = 'Disconnected.';
+        }
+        connectButton.disabled = false;
+        disconnectButton.disabled = true;
+      } catch (error) {
+        console.error('Error disconnecting from device:', error);
+      }
+    }
+
+    async function sendSerialData(data) {
+      if (port) {
+        const encoder = new TextEncoder();
+        const writer = port.writable.getWriter();
+        await writer.write(encoder.encode(data));
+        writer.releaseLock();
+      }
+    }
+
+    disconnectButton.addEventListener('click', disconnectDevice);
+    sendButton.addEventListener('click', () => {
+      const data = document.getElementById('mySendText').value;
+      sendSerialData(data);
+    });
+  </script>
+</body>
+</html>
