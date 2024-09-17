@@ -5,15 +5,17 @@ Main utility file
 https://github.com/hpssjellis/fred/blob/main/public/leet/leetjs/leetjs.js
 
 
-[helper01.html](helper01.html)
-
-[leet01.html](leet01.html)
-[leet02.html](leet02.html)
-[leet03.html](leet03.html)
-[leet04.html](leet04.html)
-[leet05.html](leet05.html)
+https://hpssjellis.github.io/fred/public/leet/leetjs/leetjs.js
 
 
+https://hpssjellis.github.io/fred/public/leet/helper01.html
 
 
-[linkedlist01.html](linkedlist01.html)
+https://hpssjellis.github.io/fred/public/leet/leet01.html
+https://hpssjellis.github.io/fred/public/leet/leet02.html
+https://hpssjellis.github.io/fred/public/leet/leet03.html
+https://hpssjellis.github.io/fred/public/leet/leet04.html
+https://hpssjellis.github.io/fred/public/leet/linkedlist01.html
+
+
+
