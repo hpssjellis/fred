@@ -235,3 +235,106 @@ function runKthLargest() {
     document.getElementById("myKthLargestResult").textContent = result;
 }
 
+
+
+// dynamic
+
+
+        // Memoize Function (for Fibonacci in this example)
+        function myMemoize(fn) {
+            const cache = {};
+            return function(...args) {
+                const key = args.toString();
+                if (cache[key]) {
+                    return cache[key];
+                } else {
+                    const result = fn(...args);
+                    cache[key] = result;
+                    return result;
+                }
+            };
+        }
+
+        // Fibonacci for memoization demo
+        const myFibonacci = myMemoize(function myFib(n) {
+            if (n <= 1) return n;
+            return myFib(n - 1) + myFib(n - 2);
+        });
+
+        // Run Memoize Demo
+        function runMemoize() {
+            const input = parseInt(document.getElementById('myMemoizeInput').value);
+            const result = myFibonacci(input);
+            document.getElementById('myMemoizeResult').textContent = result;
+        }
+
+        // Knapsack Problem Solver
+        function myKnapsack(weights, values, capacity) {
+            const n = weights.length;
+            const dp = Array(n + 1).fill(null).map(() => Array(capacity + 1).fill(0));
+
+            for (let i = 1; i <= n; i++) {
+                for (let w = 0; w <= capacity; w++) {
+                    if (weights[i - 1] <= w) {
+                        dp[i][w] = Math.max(values[i - 1] + dp[i - 1][w - weights[i - 1]], dp[i - 1][w]);
+                    } else {
+                        dp[i][w] = dp[i - 1][w];
+                    }
+                }
+            }
+
+            return dp[n][capacity];
+        }
+
+        // Run Knapsack Demo
+        function runKnapsack() {
+            const weights = document.getElementById('myKnapsackWeights').value.split(',').map(Number);
+            const values = document.getElementById('myKnapsackValues').value.split(',').map(Number);
+            const capacity = parseInt(document.getElementById('myKnapsackCapacity').value);
+            const result = myKnapsack(weights, values, capacity);
+            document.getElementById('myKnapsackResult').textContent = result;
+        }
+
+        // Longest Common Subsequence Function
+        function myLongestCommonSubsequence(str1, str2) {
+            const m = str1.length, n = str2.length;
+            const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+            for (let i = 1; i <= m; i++) {
+                for (let j = 1; j <= n; j++) {
+                    if (str1[i - 1] === str2[j - 1]) {
+                        dp[i][j] = dp[i - 1][j - 1] + 1;
+                    } else {
+                        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                    }
+                }
+            }
+
+            let lcs = '';
+            let i = m, j = n;
+            while (i > 0 && j > 0) {
+                if (str1[i - 1] === str2[j - 1]) {
+                    lcs = str1[i - 1] + lcs;
+                    i--; j--;
+                } else if (dp[i - 1][j] > dp[i][j - 1]) {
+                    i--;
+                } else {
+                    j--;
+                }
+            }
+
+            return lcs;
+        }
+
+        // Run LCS Demo
+        function runLCS() {
+            const str1 = document.getElementById('myLCSStr1').value;
+            const str2 = document.getElementById('myLCSStr2').value;
+            const result = myLongestCommonSubsequence(str1, str2);
+            document.getElementById('myLCSResult').textContent = result;
+        }
+
+
+
+
+
