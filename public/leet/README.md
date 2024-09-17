@@ -13,6 +13,12 @@ https://hpssjellis.github.io/fred/public/leet/helper01.html
 
 https://hpssjellis.github.io/fred/public/leet/leet01.html  
 https://hpssjellis.github.io/fred/public/leet/leet02.html  
+
+
+https://hpssjellis.github.io/fred/public/leet/dynamic01.html  
+
+
+
 https://hpssjellis.github.io/fred/public/leet/leet03.html  
 https://hpssjellis.github.io/fred/public/leet/leet04.html  
 https://hpssjellis.github.io/fred/public/leet/linkedlist01.html  
