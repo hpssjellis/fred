@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generic WebUSB Interface</title>
+</head>
+<body>
+  <button id="connectButton">Connect to Device</button>
+  <button id="disconnectButton" disabled>Disconnect</button>
+  <select id="deviceList"></select>
+  <div id="status"></div>
+  <script>
+    const connectButton = document.getElementById('connectButton');
+    const disconnectButton = document.getElementById('disconnectButton');
+    const deviceList = document.getElementById('deviceList');
+    const statusDiv = document.getElementById('status');
+
+    let device;
+
+    async function connectDevice(selectedDevice) {
+      try {
+        await selectedDevice.open();
+        await selectedDevice.selectConfiguration(1);
+        await selectedDevice.claimInterface(0);
+
+        await selectedDevice.controlTransferOut({
+          requestType: 'vendor',
+          recipient: 'device',
+          request: 0x01,
+          value: 0,
+          index: 0,
+        }, new Uint8Array([0x12, 0x34]));
+
+        statusDiv.textContent = 'Connected to ' + selectedDevice.productName;
+        connectButton.disabled = true;
+        disconnectButton.disabled = false;
+      } catch (error) {
+        console.error('Error connecting to device:', error);
+        statusDiv.textContent = 'Connection failed.';
+      }
+    }
+
+    async function disconnectDevice() {
+      try {
+        await device.releaseInterface(0);
+        await device.close();
+        statusDiv.textContent = 'Disconnected.';
+        connectButton.disabled = false;
+        disconnectButton.disabled = true;
+      } catch (error) {
+        console.error('Error disconnecting from device:', error);
+      }
+    }
+
+    async function listDevices() {
+      try {
+        const devices = await navigator.usb.getDevices();
+
+        deviceList.innerHTML = '';
+        devices.forEach((device) => {
+          const option = document.createElement('option');
+          option.value = device.productId;
+          option.textContent = device.productName;
+          deviceList.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error listing devices:', error);
+      }
+    }
+
+    connectButton.addEventListener('click', async () => {
+      try {
+        const selectedDevice = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x1234 }] });
+        device = selectedDevice;
+        await connectDevice(selectedDevice);
+      } catch (error) {
+        console.error('Error requesting device:', error);
+      }
+    });
+
+    disconnectButton.addEventListener('click', disconnectDevice);
+
+    listDevices();
+  </script>
+</body>
+</html>
