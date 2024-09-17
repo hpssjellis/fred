@@ -167,13 +167,39 @@ class PriorityQueue {
 // Example usage
 function runDijkstra() {
     const graph = {
-        A: { B
+        A: { B: 1, C: 4 },
+        B: { C: 2, D: 5 },
+        C: { D: 1 },
+        D: {}
+    };
 
+    const result = myDijkstra(graph, 'A');
+    document.getElementById('dijkstra').textContent = JSON.stringify(result, null, 2);
+}
 
+function runTopologicalSort() {
+    const graph = {
+        A: ['B', 'C'],
+        B: ['D'],
+        C: ['D'],
+        D: []
+    };
 
+    const result = myTopologicalSort(graph);
+    document.getElementById('topologicalSort').textContent = JSON.stringify(result, null, 2);
+}
 
+function runFloydWarshall() {
+    const graph = {
+        A: { B: 1, C: 4 },
+        B: { C: 2, D: 5 },
+        C: { D: 1 },
+        D: {}
+    };
 
-
+    const result = myFloydWarshall(graph);
+    document.getElementById('floydWarshall').textContent = JSON.stringify(result, null, 2);
+}
 
 
 
