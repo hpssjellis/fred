@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linked List Addition</title>
+</head>
+<body>
+    <h1>Linked List Addition</h1>
+    <script>
+        class ListNode {
+            constructor(value = 0, next = null) {
+                this.value = value;
+                this.next = next;
+            }
+        }
+
+        function createLinkedList(arr) {
+            let head = new ListNode(arr[0]);
+            let current = head;
+            for (let i = 1; i < arr.length; i++) {
+                current.next = new ListNode(arr[i]);
+                current = current.next;
+            }
+            return head;
+        }
+
+        function addTwoNumbers(l1, l2) {
+            let dummyHead = new ListNode(0);
+            let p = l1, q = l2, current = dummyHead;
+            let carry = 0;
+            while (p !== null || q !== null) {
+                let x = (p !== null) ? p.value : 0;
+                let y = (q !== null) ? q.value : 0;
+                let sum = carry + x + y;
+                carry = Math.floor(sum / 10);
+                current.next = new ListNode(sum % 10);
+                current = current.next;
+                if (p !== null) p = p.next;
+                if (q !== null) q = q.next;
+            }
+            if (carry > 0) {
+                current.next = new ListNode(carry);
+            }
+            return dummyHead.next;
+        }
+
+        function printLinkedList(head) {
+            let current = head;
+            let result = [];
+            while (current !== null) {
+                result.push(current.value);
+                current = current.next;
+            }
+            console.log(result.join(' -> '));
+        }
+
+        // Example usage:
+        let list1 = createLinkedList([2, 4, 3]);
+        let list2 = createLinkedList([5, 6, 4]);
+
+        console.log("List 1:");
+        printLinkedList(list1);
+
+        console.log("List 2:");
+        printLinkedList(list2);
+
+        let result = addTwoNumbers(list1, list2);
+
+        console.log("Result:");
+        printLinkedList(result);
+    </script>
+</body>
+</html>
