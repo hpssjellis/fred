@@ -13,16 +13,32 @@
     <main>
         <h2>Dijkstra's Shortest Path</h2>
         <button onclick="runDijkstra()">Run Dijkstra</button>
+        <pre>
+    const graph = {
+        A: { B: 1, C: 4 },
+        B: { C: 2, D: 5 },
+        C: { D: 1 },
+        D: {}
+    };
+            
+        </pre>
         <pre id="dijkstra"></pre>
         
         <h2>Topological Sort</h2>
         <button onclick="runTopologicalSort()">Run Topological Sort</button>
+        <pre>
+    const graph = {
+        A: ['B', 'C'],
+        B: ['D'],
+        C: ['D'],
+        D: []
+    };
+            
+        </pre>
         <pre id="topologicalSort"></pre>
         
         <h2>Floyd-Warshall</h2>
         <button onclick="runFloydWarshall()">Run Floyd-Warshall</button>
-        <pre id="floydWarshall"></pre>
-
         <pre>    
         const graph = {
         A: { B: 1, C: 4 },
@@ -30,7 +46,11 @@
         C: { D: 1 },
         D: {}
     };</pre>
+    <pre id="floydWarshall"></pre>
+
+        
     </main>
+    
     <script >
 
 
