@@ -12,6 +12,9 @@
     </header>
     <main>
         <h2>Dijkstra's Shortest Path</h2>
+        Dijkstra’s Algorithm is used to find the shortest path from a starting node
+        (called the “source node”) to all other nodes in a weighted graph. 
+        The weights on the edges represent the cost or distance between the nodes.<br>
         <button onclick="runDijkstra()">Run Dijkstra</button>
         <pre>
     const graph = {
@@ -25,6 +28,10 @@
         <pre id="dijkstra"></pre>
         
         <h2>Topological Sort</h2>
+        Topological Sort is a fundamental graph algorithm used to order the vertices of a Directed Acyclic Graph (DAG) in a 
+        linear sequence such that for every directed edge ( u \rightarrow v ), vertex ( u ) comes before ( v ) in the ordering. 
+        This is particularly useful in scenarios where certain tasks must be completed before others.<br>
+        
         <button onclick="runTopologicalSort()">Run Topological Sort</button>
         <pre>
     const graph = {
@@ -38,6 +45,9 @@
         <pre id="topologicalSort"></pre>
         
         <h2>Floyd-Warshall</h2>
+The Floyd-Warshall algorithm is a classic algorithm used to find the shortest paths between all pairs of vertices in a weighted graph. 
+            It’s particularly useful for graphs that may have negative edge weights but no negative cycles.
+         <br>
         <button onclick="runFloydWarshall()">Run Floyd-Warshall</button>
         <pre>    
         const graph = {
