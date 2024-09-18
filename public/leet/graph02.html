@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Algorithms</title>
+
+</head>
+<body>
+    <header>
+        <h1>Graph Algorithms</h1>
+    </header>
+    <main>
+        <h2>Dijkstra's Shortest Path</h2>
+        <button onclick="runDijkstra()">Run Dijkstra</button>
+        <pre id="dijkstra"></pre>
+        
+        <h2>Topological Sort</h2>
+        <button onclick="runTopologicalSort()">Run Topological Sort</button>
+        <pre id="topologicalSort"></pre>
+        
+        <h2>Floyd-Warshall</h2>
+        <button onclick="runFloydWarshall()">Run Floyd-Warshall</button>
+        <pre id="floydWarshall"></pre>
+    </main>
+    <script >
+
+
+
+
+
+// Dijkstra's Shortest Path Algorithm
+function myDijkstra(graph, start) {
+    let distances = {};
+    let visited = new Set();
+    let pq = new PriorityQueue();
+
+    distances[start] = 0;
+    pq.enqueue(start, 0);
+
+    while (!pq.isEmpty()) {
+        let { element: current } = pq.dequeue();
+        visited.add(current);
+
+        for (let neighbor in graph[current]) {
+            if (!visited.has(neighbor)) {
+                let newDist = distances[current] + graph[current][neighbor];
+                if (newDist < (distances[neighbor] || Infinity)) {
+                    distances[neighbor] = newDist;
+                    pq.enqueue(neighbor, newDist);
+                }
+            }
+        }
+    }
+
+    return distances;
+}
+
+// Topological Sort
+function myTopologicalSort(graph) {
+    let visited = new Set();
+    let stack = [];
+
+    function visit(node) {
+        if (!visited.has(node)) {
+            visited.add(node);
+            for (let neighbor of graph[node]) {
+                visit(neighbor);
+            }
+            stack.push(node);
+        }
+    }
+
+    for (let node in graph) {
+        visit(node);
+    }
+
+    return stack.reverse();
+}
+
+// Floyd-Warshall Algorithm
+function myFloydWarshall(graph) {
+    let dist = {};
+    let nodes = Object.keys(graph);
+
+    nodes.forEach(i => {
+        dist[i] = {};
+        nodes.forEach(j => {
+            if (i === j) dist[i][j] = 0;
+            else if (graph[i][j] != null) dist[i][j] = graph[i][j];
+            else dist[i][j] = Infinity;
+        });
+    });
+
+    nodes.forEach(k => {
+        nodes.forEach(i => {
+            nodes.forEach(j => {
+                if (dist[i][j] > dist[i][k] + dist[k][j]) {
+                    dist[i][j] = dist[i][k] + dist[k][j];
+                }
+            });
+        });
+    });
+
+    return dist;
+}
+
+// Priority Queue for Dijkstra's Algorithm
+class PriorityQueue {
+    constructor() {
+        this.items = [];
+    }
+
+    enqueue(element, priority) {
+        let queueElement = { element, priority };
+        let added = false;
+
+        for (let i = 0; i < this.items.length; i++) {
+            if (this.items[i].priority > queueElement.priority) {
+                this.items.splice(i, 1, queueElement);
+                added = true;
+                break;
+            }
+        }
+
+        if (!added) {
+            this.items.push(queueElement);
+        }
+    }
+
+    dequeue() {
+        return this.items.shift();
+    }
+
+    isEmpty() {
+        return this.items.length === 0;
+    }
+}
+
+// Example usage
+function runDijkstra() {
+    const graph = {
+        A: { B: 1, C: 4 },
+        B: { C: 2, D: 5 },
+        C: { D: 1 },
+        D: {}
+    };
+
+    const result = myDijkstra(graph, 'A');
+    document.getElementById('dijkstra').textContent = JSON.stringify(result, null, 2);
+}
+
+function runTopologicalSort() {
+    const graph = {
+        A: ['B', 'C'],
+        B: ['D'],
+        C: ['D'],
+        D: []
+    };
+
+    const result = myTopologicalSort(graph);
+    document.getElementById('topologicalSort').textContent = JSON.stringify(result, null, 2);
+}
+
+function runFloydWarshall() {
+    const graph = {
+        A: { B: 1, C: 4 },
+        B: { C: 2, D: 5 },
+        C: { D: 1 },
+        D: {}
+    };
+
+    const result = myFloydWarshall(graph);
+    document.getElementById('floydWarshall').textContent = JSON.stringify(result, null, 2);
+}
+
+
+
+
+        
+    </script>
+</body>
+</html>
