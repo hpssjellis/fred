@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Webcam Capture</title>
+</head>
+<body>
+    <h1>Webcam Capture</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="capture">Capture Photo</button>
+    <canvas id="canvas" width="640" height="480"></canvas>
+    <a id="download" download="photo.png">Download Photo</a>
+
+    <script>
+        (function() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            const captureButton = document.getElementById('capture');
+            const downloadLink = document.getElementById('download');
+
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then((stream) => {
+                    video.srcObject = stream;
+                })
+                .catch((error) => {
+                    console.error('Error accessing the webcam:', error);
+                });
+
+            captureButton.addEventListener('click', () => {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const dataURL = canvas.toDataURL('image/png');
+                downloadLink.href = dataURL;
+            });
+        })();
+    </script>
+</body>
+</html>
