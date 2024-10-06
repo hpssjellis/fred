@@ -22,10 +22,10 @@
     
     var myFit = await model.fit(xTrainingData, yTrainingTarget, {
       batchSize: 4,
-      epochs: 100, // Reduced epochs for speed
+      epochs: 400, // Reduced epochs for speed
       callbacks: {
         onEpochEnd: async (epoch, logs) => {
-          document.getElementById('myDiv123').innerHTML = 'Epoch # ' + (epoch + 1) + '/100, Loss: ' + logs.loss + '<br>';
+          document.getElementById('myDiv123').innerHTML = 'Epoch # ' + (epoch + 1) + '/400, Loss: ' + logs.loss + '<br>';
           await tf.nextFrame(); 
         }
       }
