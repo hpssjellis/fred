@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/9.0.0/bignumber.min.js"></script>
+
+
+ <script>
+      function calculatePhiDigits(digitsCount) {
+        BigNumber.config({ DECIMAL_PLACES: digitsCount, ROUNDING_MODE: BigNumber.ROUND_DOWN });
+        
+        const sqrt5 = new BigNumber(5).sqrt();  // Calculate √5 with high precision
+        const phi = new BigNumber(1).plus(sqrt5).div(2);  // (1 + √5) / 2
+        
+        return phi.toFixed(digitsCount);  // Return φ in base 10 with the requested digits
+      }
+
+      // Function to map base-12 digits 10 and 11 to 'A' and 'B'
+      function digitToBase12Char(digit) {
+        if (digit === 10) return 'A';
+        if (digit === 11) return 'B';
+        return digit.toString();  // For digits 0-9, just return the number as a string
+      }
+
+
+
+
+
+      // Function to convert a decimal string to a number in base 12
+      function convertToBase(decimalStr, base, digit) {
+        let decimalPart = new BigNumber(decimalStr);
+        let baseDigits = '';
+        const bigBase = new BigNumber(base);
+
+        // Process integer part (to the left of the decimal point)
+        let integerPart = decimalPart.integerValue(BigNumber.ROUND_FLOOR);
+        while (integerPart.gt(0)) {
+          let remainder = integerPart.mod(bigBase).toNumber();
+          baseDigits = digitToBase12Char(remainder) + baseDigits;  // Map the digit
+          integerPart = integerPart.dividedToIntegerBy(bigBase);
+        }
+        baseDigits = baseDigits || '0';  // If integer part is zero, set to "0"
+
+        // Process fractional part (to the right of the decimal point)
+        let fractionPart = decimalPart.minus(decimalPart.integerValue(BigNumber.ROUND_FLOOR));
+        if (!fractionPart.isZero()) {
+          baseDigits += '.';
+        }
+
+        for (let i = 0; i < digit && !fractionPart.isZero(); i++) {  // 100 digits of precision for fractional part
+          fractionPart = fractionPart.times(bigBase);
+          let digit = fractionPart.integerValue(BigNumber.ROUND_FLOOR).toNumber();
+          baseDigits += digitToBase12Char(digit);  // Map the digit
+          fractionPart = fractionPart.minus(digit);
+        }
+
+        return baseDigits;
+      }
+
+      function myDisplayPhiDigits() {
+        const digitsCount = 100;  // Number of decimal digits of φ to calculate
+        const base = 12;  // Base to convert to
+        const phiDecimal = calculatePhiDigits(digitsCount);
+        const phiInBase12 = convertToBase(phiDecimal, base);
+
+        console.log(`Phi in base 12: ${phiInBase12}`);
+        document.getElementById('myDiv01').innerHTML += `Phi in base 10: ${phiDecimal} <br>  Phi in base 12: ${phiInBase12}`
+      }
+
+      function myFancy() {
+        const digitsCount = 300;  // Number of decimal digits of φ to calculate
+        const base = 12;  // Base to convert to
+        const phiDecimal = calculatePhiDigits(digitsCount);
+        let phiInBase12 = convertToBase(phiDecimal, base, digitsCount);
+
+       console.log(`Phi in base 12: ${phiInBase12}`);      
+       console.log(`length: ${phiInBase12.length}`);
+       phiInBase12 = phiInBase12.slice(2);      
+//      phiInBase12.shift();   // remove the first two elements
+
+        for (myLoop=0;  myLoop < phiInBase12.length;  myLoop++){
+
+                  if ((phiInBase12[myLoop] == '1') && (myLoop % 9 != 0)){document.getElementById('myDiv01').innerHTML += '0\''}             
+             else if ((phiInBase12[myLoop] == '3') && (myLoop % 9 != 0)){document.getElementById('myDiv01').innerHTML += '0,'}              
+             else if ((phiInBase12[myLoop] == '6') && (myLoop % 9 != 0)){document.getElementById('myDiv01').innerHTML += '5\''}              
+             else if ((phiInBase12[myLoop] == '8') && (myLoop % 9 != 0)){document.getElementById('myDiv01').innerHTML += '7\''}              
+             else if ((phiInBase12[myLoop] == 'A')                     ){document.getElementById('myDiv01').innerHTML += '@&thinsp;'}      
+             else if ((phiInBase12[myLoop] == 'B')                     ){document.getElementById('myDiv01').innerHTML += '*&thinsp;'} 
+
+             else {
+               document.getElementById('myDiv01').innerHTML += phiInBase12[myLoop]+'&thinsp;';  
+             }
+ 
+             if (myLoop % 8 == 4 ){
+                document.getElementById('myDiv01').innerHTML += '&nbsp;&nbsp;&nbsp;'   // two non-breaking spaces
+             }
+
+
+             if (myLoop % 8 == 0 ){
+                document.getElementById('myDiv01').innerHTML += '<br>'
+             }
+         }
+
+      }
+
+
+
+
+    </script>
+
+
+  </head>
+  <body>
+     <input type="button" value="Erase" onclick="document.getElementById('myDiv01').innerHTML = '' ">   
+     <input type="button" value="Calculate Phi in Base 12" onclick="myDisplayPhiDigits()">
+     <input type="button" value="Phi Fancy" onclick="myFancy()">  <br><br>
+    <div id="myDiv01"></div>
+  </body>
+</html>
