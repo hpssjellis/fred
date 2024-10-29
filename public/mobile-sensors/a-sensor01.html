@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Detection</title>
+</head>
+<body>
+    <div id="myDiv01"></div>
+
+    <script>
+        async function detectSensors() {
+            const sensors = {
+                accelerometer: 'Accelerometer' in window,
+                gyroscope: 'Gyroscope' in window,
+                magnetometer: 'Magnetometer' in window,
+                ambientLightSensor: 'AmbientLightSensor' in window,
+                proximitySensor: 'ProximitySensor' in window,
+                geolocation: 'geolocation' in navigator,
+                barometer: 'Barometer' in window, // only on iOS
+                deviceMotion: 'DeviceMotionEvent' in window, // only on iOS
+                faceMetrics: 'FaceDetector' in window, // only on iOS
+                speechMetrics: 'SpeechRecognition' in window, // only on iOS
+                temperatureSensor: 'TemperatureSensor' in window, // only on Android
+                humiditySensor: 'HumiditySensor' in window, // only on Android
+                pressureSensor: 'PressureSensor' in window, // only on Android
+                heartRateSensor: 'HeartRateSensor' in window // only on Android
+            };
+
+            const availableSensors = Object.keys(sensors).filter(sensor => sensors[sensor]);
+            const myDiv = document.getElementById('myDiv01');
+            myDiv.innerHTML = `<h3>Available Sensors:</h3><ul>${availableSensors.map(sensor => `<li>${sensor}</li>`).join('')}</ul>`;
+        }
+
+        detectSensors();
+    </script>
+</body>
+</html>
