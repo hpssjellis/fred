@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Data</title>
+</head>
+<body>
+    <div id="myDiv01"></div>
+
+    <script>
+        async function detectSensors() {
+            const sensors = {
+                accelerometer: 'Accelerometer' in window,
+                gyroscope: 'Gyroscope' in window,
+                magnetometer: 'Magnetometer' in window,
+                ambientLightSensor: 'AmbientLightSensor' in window,
+                proximitySensor: 'ProximitySensor' in window,
+                geolocation: 'geolocation' in navigator,
+                barometer: 'Barometer' in window, // only on iOS
+                deviceMotion: 'DeviceMotionEvent' in window, // only on iOS
+                faceMetrics: 'FaceDetector' in window, // only on iOS
+                speechMetrics: 'SpeechRecognition' in window, // only on iOS
+                temperatureSensor: 'TemperatureSensor' in window, // only on Android
+                humiditySensor: 'HumiditySensor' in window, // only on Android
+                pressureSensor: 'PressureSensor' in window, // only on Android
+                heartRateSensor: 'HeartRateSensor' in window // only on Android
+            };
+
+            const availableSensors = Object.keys(sensors).filter(sensor => sensors[sensor]);
+            const myDiv = document.getElementById('myDiv01');
+            myDiv.innerHTML = `<h3>Available Sensors:</h3><ul>${availableSensors.map(sensor => `<li>${sensor}</li>`).join('')}</ul>`;
+
+            if ('Accelerometer' in window) {
+                const accelerometer = new Accelerometer({frequency: 60});
+                accelerometer.addEventListener('reading', () => {
+                    myDiv.innerHTML += `<p>Accelerometer: x=${accelerometer.x.toFixed(2)}, y=${accelerometer.y.toFixed(2)}, z=${accelerometer.z.toFixed(2)}</p>`;
+                    accelerometer.stop();
+                });
+                accelerometer.start();
+            }
+
+            if ('Gyroscope' in window) {
+                const gyroscope = new Gyroscope({frequency: 60});
+                gyroscope.addEventListener('reading', () => {
+                    myDiv.innerHTML += `<p>Gyroscope: x=${gyroscope.x.toFixed(2)}, y=${gyroscope.y.toFixed(2)}, z=${gyroscope.z.toFixed(2)}</p>`;
+                    gyroscope.stop();
+                });
+                gyroscope.start();
+            }
+
+            if ('Magnetometer' in window) {
+                const magnetometer = new Magnetometer({frequency: 60});
+                magnetometer.addEventListener('reading', () => {
+                    myDiv.innerHTML += `<p>Magnetometer: x=${magnetometer.x.toFixed(2)}, y=${magnetometer.y.toFixed(2)}, z=${magnetometer.z.toFixed(2)}</p>`;
+                    magnetometer.stop();
+                });
+                magnetometer.start();
+            }
+
+            if ('AmbientLightSensor' in window) {
+                const ambientLightSensor = new AmbientLightSensor({frequency: 60});
+                ambientLightSensor.addEventListener('reading', () => {
+                    myDiv.innerHTML += `<p>Ambient Light: ${ambientLightSensor.illuminance.toFixed(2)} lux</p>`;
+                    ambientLightSensor.stop();
+                });
+                ambientLightSensor.start();
+            }
+
+            if ('ProximitySensor' in window) {
+                const proximitySensor = new ProximitySensor({frequency: 60});
+                proximitySensor.addEventListener('reading', () => {
+                    myDiv.innerHTML += `<p>Proximity: ${proximitySensor.distance.toFixed(2)} cm</p>`;
+                    proximitySensor.stop();
+                });
+                proximitySensor.start();
+            }
+
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    myDiv.innerHTML += `<p>Geolocation: Latitude=${position.coords.latitude.toFixed(2)}, Longitude=${position.coords.longitude.toFixed(2)}</p>`;
+                });
+            }
+
+            if ('Barometer' in window) { // only on iOS
+                const barometer = new Barometer({frequency: 60});
+                barometer.addEventListener('reading', () => {
+                    myDiv.innerHTML += `<p>Barometer: ${barometer.pressure.toFixed(2)} hPa</p>`;
+                    barometer.stop();
+                });
+                barometer.start();
+            }
+
+            if ('DeviceMotionEvent' in window) { // only on iOS
+                window.addEventListener('devicemotion', event => {
+                    myDiv.innerHTML += `<p>Device Motion: Acceleration x=${event.acceleration.x.toFixed(2)}, y=${event.acceleration.y.toFixed(2)}, z=${event.acceleration.z.toFixed(2)}</p>`;
+                }, { once: true });
+            }
+
+            if ('FaceDetector' in window) { // only on iOS
+                const faceDetector = new FaceDetector();
+                faceDetector.detect(document.querySelector('img')).then(faces => {
+                    myDiv.innerHTML += `<p>Face Metrics: Detected ${faces.length} face(s)</p>`;
+                });
+            }
+
+            if ('SpeechRecognition' in window) { // only on iOS
+                const recognition = new SpeechRecognition();
+                recognition.onresult = event => {
+                    myDiv.innerHTML += `<p>Speech Metrics: ${event.results[0][0].transcript}</p>`;
+                };
+                recognition.start();
+            }
+
+            if ('TemperatureSensor' in window) { // only on Android
+                const temperatureSensor = new TemperatureSensor({frequency: 60});
+                temperatureSensor.addEventListener('reading', () => {
+                    myDiv.innerHTML += `<p>Temperature: ${temperatureSensor.temperature.toFixed(2)} °C</p>`;
+                    temperatureSensor.stop();
+                });
+                temperatureSensor.start();
+            }
+
+            if ('HumiditySensor' in window) { // only on Android
+                const humiditySensor = new HumiditySensor({frequency: 60});
+                humiditySensor.addEventListener('reading', () => {
+                    myDiv.innerHTML += `<p>Humidity: ${humiditySensor.humidity.toFixed(2)} %</p>`;
+                    humiditySensor.stop();
+                });
+                humiditySensor.start();
+            }
+
+            if ('PressureSensor' in window) { // only on Android
+                const pressureSensor = new PressureSensor({frequency: 60});
+                pressureSensor.addEventListener('reading', () => {
+                    myDiv.innerHTML += `<p>Pressure: ${pressureSensor.pressure.toFixed(2)} hPa</p>`;
+                    pressureSensor.stop();
+                });
+                pressureSensor.start();
+            }
+
+            if ('HeartRateSensor' in window) { // only on Android
+                const heartRateSensor = new HeartRateSensor({frequency: 60});
+                heartRateSensor.addEventListener('reading', () => {
+                    myDiv.innerHTML += `<p>Heart Rate: ${heartRateSensor.heartRate.toFixed(2)} bpm</p>`;
+                    heartRateSensor.stop();
+                });
+                heartRateSensor.start();
+            }
+        }
+
+        detectSensors();
+    </script>
+</body>
+</html>
