@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gesture Controlled Details</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+    <style>
+        #video {
+            transform: scaleX(-1); /* Horizontally reverse the camera canvas */
+        }
+    </style>
+</head>
+<body>
+    <details id="details">
+        <summary>Camera Options</summary>
+        <button id="rearCamera" onclick="startCamera('environment')">Rear Camera</button>
+        <button id="frontCamera" onclick="startCamera('user')">Front Camera</button>
+        <video id="video" style="width: 100%; height: auto; display: block; margin-top: 10px;" autoplay></video>
+    </details>
+    <button id="alertButton" onclick="alert('Button clicked!')" style="margin-top: 20px;">Click Me</button>
+
+    <script>
+        async function startCamera(facingMode) {
+            const video = document.getElementById('video');
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode } });
+                    video.srcObject = stream;
+                } catch (error) {
+                    console.error('Error accessing camera: ', error);
+                }
+            } else {
+                alert('getUserMedia not supported on your browser!');
+            }
+        }
+
+        const videoElement = document.getElementById('video');
+        const detailsElement = document.getElementById('details');
+        const alertButton = document.getElementById('alertButton');
+
+        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onResults);
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({image: videoElement});
+            },
+            width: 640,
+            height: 480
+        });
+        camera.start();
+
+        function onResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const hand = results.multiHandLandmarks[0];
+                const palmBase = hand[0];
+                const x = (1 - palmBase.x) * screen.width; // Reverse horizontal movement
+                const y = palmBase.y * screen.height;
+
+                console.log(`Cursor position: (${x}, ${y})`); // Log cursor position
+
+                // Move the custom cursor to the palm base position
+                moveCustomCursor(x, y, 'red');
+
+                // Check for click gesture (index finger and thumb touching)
+                const indexFingerTip = hand[8];
+                const thumbTip = hand[4];
+                const clickDistance = Math.sqrt(Math.pow(indexFingerTip.x - thumbTip.x, 2) + Math.pow(indexFingerTip.y - thumbTip.y, 2));
+                if (clickDistance < 0.05) {
+                    const element = document.elementFromPoint(x, y);
+                    if (element === detailsElement || element === alertButton) {
+                        console.log('Click detected');
+                        element.click();
+                        moveCustomCursor(x, y, 'blue');
+                        setTimeout(() => moveCustomCursor(x, y, 'red'), 500); // Change back to red after 500ms
+                    }
+                }
+
+                // Check for grab gesture (all fingers close to the palm)
+                const middleFingerTip = hand[12];
+                const ringFingerTip = hand[16];
+                const pinkyTip = hand[20];
+                const grabDistance = 0.1; // Adjust this threshold as needed
+                if (distanceToPalm(indexFingerTip, palmBase) < grabDistance &&
+                    distanceToPalm(middleFingerTip, palmBase) < grabDistance &&
+                    distanceToPalm(ringFingerTip, palmBase) < grabDistance &&
+                    distanceToPalm(pinkyTip, palmBase) < grabDistance) {
+                    console.log('Grab detected');
+                    moveCustomCursor(x, y, 'green');
+                }
+            }
+        }
+
+        function moveCustomCursor(x, y, color) {
+            let cursor = document.getElementById('customCursor');
+            if (!cursor) {
+                cursor = document.createElement('div');
+                cursor.id = 'customCursor';
+                cursor.style.position = 'absolute';
+                cursor.style.width = '10px';
+                cursor.style.height = '10px';
+                cursor.style.borderRadius = '50%';
+                cursor.style.pointerEvents = 'none';
+                document.body.appendChild(cursor);
+            }
+            cursor.style.left = `${x}px`;
+            cursor.style.top = `${y}px`;
+            cursor.style.backgroundColor = color;
+        }
+
+        function distanceToPalm(fingerTip, palmBase) {
+            return Math.sqrt(Math.pow(fingerTip.x - palmBase.x, 2) + Math.pow(fingerTip.y - palmBase.y, 2));
+        }
+    </script>
+</body>
+</html>
