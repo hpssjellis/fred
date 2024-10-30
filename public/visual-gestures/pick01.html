@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Toggle</title>
+</head>
+<body>
+    <details>
+        <summary>Camera Options</summary>
+        <button id="rearCamera" onclick="startCamera('environment')">Rear Camera</button>
+        <button id="frontCamera" onclick="startCamera('user')">Front Camera</button>
+        <video id="video" style="width: 100%; height: auto; display: block; margin-top: 10px;" autoplay></video>
+    </details>
+
+    <script>
+        async function startCamera(facingMode) {
+            const video = document.getElementById('video');
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode } });
+                    video.srcObject = stream;
+                } catch (error) {
+                    console.error('Error accessing camera: ', error);
+                }
+            } else {
+                alert('getUserMedia not supported on your browser!');
+            }
+        }
+    </script>
+</body>
+</html>
