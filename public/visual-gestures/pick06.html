@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gesture Controlled Details</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+</head>
+<body>
+    <details id="details">
+        <summary>Camera Options</summary>
+        <button id="rearCamera" onclick="startCamera('environment')">Rear Camera</button>
+        <button id="frontCamera" onclick="startCamera('user')">Front Camera</button>
+        <video id="video" style="width: 100%; height: auto; display: block; margin-top: 10px;" autoplay></video>
+    </details>
+    <button id="alertButton" onclick="alert('Button clicked!')" style="margin-top: 20px;">Click Me</button>
+
+    <script>
+        async function startCamera(facingMode) {
+            const video = document.getElementById('video');
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode } });
+                    video.srcObject = stream;
+                } catch (error) {
+                    console.error('Error accessing camera: ', error);
+                }
+            } else {
+                alert('getUserMedia not supported on your browser!');
+            }
+        }
+
+        const videoElement = document.getElementById('video');
+        const detailsElement = document.getElementById('details');
+        const alertButton = document.getElementById('alertButton');
+
+        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onResults);
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({image: videoElement});
+            },
+            width: 640,
+            height: 480
+        });
+        camera.start();
+
+        function onResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const hand = results.multiHandLandmarks[0];
+                const indexFingerTip = hand[8];
+                const x = indexFingerTip.x * window.innerWidth;
+                const y = indexFingerTip.y * window.innerHeight;
+
+                // Move the mouse pointer
+                const element = document.elementFromPoint(x, y);
+                if (element) {
+                    element.style.cursor = 'pointer';
+
+                    // Check for click gesture (e.g., index finger and thumb touching)
+                    const thumbTip = hand[4];
+                    const distance = Math.sqrt(Math.pow(indexFingerTip.x - thumbTip.x, 2) + Math.pow(indexFingerTip.y - thumbTip.y, 2));
+                    if (distance < 0.05) {
+                        if (element === detailsElement || element === alertButton) {
+                            element.click();
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
