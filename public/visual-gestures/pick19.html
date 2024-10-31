@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gesture-Controlled Dot</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+    <style>
+        #video {
+            transform: scaleX(-1); /* Horizontally reverse the camera */
+            width: 100%;
+            height: auto;
+            display: block;
+            margin-top: 10px;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+        #customCursor {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: green;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <details>
+        <summary>Camera Options</summary>
+        <button onclick="startCamera('environment')">Rear Camera</button>
+        <button onclick="startCamera('user')">Front Camera</button>
+    </details>
+    <video id="video" autoplay></video>
+    <div id="customCursor"></div>
+
+    <script>
+        let currentStream;
+        
+        // Start camera based on facing mode
+        async function startCamera(facingMode) {
+            if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+            currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
+            document.getElementById('video').srcObject = currentStream;
+        }
+
+        const hands = new Hands({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.7
+        });
+
+        // Set up video capture and hand tracking
+        const videoElement = document.getElementById('video');
+        const customCursor = document.getElementById('customCursor');
+        
+        hands.onResults(onResults);
+        const camera = new Camera(videoElement, {
+            onFrame: async () => await hands.send({ image: videoElement }),
+            width: 640,
+            height: 480
+        });
+        camera.start();
+
+        // Move custom cursor based on hand coordinates and change color based on gestures
+        function onResults(results) {
+            if (results.multiHandLandmarks.length > 0) {
+                const hand = results.multiHandLandmarks[0];
+                const [palmBase, indexFingerTip, thumbTip] = [hand[0], hand[8], hand[4]];
+
+                const x = (1 - palmBase.x) * window.innerWidth;
+                const y = palmBase.y * window.innerHeight;
+
+                moveCursor(x, y, 'green');
+                
+                // Gesture for pinch or close to simulate click
+                const distance = Math.sqrt(Math.pow(indexFingerTip.x - thumbTip.x, 2) + Math.pow(indexFingerTip.y - thumbTip.y, 2));
+                if (distance < 0.05) {
+                    simulateClick(x, y);
+                    moveCursor(x, y, 'blue');
+                }
+            }
+        }
+
+        // Move cursor element to coordinates
+        function moveCursor(x, y, color) {
+            customCursor.style.left = `${x}px`;
+            customCursor.style.top = `${y}px`;
+            customCursor.style.backgroundColor = color;
+        }
+
+        // Simulate clicking on an element at the given coordinates
+        function simulateClick(x, y) {
+            const element = document.elementFromPoint(x, y);
+            if (element) element.click();
+            setTimeout(() => customCursor.style.backgroundColor = 'green', 500); // Reset color
+        }
+
+        // Initialize camera
+        startCamera('user');
+    </script>
+</body>
+</html>
