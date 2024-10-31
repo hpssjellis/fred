@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand Tracking Demo</title>
+</head>
+<body style="margin:0; overflow:hidden; display:flex; align-items:center; justify-content:center; position:relative; height:100vh;">
+
+    <!-- Camera Toggle -->
+    <input type="button" value="Toggle Camera" onclick="toggleCamera()" style="position:absolute; top:10px; left:10px; z-index:10;">
+
+    <!-- Dot Indicator -->
+    <div id="myDot" style="position:absolute; width:20px; height:20px; background-color:green; border-radius:50%;"></div>
+
+    <!-- Target Objects -->
+    <div id="myObj1" style="position:absolute; top:20%; left:10%; width:50px; height:50px; background-color:red;"></div>
+    <div id="myObj2" style="position:absolute; top:50%; left:70%; width:50px; height:50px; background-color:orange;"></div>
+    <div id="myObj3" style="position:absolute; top:80%; left:40%; width:50px; height:50px; background-color:yellow;"></div>
+
+    <script type="module">
+        import createGestureModel from '@learn-hunger/visual-gestures';
+
+        let myDot = document.getElementById('myDot');
+        let objects = [document.getElementById('myObj1'), document.getElementById('myObj2'), document.getElementById('myObj3')];
+        let isGrabbing = false, useRearCamera = false;
+
+        async function toggleCamera() {
+            useRearCamera = !useRearCamera;
+            await setupCamera();
+        }
+
+        async function setupCamera() {
+            let video = document.createElement('video');
+            video.style.display = 'none';
+            document.body.appendChild(video);
+
+            let stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: useRearCamera ? "environment" : "user" } 
+            });
+            video.srcObject = stream;
+            await video.play();
+
+            let gestureModel = await createGestureModel(video);
+            trackHand(gestureModel);
+        }
+
+        async function trackHand(model) {
+            let dotSize = 20;
+            while (true) {
+                let hand = await model.detect();
+                if (hand) {
+                    let { x, y, gesture } = hand;
+                    let pageX = x * window.innerWidth - dotSize / 2;
+                    let pageY = y * window.innerHeight - dotSize / 2;
+
+                    myDot.style.left = `${pageX}px`;
+                    myDot.style.top = `${pageY}px`;
+
+                    if (gesture === 'clench') {
+                        myDot.style.backgroundColor = 'blue';
+                        isGrabbing = true;
+                    } else if (gesture === 'raise') {
+                        myDot.style.backgroundColor = 'green';
+                        if (isGrabbing) clickNearbyObject(pageX, pageY);
+                        isGrabbing = false;
+                    }
+                }
+                await new Promise(resolve => requestAnimationFrame(resolve));
+            }
+        }
+
+        function clickNearbyObject(x, y) {
+            objects.forEach(obj => {
+                let rect = obj.getBoundingClientRect();
+                if (x > rect.left && x < rect.right && y > rect.top && y < rect.bottom) {
+                    obj.style.backgroundColor = 'blue';
+                    setTimeout(() => obj.style.backgroundColor = '', 200); // Visual feedback
+                }
+            });
+        }
+
+        setupCamera();
+    </script>
+</body>
+</html>
