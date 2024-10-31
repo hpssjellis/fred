@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gesture Controlled Details</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+    <style>
+        #video {
+            transform: scaleX(-1);
+            width: 100%;
+            height: auto;
+            display: block;
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: -1;
+        }
+        #customCursor {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <details id="details">
+        <summary>Camera Options</summary>
+        <button onclick="startCamera('environment')">Rear Camera</button>
+        <button onclick="startCamera('user')">Front Camera</button>
+        <video id="video" autoplay></video>
+    </details>
+    <button onclick="alert('Button clicked!')" style="margin-top: 20px; position: absolute; top: 60px; left: 20px;">Click Me</button>
+
+    <script>
+        let currentStream;
+        let customCursorColor = 'green';
+        
+        async function startCamera(facingMode) {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+            const constraints = { video: { facingMode: facingMode } };
+            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+            document.getElementById('video').srcObject = currentStream;
+        }
+
+        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onResults);
+        const camera = new Camera(document.getElementById('video'), {
+            onFrame: async () => {
+                await hands.send({image: document.getElementById('video')});
+            },
+            width: 640,
+            height: 480
+        });
+        camera.start();
+
+        function onResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const hand = results.multiHandLandmarks[0];
+                const palmBase = hand[0];
+                const indexFingerTip = hand[8];
+                const thumbTip = hand[4];
+                
+                // Cursor position mapping to screen coordinates
+                const x = (1 - palmBase.x) * window.innerWidth;
+                const y = palmBase.y * window.innerHeight;
+                
+                // Move cursor and detect grab or click gestures
+                moveCustomCursor(x, y, customCursorColor);
+                const grabDistance = Math.sqrt(Math.pow(indexFingerTip.x - thumbTip.x, 2) + Math.pow(indexFingerTip.y - thumbTip.y, 2));
+                
+                if (grabDistance < 0.05) {  // Close enough to be considered "grabbed"
+                    customCursorColor = 'blue';
+                    const element = document.elementFromPoint(x, y);
+                    if (element) {
+                        element.click();
+                    }
+                } else {  // Finger open, set cursor to "clickable" mode
+                    customCursorColor = 'green';
+                }
+            }
+        }
+
+        function moveCustomCursor(x, y, color) {
+            let cursor = document.getElementById('customCursor');
+            if (!cursor) {
+                cursor = document.createElement('div');
+                cursor.id = 'customCursor';
+                document.body.appendChild(cursor);
+            }
+            cursor.style.left = `${x}px`;
+            cursor.style.top = `${y}px`;
+            cursor.style.backgroundColor = color;
+        }
+
+        async function init() {
+            await startCamera('user');
+        }
+        
+        init();
+    </script>
+</body>
+</html>
