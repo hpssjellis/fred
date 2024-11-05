@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File Parser</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #drop_zone { border: 2px dashed #ccc; padding: 20px; text-align: center; }
+        #fileInput { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Drop your file here</h1>
+    <div id="drop_zone">Drop file here</div>
+    <input type="file" id="fileInput">
+    <button onclick="document.getElementById('fileInput').click();">Select File</button>
+    <pre id="output"></pre>
+
+    <script>
+        let dropZone = document.getElementById('drop_zone');
+        let fileInput = document.getElementById('fileInput');
+        let output = document.getElementById('output');
+        let myInput = [];
+
+        dropZone.ondragover = function(event) {
+            event.preventDefault();
+            dropZone.style.borderColor = '#000';
+        };
+
+        dropZone.ondragleave = function() {
+            dropZone.style.borderColor = '#ccc';
+        };
+
+        dropZone.ondrop = function(event) {
+            event.preventDefault();
+            dropZone.style.borderColor = '#ccc';
+            let file = event.dataTransfer.files[0];
+            if (file.name === 'anything.in') {
+                parseFile(file);
+            } else {
+                alert('Please drop a file named "anything.in"');
+            }
+        };
+
+        fileInput.onchange = function(event) {
+            let file = event.target.files[0];
+            if (file.name === 'anything.in') {
+                parseFile(file);
+            } else {
+                alert('Please select a file named "anything.in"');
+            }
+        };
+
+        function parseFile(file) {
+            let reader = new FileReader();
+            reader.onload = function(event) {
+                let content = event.target.result;
+                myInput = content.split(' ').map(Number);
+                output.textContent = 'Parsed integers: ' + myInput.join(', ');
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
