@@ -46,6 +46,7 @@
                 myInput = content.split('\n').map(line => line.split(' ').map(Number));
               //  output.textContent = 'Parsed integers: ' + JSON.stringify(myInput, null, 2);
                 output.innerHTML = 'Parsed integers: <br>' + JSON.stringify(myInput, null, '<br>');
+                console.log(myInput)
             };
             reader.readAsText(file);
         }
