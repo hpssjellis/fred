@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subset Sum Finder</title>
+</head>
+<body>
+    <div>
+        <h1>Subset Sum Finder</h1>
+        <input type="text" id="inputNumbers" placeholder="Enter numbers separated by commas" value="1,2,3,4,5,6,7,2,3,4,1,3,2,4,3,5,4,6,5,6,5,4,3,2,3,4">
+        <input type="number" id="targetSum" placeholder="Target sum" value=5>
+        <button onclick="findSubsets()">Find Subsets</button>
+    </div>
+    <ul id="numberList"></ul>
+
+    <script>
+        function findSubsets() {
+            // Get the input values
+            const inputNumbers = document.getElementById('inputNumbers').value;
+            const targetSum = parseInt(document.getElementById('targetSum').value);
+
+            // Convert input string to an array of numbers
+            const numbers = inputNumbers.split(',').map(Number);
+
+            // Function to find all subsets that sum to the target sum
+            function findSubsetsRec(nums, target, partial = []) {
+                const sum = partial.reduce((a, b) => a + b, 0);
+
+                if (sum === target) {
+                    addSubsetToList(partial);
+                }
+
+                if (sum >= target) {
+                    return;
+                }
+
+                for (let i = 0; i < nums.length; i++) {
+                    const n = nums[i];
+                    const remaining = nums.slice(i + 1);
+                    findSubsetsRec(remaining, target, partial.concat([n]));
+                }
+            }
+
+            // Function to add subset to the list
+            function addSubsetToList(subset) {
+                const wordList = document.getElementById('numberList');
+                const listItem = document.createElement('li');
+                listItem.textContent = subset.join(', ');
+                wordList.appendChild(listItem);
+            }
+
+            // Clear previous list items
+            document.getElementById('numberList').innerHTML = '';
+
+            // Find and display all subsets
+            findSubsetsRec(numbers, targetSum);
+        }
+    </script>
+</body>
+</html>
+
