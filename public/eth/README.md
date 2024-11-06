@@ -14,7 +14,7 @@ https://hpssjellis.github.io/fred/public/eth/ast05.html     Presently here getti
 
 https://hpssjellis.github.io/fred/public/eth/split01.html  testing splits.
 
-https://hpssjellis.github.io/fred/public/eth/ast06.html
+https://hpssjellis.github.io/fred/public/eth/ast06.html  Ok lets look at potions.
 
 
 
