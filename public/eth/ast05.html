@@ -81,8 +81,16 @@ function myProcess(){
 
 function myCalc(){
     for (j=0; j < myNumSets; j++){
-        console.log('mySetIndex['+ i+ ']')
-        console.log(mySetIndex[i])
+        console.log('mySetIndex[' + j + ']')
+        console.log(mySetIndex[j])
+        let myDistance = 0;
+        let myTime =0;
+        for (k=1; k < myInput[mySetIndex[j]][0]; k++){  // number of steps
+              myDistance += myInput[mySetIndex[j]+k][0]  // gtrab distance
+              myTime     += myInput[mySetIndex[j]+k][1]  // gtrab distance
+        }
+        console.log('myDistance:' + myDistance)
+        console.log('myTime:' + myTime)
     }
 }
 
