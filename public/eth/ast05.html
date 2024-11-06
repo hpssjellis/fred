@@ -58,22 +58,22 @@ function parseFile(file) {
 
 function myProcess(){
     myNumSets = myInput[0][0]
-    console.log('myNumSets')
-    console.log(myNumSets)
+ //   console.log('myNumSets')
+  //  console.log(myNumSets)
     
     let myNextIndex = 1;
     mySetIndex[0] = myNextIndex;   // first set must start at index 1;
     
-    console.log('mySetIndex[0]')
-    console.log(mySetIndex[0])
+  //  console.log('mySetIndex[0]')
+  //  console.log(mySetIndex[0])
     for (i=1; i < myNumSets; i++){
        // mySetIndex[i] = mySetIndex[i-1] + myInput[myNextIndex][0]  + 3   // m   n    d    t
         myNextIndex +=  myInput[myNextIndex][0]  + 2   // m   n    d    t
         mySetIndex[i] = myNextIndex 
-        console.log('mySetIndex[' + i + ']')
-        console.log(mySetIndex[i])
-        console.log('myNextIndex')
-        console.log(myNextIndex)
+       // console.log('mySetIndex[' + i + ']')
+       // console.log(mySetIndex[i])
+       // console.log('myNextIndex')
+       // console.log(myNextIndex)
         
     }  
     
@@ -81,6 +81,7 @@ function myProcess(){
 
 function myCalc(){
     for (j=0; j < myNumSets; j++){
+        console.log()
         console.log('mySetIndex[' + j + ']')
         console.log(mySetIndex[j])
         let myDistance = 0;
