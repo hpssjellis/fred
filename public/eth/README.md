@@ -12,7 +12,9 @@ https://hpssjellis.github.io/fred/public/eth/ast04.html     crap
 
 https://hpssjellis.github.io/fred/public/eth/ast05.html     Presently here getting it parsed, now trying to add distance and time. 
 
-https://hpssjellis.github.io/fred/public/eth/split01.html  testing splits.
+https://hpssjellis.github.io/fred/public/eth/split01.html  testing splits works
+
+https://hpssjellis.github.io/fred/public/eth/split02.html  bit cleaner
 
 https://hpssjellis.github.io/fred/public/eth/ast06.html  Ok lets look at potions.
 
