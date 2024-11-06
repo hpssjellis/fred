@@ -112,8 +112,17 @@ function myCalc(){
                              console.log(`Loop:${m},   `)    
 
                              if (j < mySetIndex.length) {
-                                 console.log( myInput[mySetIndex[j+1]-1][m])
-                                 myPotion = myInput[mySetIndex[j]][0] * myInput[mySetIndex[j+1]-1][m]
+                                let myJ
+                                 try {
+                                    myJ = myInput[mySetIndex[j+1]-1][m]
+                                 } catch (e) {
+                                     console.log(e)
+                                     myJ = 1;   // set potions something sane
+                                   return
+                                  }
+                                 
+                                 console.log( myJ)
+                                 myPotion = myInput[mySetIndex[j]][0] * myJ
                                  console.log('myPotion-mid')
                                  console.log(myPotion)
                              }  else {
