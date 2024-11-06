@@ -75,17 +75,17 @@ function myProcess(){
        // console.log(mySetIndex[i])
        // console.log('myNextIndex')
        // console.log(myNextIndex)
-      console.log('Process done')  
+     // console.log('Process done')  
     }  
   myCalc()  
 }
 
 function myCalc(){
     for (j=0; j < myNumSets; j++){
-        console.log()
-        console.log('mySetIndex[' + j + ']')
-        console.log(mySetIndex[j])
-        console.log('sets:'+ myInput[mySetIndex[j]][0])
+    //    console.log()
+     //   console.log('mySetIndex[' + j + ']')
+      //  console.log(mySetIndex[j])
+     //   console.log('sets:'+ myInput[mySetIndex[j]][0])
         let myDistance = 0;
         let myTime =0;
        // let myMax = myInput[mySetIndex[j]][0]
@@ -110,8 +110,7 @@ function myCalc(){
                       let myPotion = 0
                       for (let m=0;  m < myInput[mySetIndex[j]][1] ; m++){   // potion looping
                              console.log(`Loop:${m},   `)   
-                             console.log('mySetIndex.length')
-                             console.log(mySetIndex.length)
+                             console.log(`mySetIndex.length: ${mySetIndex.length}`)
 
                              if (j < mySetIndex.length) {
                                 let myJ = myInput[mySetIndex[j+1]-1][m]
@@ -125,15 +124,15 @@ function myCalc(){
                                   }
                                */
                                  
-                                 console.log( myJ)
+                                // console.log( myJ)
                                  myPotion = myInput[mySetIndex[j]][0] * myJ
-                                 console.log('myPotion-mid')
-                                 console.log(myPotion)
+                                 console.log(`${myJ}  myPotion-mid: ${myPotion} `)
+                               //  console.log(myPotion)
                              }  else {
-                                 console.log( myInput[mySetIndex[mySetIndex.length-1]][m])      
+                                 console.log(` last location ${myInput[mySetIndex[mySetIndex.length-1]][m]} `)      
                                  myPotion = myInput[mySetIndex[j]][0] * myInput[mySetIndex[mySetIndex.length-1]][m]                                
-                                 console.log('myPotion-end')
-                                 console.log(myPotion)
+
+                                 console.log(`${myJ}  myPotion-mid: ${myPotion} `)
                              }
                              let myNewDistance = myDistance + myPotion
                              if ( myNewDistance >= myInput[mySetIndex[j]][2]  ){
@@ -145,8 +144,8 @@ function myCalc(){
               }
 
         }
-        console.log('myDistance:' + myDistance)
-        console.log('myTime:' + myTime)
+     //   console.log('myDistance:' + myDistance)
+     //   console.log('myTime:' + myTime)
     }
 }
 
