@@ -22,6 +22,9 @@ https://hpssjellis.github.io/fred/public/eth/split04.html  showing results
 
 https://hpssjellis.github.io/fred/public/eth/split05.html  split and list using recursion not the shift operators. A bit more complex. I probably will not use this.
 
+
+https://hpssjellis.github.io/fred/public/eth/split06.html  Using this, should show the total number of hits.
+
 https://hpssjellis.github.io/fred/public/eth/ast06.html  Ok lets look at potions.
 
 
