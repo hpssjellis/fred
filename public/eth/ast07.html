@@ -108,9 +108,10 @@ function myCalc(){
                    //  myTestPotion()
                   //    output.innerHTML += `Set #${j}. Now it is interesting, lets test potions: myDistance:${myDistance}, myTime:${myTime} <br>`
                       let myPotion = 0
+                      console.log(`mySetIndex.length: ${mySetIndex.length}`)
                       for (let m=0;  m < myInput[mySetIndex[j]][1] ; m++){   // potion looping
                              console.log(`Loop:${m},   `)   
-                             console.log(`mySetIndex.length: ${mySetIndex.length}`)
+
 
                              if (j < mySetIndex.length) {
                                 let myJ = myInput[mySetIndex[j+1]-1][m]
