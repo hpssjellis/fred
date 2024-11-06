@@ -25,7 +25,9 @@ https://hpssjellis.github.io/fred/public/eth/split05.html  split and list using 
 
 https://hpssjellis.github.io/fred/public/eth/split06.html  Using this, should show the total number of hits.
 
-https://hpssjellis.github.io/fred/public/eth/ast06.html  Ok lets look at potions.
+https://hpssjellis.github.io/fred/public/eth/ast06.html  Kind of doing stuff, not really working yet. An OK code backup 
+
+https://hpssjellis.github.io/fred/public/eth/ast06.html  Latest.
 
 
 
