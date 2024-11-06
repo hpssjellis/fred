@@ -67,8 +67,8 @@ function myProcess(){
     console.log(mySetIndex[0])
     for (i=1; i < myNumSets; i++){
        // mySetIndex[i] = mySetIndex[i-1] + myInput[myNextIndex][0]  + 3   // m   n    d    t
-        myNextIndex =  myInput[myNextIndex][0]  + 3   // m   n    d    t
-        //myNextIndex = mySetIndex[i]
+        myNextIndex +=  myInput[myNextIndex][0]  + 3   // m   n    d    t
+        mySetIndex[i] = myNextIndex 
         console.log('mySetIndex[' + i + ']')
         console.log(mySetIndex[i])
         console.log('myNextIndex')
