@@ -48,9 +48,7 @@ function parseFile(file) {
   reader.onload = function(event) {
       let content = event.target.result;
       myInput = content.split('\n').map(line => line.split(' ').map(Number));
-    //  output.textContent = 'Parsed integers: ' + JSON.stringify(myInput, null, 2);
-     // output.innerHTML = 'Parsed integers: <br>' + JSON.stringify(myInput, null, '<br>');
-      output.innerHTML = 'Parsed integers: <br>' + JSON.stringify(myInput, null, 2);
+    //  output.innerHTML = 'Parsed integers: <br>' + JSON.stringify(myInput, null, 2);  // not really neeeded
       console.log(myInput)
   };
   reader.readAsText(file);
