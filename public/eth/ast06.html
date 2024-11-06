@@ -120,7 +120,11 @@ function myCalc(){
                                  console.log('myPotion-end')
                                  console.log(myPotion)
                              }
-                          
+                             let myNewDistance = myDistance + myPotion
+                             if (myNewDistance >= myInput[mySetIndex[j]][2])  ){
+                                output.innerHTML += `YYYYYYYYYYYYYEEEEEEEEEEHHHHHHHHHHHHHH<br>`
+                                break;      
+                             }
                       }
                  }
               }
