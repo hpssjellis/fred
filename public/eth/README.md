@@ -20,6 +20,8 @@ https://hpssjellis.github.io/fred/public/eth/split03.html  trying converted from
 
 https://hpssjellis.github.io/fred/public/eth/split04.html  showing results
 
+https://hpssjellis.github.io/fred/public/eth/split05.html  split and list using recursion not the shift operators. A bit more complex. 
+
 https://hpssjellis.github.io/fred/public/eth/ast06.html  Ok lets look at potions.
 
 
