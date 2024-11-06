@@ -11,6 +11,7 @@
 <input type="file" id="fileInput">
 <button onclick="document.getElementById('fileInput').click();">Select File</button>
 <button onclick="myProcess();">Process</button>
+<button onclick="myCalc();">Calculate</button>
 <pre id="output"></pre>
 
 <script>
@@ -77,6 +78,15 @@ function myProcess(){
     }  
     
 }
-    </script>
+
+function myCalc(){
+    for (j=0; j < myNumSets; j++){
+        console.log('mySetIndex['+ i+ ']')
+        console.log(mySetIndex[i])
+    }
+}
+
+    
+</script>
 </body>
 </html>
