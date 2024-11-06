@@ -74,7 +74,7 @@ function myProcess(){
        // console.log(mySetIndex[i])
        // console.log('myNextIndex')
        // console.log(myNextIndex)
-        
+      console.log('Process done')  
     }  
     
 }
@@ -84,10 +84,11 @@ function myCalc(){
         console.log()
         console.log('mySetIndex[' + j + ']')
         console.log(mySetIndex[j])
+        console.log('sets:'+ myInput[mySetIndex[j]][0])
         let myDistance = 0;
         let myTime =0;
        // let myMax = myInput[mySetIndex[j]][0]
-        for (k=1; k < myInput[mySetIndex[j]][0]; k++){  // number of steps
+        for (k=1; k <= myInput[mySetIndex[j]][0]; k++){  // number of steps
               myDistance += myInput[mySetIndex[j] + k][0]  // grab distance
               myTime     += myInput[mySetIndex[j] + k][1]  // grab time
         }
