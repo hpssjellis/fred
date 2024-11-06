@@ -6,8 +6,8 @@
 
 </head>
 <body>
-<h1>Drop your file here</h1>
-<div id="drop_zone">Drop file here</div>
+
+<div id="drop_zone"><h1>Drop your file here</h1> Drop file here</div>
 <input type="file" id="fileInput">
 <button onclick="document.getElementById('fileInput').click();">Select File</button>
 <button onclick="myProcess();">Process</button>
@@ -104,7 +104,7 @@ function myCalc(){
                   let myNextTime = myTime + myInput[mySetIndex[j] + k + 1][1]  //  the next time frame needs to be a fail or not close enough and too many potions used
                   if (myNextTime > myInput[mySetIndex[j]][3]){
                    //  myTestPotion()
-                      output.innerHTML += `Now it is interesting, lets test potions: myDistance: ${myDistance}, myTime:${myTime} <br>`
+                      output.innerHTML += `Now it is interesting, lets test potions: myDistance:${myDistance}, myTime:${myTime} <br>`
                  }
               }
             /*
