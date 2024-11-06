@@ -18,6 +18,8 @@ https://hpssjellis.github.io/fred/public/eth/split02.html  bit cleaner   but wro
 
 https://hpssjellis.github.io/fred/public/eth/split03.html  trying converted from c++
 
+https://hpssjellis.github.io/fred/public/eth/split04.html  showing results
+
 https://hpssjellis.github.io/fred/public/eth/ast06.html  Ok lets look at potions.
 
 
