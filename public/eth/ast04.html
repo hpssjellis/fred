@@ -59,9 +59,13 @@ function myProcess(){
   myNumSets = myInput[0][0]
   let myNextIndex = 1;
   mySetIndex[0] = myNextIndex;   // first set must start at index 1;
+    
+   console.log('mySetIndex[0]')
+   console.log(mySetIndex[0])
   for (i=1; i < myNumSets; i++){
     mySetIndex[i] = myInput[myNextIndex][0]  + myInput[myNextIndex][1] + 2   // m   n    d    t
     myNextIndex = mySetIndex[i]
+    console.log('mySetIndex[i] and i:' + i)
     console.log(mySetIndex[i])
   }  
     
