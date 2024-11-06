@@ -89,6 +89,10 @@ function myCalc(){
         for (k=1; k <= myInput[mySetIndex[j]][0]; k++){  // number of steps
               myDistance += myInput[mySetIndex[j] + k][0]  // grab distance
               myTime     += myInput[mySetIndex[j] + k][1]  // grab time
+              if (myTime >= myInput[mySetIndex[j]][3]){
+                  output.innerHTML += 'Set #' + myInput[mySetIndex[j]][0] + 'BAD' 
+                  break;
+              }
         }
         console.log('myDistance:' + myDistance)
         console.log('myTime:' + myTime)
