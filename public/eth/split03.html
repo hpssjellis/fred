@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Subset Sum - Meet in the Middle</title>
+</head>
+<body>
+    <h1>Subset Sum - Meet in the Middle</h1>
+    <p>Check if a subset with a given sum exists in the array.</p>
+    <div>
+        <label for="targetSum">Target Sum:</label>
+        <input type="number" id="targetSum" value="10">
+    </div>
+    <div>
+        <label for="elements">Elements (comma-separated):</label>
+        <input type="text" id="elements" value="1,3,9,2,7">
+    </div>
+    <button onclick="checkSubsetSum()">Check Subset Sum</button>
+    <p id="result"></p>
+
+    <script>
+        function checkSubsetSum() {
+            const targetSum = parseInt(document.getElementById('targetSum').value);
+            const elements = document.getElementById('elements').value.split(',').map(Number);
+
+            function subsetSum(k, elements) {
+                const n = elements.length;
+                const half = Math.floor(n / 2);
+                const left = elements.slice(0, half);
+                const right = elements.slice(half);
+
+                const leftSums = new Set();
+                for (let s = 0; s < (1 << left.length); ++s) {
+                    let sum = 0;
+                    for (let i = 0; i < left.length; ++i) {
+                        if (s & (1 << i)) sum += left[i];
+                    }
+                    leftSums.add(sum);
+                }
+
+                for (let s = 0; s < (1 << right.length); ++s) {
+                    let sum = 0;
+                    for (let i = 0; i < right.length; ++i) {
+                        if (s & (1 << i)) sum += right[i];
+                    }
+                    if (leftSums.has(k - sum)) return true;
+                }
+
+                return false;
+            }
+
+            const result = subsetSum(targetSum, elements);
+            document.getElementById('result').textContent = result ? 
+                `Subset with sum ${targetSum} exists.` : 
+                `No subset with sum ${targetSum} exists.`;
+        }
+    </script>
+</body>
+</html>
