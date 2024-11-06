@@ -104,7 +104,7 @@ function myCalc(){
                   let myNextTime = myTime + myInput[mySetIndex[j] + k + 1][1]  //  the next time frame needs to be a fail or not close enough and too many potions used
                   if (myNextTime > myInput[mySetIndex[j]][3]){
                    //  myTestPotion()
-                      output.innerHTML += `Set #${j}. Now it is interesting, lets test potions: myDistance:${myDistance}, myTime:${myTime} <br>`
+                  //    output.innerHTML += `Set #${j}. Now it is interesting, lets test potions: myDistance:${myDistance}, myTime:${myTime} <br>`
                       let myPotion = 0
                       for (let m=0;  m < myInput[mySetIndex[j]][1] ; m++){   // potion looping
                              console.log(`Loop:${m},   `)    
@@ -122,7 +122,7 @@ function myCalc(){
                              }
                              let myNewDistance = myDistance + myPotion
                              if ( myNewDistance >= myInput[mySetIndex[j]][2]  ){
-                                output.innerHTML += `Set #${j}.  myNewDistance:${myNewDistance}, myTime:${myTime}, myPotion: ${myPotion}<br>`
+                                output.innerHTML += `Set #${j}.  myNewDistance:${myNewDistance}, myTime:${myTime}, Potions #${myInput[mySetIndex[j]][0]}<br>`
                                 break;      
                              }
                       }
