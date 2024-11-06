@@ -73,7 +73,7 @@
             subsetsElement.innerHTML = '';
 
             if (found) {
-                resultElement.textContent = `Subset(s) with sum ${targetSum} exist:`;
+                resultElement.textContent = `Subset(s) with sum: ${targetSum}`;
               let myCount=0;
                 resultSubsets.forEach(subset => {
                     const li = document.createElement('li');
@@ -81,7 +81,7 @@
                     subsetsElement.appendChild(li);
                      myCount +=1;
                 });
-                resultElement.textContent += `Total Count: ${myCount} `;
+                resultElement.textContent += `, Subset count: ${myCount} `;
             } else {
                 resultElement.textContent = `No subset with sum ${targetSum} exists.`;
             }
