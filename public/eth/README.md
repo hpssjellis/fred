@@ -27,7 +27,7 @@ https://hpssjellis.github.io/fred/public/eth/split06.html  Using this, should sh
 
 https://hpssjellis.github.io/fred/public/eth/ast06.html  Kind of doing stuff, not really working yet. An OK code backup 
 
-https://hpssjellis.github.io/fred/public/eth/ast06.html  Latest.
+https://hpssjellis.github.io/fred/public/eth/ast07.html  Latest.
 
 
 
