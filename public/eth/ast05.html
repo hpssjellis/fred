@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File Parser</title>
+
+</head>
+<body>
+<h1>Drop your file here</h1>
+<div id="drop_zone">Drop file here</div>
+<input type="file" id="fileInput">
+<button onclick="document.getElementById('fileInput').click();">Select File</button>
+<button onclick="myProcess();">Process</button>
+<pre id="output"></pre>
+
+<script>
+let dropZone = document.getElementById('drop_zone');
+let fileInput = document.getElementById('fileInput');
+let output = document.getElementById('output');
+let myInput = [];
+let myNumSets;
+let mySetIndex = [];
+
+dropZone.ondragover = function(event) {
+  event.preventDefault();
+  dropZone.style.borderColor = '#000';
+};
+
+dropZone.ondragleave = function() {
+  dropZone.style.borderColor = '#ccc';
+};
+
+dropZone.ondrop = function(event) {
+  event.preventDefault();
+  dropZone.style.borderColor = '#ccc';
+  let file = event.dataTransfer.files[0];
+  parseFile(file);
+};
+
+fileInput.onchange = function(event) {
+  let file = event.target.files[0];
+   parseFile(file);
+};
+
+function parseFile(file) {
+  let reader = new FileReader();
+  reader.onload = function(event) {
+      let content = event.target.result;
+      myInput = content.split('\n').map(line => line.split(' ').map(Number));
+    //  output.textContent = 'Parsed integers: ' + JSON.stringify(myInput, null, 2);
+     // output.innerHTML = 'Parsed integers: <br>' + JSON.stringify(myInput, null, '<br>');
+      output.innerHTML = 'Parsed integers: <br>' + JSON.stringify(myInput, null, 2);
+      console.log(myInput)
+  };
+  reader.readAsText(file);
+}
+
+function myProcess(){
+    myNumSets = myInput[0][0]
+    console.log('myNumSets')
+    console.log(myNumSets)
+    
+    let myNextIndex = 1;
+    mySetIndex[0] = myNextIndex;   // first set must start at index 1;
+    
+    console.log('mySetIndex[0]')
+    console.log(mySetIndex[0])
+    for (i=1; i < myNumSets; i++){
+       // mySetIndex[i] = mySetIndex[i-1] + myInput[myNextIndex][0]  + 3   // m   n    d    t
+        myNextIndex +=  myInput[myNextIndex][0]  + 2   // m   n    d    t
+        mySetIndex[i] = myNextIndex 
+        console.log('mySetIndex[' + i + ']')
+        console.log(mySetIndex[i])
+        console.log('myNextIndex')
+        console.log(myNextIndex)
+        
+    }  
+    
+}
+    </script>
+</body>
+</html>
