@@ -94,7 +94,7 @@ function myCalc(){
               myTime     += myInput[mySetIndex[j] + k][1]  // grab time
             
               if (myTime >= myInput[mySetIndex[j]][3]){   // test duration
-                  output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j}  Panoramix captured<br>` 
+                  output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} Darn Panoramix captured<br>` 
                   break;
               }
               if ((myTime < myInput[mySetIndex[j]][3])   &&  (myDistance >= myInput[mySetIndex[j]][2])       ){   // yeh you did it without potions
@@ -137,7 +137,7 @@ function myCalc(){
                              }
                              let myNewDistance = myDistance + myPotion
                              if ( myNewDistance >= myInput[mySetIndex[j]][2]  ){
-                                output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  Set #${j}. Success myNewDistance:${myNewDistance}, myTime:${myTime}, Potions #${m+1}<br>`
+                                output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myNewDistance:${myNewDistance}, myTime:${myTime},  Set #${j}. Success Potions #${m+1}<br>`
                                 break;      
                              }
                       }
