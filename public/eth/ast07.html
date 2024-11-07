@@ -91,15 +91,18 @@ function myCalc(){
         let myTime =0;
        // let myMax = myInput[mySetIndex[j]][0]
         for (k=1; k <= myInput[mySetIndex[j]][0]; k++){  // number of steps
+            console.log(`set #:${k}`)
               myDistance += myInput[mySetIndex[j] + k][0]  // grab distance
               myTime     += myInput[mySetIndex[j] + k][1]  // grab time
             
               if (myTime >= myInput[mySetIndex[j]][3]){   // test duration
-                  output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} Darn Panoramix captured<br>` 
+                  output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} Darn Panoramix captured<br>`
+                  console.log(`Panoramix captured`)
                   break;
               }
               if ((myTime < myInput[mySetIndex[j]][3])   &&  (myDistance >= myInput[mySetIndex[j]][2])       ){   // yeh you did it without potions
                   output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} success, potions #0<br>` 
+                  console.log(`Success Potions #0`)
                   break;
               }
 
@@ -121,6 +124,7 @@ function myCalc(){
                              let myNewDistance = myDistance + myPotion
                              if ( myNewDistance >= myInput[mySetIndex[j]][2]  ){
                                 output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myNewDistance:${myNewDistance}, myTime:${myTime},  Set #${j}. Success Potions #${m+1}<br>`
+                                 console.log(`Success Potions #${m+1}`)
                                 break;      
                              }
                       }
