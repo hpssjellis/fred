@@ -122,7 +122,7 @@ chunkLoop:  for (k=1; k <= myInput[mySetIndex[j]][0]; k++){  // number of steps
 
                              myPotion = k * myJ   // potion added amount based on # of the steps so far "k" x potion multiplier
                              let myNewDistance = myDistance + myPotion                          
-                             console.log(`set #:${j}, n-steps:${myInput[mySetIndex[j]][0]},Pot#:${m}, pot-index:${myPotionIndex}, Potion Amount:${myJ},  pot-add:${myPotion}, dist:${myNewDistance} `)
+                             console.log(`set #:${j}, step #:${k}, Pot-#:${m}, pot-index:${myPotionIndex}, Pot-Amount:${myJ},  pot-add:${myPotion}, distance:${myNewDistance} `)
 
                              if ( myNewDistance >= myInput[mySetIndex[j]][2]  ){
                                 output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myNewDistance:${myNewDistance}, myTime:${myTime},  Set #${j}. Success Potions #${m+1}<br>`
