@@ -98,12 +98,14 @@ chunkLoop:  for (k=1; k <= myInput[mySetIndex[j]][0]; k++){  // number of steps
               console.log(`set #:${j}, step #:${k}, dist:${myDistance},  time:${myTime}`)
             
               if (myTime >= myInput[mySetIndex[j]][3]){   // test duration
-                  output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} Darn Panoramix captured<br>`
+                //  output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} Darn Panoramix captured<br>`
+                  output.innerHTML += `Panoramix captured<br>`
                   console.log(`Panoramix captured`)
                   break chunkLoop;
               }
               if ((myTime < myInput[mySetIndex[j]][3])   &&  (myDistance >= myInput[mySetIndex[j]][2])       ){   // yeh you did it without potions
-                  output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} success, potions #0<br>` 
+                //  output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} success, potions #0<br>` 
+                  output.innerHTML += `0<br>` 
                   console.log(`Success Potions #0`)
                   break chunkLoop;
               }
@@ -125,7 +127,8 @@ chunkLoop:  for (k=1; k <= myInput[mySetIndex[j]][0]; k++){  // number of steps
                              console.log(`set #:${j}, step #:${k}, Pot-#:${m}, pot-index:${myPotionIndex}, Pot-Amount:${myJ},  pot-add:${myPotion}, distance:${myNewDistance} `)
 
                              if ( myNewDistance >= myInput[mySetIndex[j]][2]  ){
-                                output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myNewDistance:${myNewDistance}, myTime:${myTime},  Set #${j}. Success Potions #${m+1}<br>`
+                               // output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myNewDistance:${myNewDistance}, myTime:${myTime},  Set #${j}. Success Potions #${m+1}<br>`
+                                output.innerHTML += `${m+1}<br>`
                                 console.log(`Success Potions #${m+1}`)
                                 break chunkLoop;      
                              }
