@@ -84,7 +84,7 @@ function myProcess(){
 function myCalc(){
     for (j=0; j < myNumSets; j++){
         
-        console.log(`set #:${j}, n-steps:, m-potion, D-distance, T-in time: ${myInput[mySetIndex[j]]}`)
+        console.log(`set #:${j}, n-steps:${myInput[mySetIndex[j]][0]}, m-potions:${myInput[mySetIndex[j]][1]}, D-distance:${myInput[mySetIndex[j]][2]}, T-in time:${myInput[mySetIndex[j]][3]}`)
     //    console.log()
      //   console.log('mySetIndex[' + j + ']')
       //  console.log(mySetIndex[j])
@@ -122,7 +122,7 @@ function myCalc(){
 
                              myPotion = k * myJ   // potion added amount based on # of the steps so far "k" x potion multiplier
                              let myNewDistance = myDistance + myPotion                          
-                             console.log(`Potions:${m}, pot-i:${myPotionIndex}, step-k:${k}, Pot:${myJ},  pot-add:${myPotion}, dist:${myNewDistance},  time:${myTime} `)
+                             console.log(`Pot#:${m}, pot-index:${myPotionIndex}, Potion Amount:${myJ},  pot-add:${myPotion}, dist:${myNewDistance} `)
 
                              if ( myNewDistance >= myInput[mySetIndex[j]][2]  ){
                                 output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myNewDistance:${myNewDistance}, myTime:${myTime},  Set #${j}. Success Potions #${m+1}<br>`
