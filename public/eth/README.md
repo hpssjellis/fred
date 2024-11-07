@@ -1,5 +1,5 @@
 
-
+## These are links to the website version of the above github .html files.
 
 
 [ast01.html](https://hpssjellis.github.io/fred/public/eth/ast01.html)     crap
@@ -31,6 +31,8 @@
 
 
 
-[ast07.html](https://hpssjellis.github.io/fred/public/eth/ast07.html)   latest as a proper link
+[ast07.html](https://hpssjellis.github.io/fred/public/eth/ast07.html)   Potion add may be wrong
+
+[ast08.html](https://hpssjellis.github.io/fred/public/eth/ast08.html)   latest as a proper link
 
 
