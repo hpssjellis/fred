@@ -30,6 +30,6 @@ https://hpssjellis.github.io/fred/public/eth/ast06.html  Kind of doing stuff, no
 https://hpssjellis.github.io/fred/public/eth/ast07.html  Latest.
 
 
-[https://hpssjellis.github.io/fred/public/eth/ast07.html](https://hpssjellis.github.io/fred/public/eth/ast07.html)   latest as a proper link
+[ast07.html](https://hpssjellis.github.io/fred/public/eth/ast07.html)   latest as a proper link
 
 
