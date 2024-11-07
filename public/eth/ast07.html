@@ -91,7 +91,7 @@ function myCalc(){
         let myTime =0;
        // let myMax = myInput[mySetIndex[j]][0]
         for (k=1; k <= myInput[mySetIndex[j]][0]; k++){  // number of steps
-            console.log(`set #:${k}`)
+            console.log(`set #:${j}, steps #:${k}`)
               myDistance += myInput[mySetIndex[j] + k][0]  // grab distance
               myTime     += myInput[mySetIndex[j] + k][1]  // grab time
             
@@ -115,16 +115,16 @@ function myCalc(){
 
                       for (let m=0;  m < myInput[mySetIndex[j]][1] ; m++){   // potion looping
                          //   console.log(`Loop:${m},   `)   
-                            let myPotionIndex = mySetIndex[j] + myInput[mySetIndex[j]][0]
+                            let myPotionIndex = mySetIndex[j] + myInput[mySetIndex[j]][0] + 1 
                             let myJ = myInput[myPotionIndex][m]
 
                              myPotion = k * myJ   // potion added amount based on # of the steps so far "k" x potion multiplier
-                             console.log(`Loop:${m},   myPotionIndex: ${myPotionIndex}, k:${k}, myJ:${myJ},  myPotion-total-Add: ${myPotion} `)
+                             console.log(`Potions:${m},   myPotionIndex: ${myPotionIndex}, k:${k}, myJ:${myJ},  myPotion-total-Add: ${myPotion} `)
 
                              let myNewDistance = myDistance + myPotion
                              if ( myNewDistance >= myInput[mySetIndex[j]][2]  ){
                                 output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myNewDistance:${myNewDistance}, myTime:${myTime},  Set #${j}. Success Potions #${m+1}<br>`
-                                 console.log(`Success Potions #${m+1}`)
+                                console.log(`Success Potions #${m+1}`)
                                 break;      
                              }
                       }
