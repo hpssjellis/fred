@@ -83,6 +83,8 @@ function myProcess(){
 
 function myCalc(){
     for (j=0; j < myNumSets; j++){
+        
+        console.log(`set #:${j}, n-steps, m-potion, D-distance, T-in time: ${mySetIndex[j]}`)
     //    console.log()
      //   console.log('mySetIndex[' + j + ']')
       //  console.log(mySetIndex[j])
@@ -91,9 +93,9 @@ function myCalc(){
         let myTime =0;
        // let myMax = myInput[mySetIndex[j]][0]
         for (k=1; k <= myInput[mySetIndex[j]][0]; k++){  // number of steps
-            console.log(`set #:${j}, step #:${k}`)
               myDistance += myInput[mySetIndex[j] + k][0]  // grab distance
               myTime     += myInput[mySetIndex[j] + k][1]  // grab time
+             console.log(`step #:${k}, dist:${myDistance},  time:${myTime}`)
             
               if (myTime >= myInput[mySetIndex[j]][3]){   // test duration
                   output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} Darn Panoramix captured<br>`
