@@ -12,6 +12,8 @@
 
 [ast05.html](https://hpssjellis.github.io/fred/public/eth/ast05.html)     Presently here getting it parsed, now trying to add distance and time. 
 
+<br><br>
+
 [split01.html](https://hpssjellis.github.io/fred/public/eth/split01.html)  testing splits works but wrong
 
 [split02.html](https://hpssjellis.github.io/fred/public/eth/split02.html)  bit cleaner   but wrong
@@ -23,7 +25,7 @@
 [split05.html](https://hpssjellis.github.io/fred/public/eth/split05.html)  split and list using recursion not the shift operators. A bit more complex. I probably will not use this.
 
 
-https://hpssjellis.github.io/fred/public/eth/split06.html  Using this, should show the total number of hits.
+<br><br>
 
 [ast06.html](https://hpssjellis.github.io/fred/public/eth/ast06.html)  Kind of doing stuff, not really working yet. An OK code backup 
 
