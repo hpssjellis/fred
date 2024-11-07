@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File Parser</title>
+
+</head>
+<body>
+<h1>Asterix ETH Javascript</h1>
+<div id="drop_zone"> Drop file here. See the console (ctlr-shift-i) for the input array. <br><br><br><br> </div>
+<input type="file" id="fileInput">
+<button onclick="document.getElementById('fileInput').click();">Select File</button>
+<button onclick="myProcess();" style="background-color:lime;">Process</button>
+<!-- <button onclick="myCalc();">Calculate</button>   -->
+<pre id="output"></pre>
+
+<script>
+let dropZone = document.getElementById('drop_zone');
+let fileInput = document.getElementById('fileInput');
+let output = document.getElementById('output');
+let myInput = [];
+let myNumSets;
+let mySetIndex = [];
+let myPotions = 0;
+
+dropZone.ondragover = function(event) {
+  event.preventDefault();
+  dropZone.style.borderColor = '#000';
+};
+
+dropZone.ondragleave = function() {
+  dropZone.style.borderColor = '#ccc';
+};
+
+dropZone.ondrop = function(event) {
+  event.preventDefault();
+  dropZone.style.borderColor = '#ccc';
+  let file = event.dataTransfer.files[0];
+  parseFile(file);
+};
+
+fileInput.onchange = function(event) {
+  let file = event.target.files[0];
+   parseFile(file);
+};
+
+function parseFile(file) {
+  let reader = new FileReader();
+  reader.onload = function(event) {
+      let content = event.target.result;
+      myInput = content.split('\n').map(line => line.split(' ').map(Number));
+    //  output.innerHTML = 'Parsed integers: <br>' + JSON.stringify(myInput, null, 2);  // not really neeeded
+      console.log(myInput)
+  };
+  reader.readAsText(file);
+
+
+}
+
+function myProcess(){
+    myNumSets = myInput[0][0]
+ //   console.log('myNumSets')
+  //  console.log(myNumSets)
+    
+    let myNextIndex = 1;
+    mySetIndex[0] = myNextIndex;   // first set must start at index 1;
+    
+  //  console.log('mySetIndex[0]')
+  //  console.log(mySetIndex[0])
+    for (i=1; i < myNumSets; i++){
+       // mySetIndex[i] = mySetIndex[i-1] + myInput[myNextIndex][0]  + 3   // m   n    d    t
+        myNextIndex +=  myInput[myNextIndex][0]  + 2   // m   n    d    t
+        mySetIndex[i] = myNextIndex 
+       // console.log('mySetIndex[' + i + ']')
+       // console.log(mySetIndex[i])
+       // console.log('myNextIndex')
+       // console.log(myNextIndex)
+     // console.log('Process done')  
+    }  
+  console.log(`mySetIndex.length: ${mySetIndex.length}`)
+  myCalc()  
+}
+
+function myCalc(){
+    for (j=0; j < myNumSets; j++){
+        
+        console.log(`set #:${j}, n-steps:${myInput[mySetIndex[j]][0]}, m-potions:${myInput[mySetIndex[j]][1]}, D-distance:${myInput[mySetIndex[j]][2]}, T-in time:${myInput[mySetIndex[j]][3]}`)
+    //    console.log()
+     //   console.log('mySetIndex[' + j + ']')
+      //  console.log(mySetIndex[j])
+     //   console.log('sets:'+ myInput[mySetIndex[j]][0])
+        let myDistance = 0;
+        let myTime =0;
+       // let myMax = myInput[mySetIndex[j]][0]
+chunkLoop:  for (k=1; k <= myInput[mySetIndex[j]][0]; k++){  // number of steps
+              myDistance += myInput[mySetIndex[j] + k][0]  // grab distance
+              myTime     += myInput[mySetIndex[j] + k][1]  // grab time
+              console.log(`set #:${j}, step #:${k}, dist:${myDistance},  time:${myTime}`)
+            
+              if (myTime >= myInput[mySetIndex[j]][3]){   // test duration
+                  output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} Darn Panoramix captured<br>`
+                  console.log(`Panoramix captured`)
+                  break chunkLoop;
+              }
+              if ((myTime < myInput[mySetIndex[j]][3])   &&  (myDistance >= myInput[mySetIndex[j]][2])       ){   // yeh you did it without potions
+                  output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} success, potions #0<br>` 
+                  console.log(`Success Potions #0`)
+                  break chunkLoop;
+              }
+
+              if ((myDistance < myInput[mySetIndex[j]][2]) && (myTime < myInput[mySetIndex[j]][3])  ){  // not yet there so try potions
+                  let myNextTime = myTime + myInput[mySetIndex[j] + k + 1][1]  //  the next time frame needs to be a fail or not close enough and too many potions used
+                  if (myNextTime > myInput[mySetIndex[j]][3]){
+                   //  myTestPotion()
+                  //    output.innerHTML += `Set #${j}. Now it is interesting, lets test potions: myDistance:${myDistance}, myTime:${myTime} <br>`
+                      let myPotion = 0
+
+                      for (let m=0;  m < myInput[mySetIndex[j]][1] ; m++){   // potion looping
+                         //   console.log(`Loop:${m},   `)   
+                            let myPotionIndex = mySetIndex[j] + myInput[mySetIndex[j]][0] + 1 
+                            let myJ = myInput[myPotionIndex][m]
+
+                             myPotion = k * myJ   // potion added amount based on # of the steps so far "k" x potion multiplier
+                             let myNewDistance = myDistance + myPotion                          
+                             console.log(`set #:${j}, step #:${k}, Pot-#:${m}, pot-index:${myPotionIndex}, Pot-Amount:${myJ},  pot-add:${myPotion}, distance:${myNewDistance} `)
+
+                             if ( myNewDistance >= myInput[mySetIndex[j]][2]  ){
+                                output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myNewDistance:${myNewDistance}, myTime:${myTime},  Set #${j}. Success Potions #${m+1}<br>`
+                                console.log(`Success Potions #${m+1}`)
+                                break chunkLoop;      
+                             }
+                      }
+                 }
+              }
+
+        }
+     //   console.log('myDistance:' + myDistance)
+     //   console.log('myTime:' + myTime)
+    }
+}
+
+    
+</script>
+</body>
+</html>
