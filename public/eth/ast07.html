@@ -110,31 +110,13 @@ function myCalc(){
                       let myPotion = 0
                       console.log(`mySetIndex.length: ${mySetIndex.length}`)
                       for (let m=0;  m < myInput[mySetIndex[j]][1] ; m++){   // potion looping
-                             console.log(`Loop:${m},   `)   
+                         //   console.log(`Loop:${m},   `)   
+                            let myPotionIndex = mySetIndex[j] + myInput[mySetIndex[j]][0]
+                            let myJ = myInput[myPotionIndex][m]
 
+                             myPotion = k * myJ   // potion added amount based on # of the steps so far "k" x potion multiplier
+                             console.log(`Loop:${m},   myPotionIndex: ${myPotionIndex}, k:${k}, myJ:${myJ},  myPotion-total-Add: ${myPotion} `)
 
-                             if (j < mySetIndex.length) {
-                                let myJ = myInput[mySetIndex[j+1]-1][m]
-                               /*
-                                 try {
-                                    myJ = myInput[mySetIndex[j+1]-1][m]
-                                 } catch (e) {
-                                     console.log(e)
-                                     myJ = 1;   // set potions something sane
-                                   return
-                                  }
-                               */
-                                 
-                                // console.log( myJ)
-                                 myPotion = myInput[mySetIndex[j]][0] * myJ
-                                 console.log(`${myJ}  myPotion-mid: ${myPotion} `)
-                               //  console.log(myPotion)
-                             }  else {
-                                 console.log(` last location ${myInput[mySetIndex[mySetIndex.length-1]][m]} `)      
-                                 myPotion = myInput[mySetIndex[j]][0] * myInput[mySetIndex[mySetIndex.length-1]][m]                                
-
-                                 console.log(`${myJ}  myPotion-mid: ${myPotion} `)
-                             }
                              let myNewDistance = myDistance + myPotion
                              if ( myNewDistance >= myInput[mySetIndex[j]][2]  ){
                                 output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myNewDistance:${myNewDistance}, myTime:${myTime},  Set #${j}. Success Potions #${m+1}<br>`
