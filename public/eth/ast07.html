@@ -92,7 +92,7 @@ function myCalc(){
         let myDistance = 0;
         let myTime =0;
        // let myMax = myInput[mySetIndex[j]][0]
-        for (k=1; k <= myInput[mySetIndex[j]][0]; k++){  // number of steps
+chunkLoop:  for (k=1; k <= myInput[mySetIndex[j]][0]; k++){  // number of steps
               myDistance += myInput[mySetIndex[j] + k][0]  // grab distance
               myTime     += myInput[mySetIndex[j] + k][1]  // grab time
               console.log(`set #:${j}, step #:${k}, dist:${myDistance},  time:${myTime}`)
@@ -100,12 +100,12 @@ function myCalc(){
               if (myTime >= myInput[mySetIndex[j]][3]){   // test duration
                   output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} Darn Panoramix captured<br>`
                   console.log(`Panoramix captured`)
-                  break;
+                  break chunkLoop;
               }
               if ((myTime < myInput[mySetIndex[j]][3])   &&  (myDistance >= myInput[mySetIndex[j]][2])       ){   // yeh you did it without potions
                   output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myDistance:${myDistance}, myTime:${myTime} Set # ${j} success, potions #0<br>` 
                   console.log(`Success Potions #0`)
-                  break;
+                  break chunkLoop;
               }
 
               if ((myDistance < myInput[mySetIndex[j]][2]) && (myTime < myInput[mySetIndex[j]][3])  ){  // not yet there so try potions
@@ -122,12 +122,12 @@ function myCalc(){
 
                              myPotion = k * myJ   // potion added amount based on # of the steps so far "k" x potion multiplier
                              let myNewDistance = myDistance + myPotion                          
-                             console.log(`Pot#:${m}, pot-index:${myPotionIndex}, Potion Amount:${myJ},  pot-add:${myPotion}, dist:${myNewDistance} `)
+                             console.log(`set #:${j}, n-steps:${myInput[mySetIndex[j]][0]},Pot#:${m}, pot-index:${myPotionIndex}, Potion Amount:${myJ},  pot-add:${myPotion}, dist:${myNewDistance} `)
 
                              if ( myNewDistance >= myInput[mySetIndex[j]][2]  ){
                                 output.innerHTML += `Given:  ${myInput[mySetIndex[j]]}  myNewDistance:${myNewDistance}, myTime:${myTime},  Set #${j}. Success Potions #${m+1}<br>`
                                 console.log(`Success Potions #${m+1}`)
-                                break;      
+                                break chunkLoop;      
                              }
                       }
                  }
