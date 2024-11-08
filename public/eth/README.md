@@ -2,7 +2,10 @@
 
 Why do I make lots of files?  Because I always break my own code and have to go back a few steps to find a working version that I can then rebuild with the new code.
 
+The github for all this code is at [https://github.com/hpssjellis/fred/tree/main/public/eth](https://github.com/hpssjellis/fred/tree/main/public/eth)
 
+
+The website demo equivalent of this page is at  [https://hpssjellis.github.io/fred/public/eth/](https://hpssjellis.github.io/fred/public/eth/)
 
 ## These are links to the website version of the above github .html files.
 
