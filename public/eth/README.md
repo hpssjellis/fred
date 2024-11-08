@@ -38,7 +38,9 @@
 
 ## LOL, I understood the question wrong. I thought the ditance times must be done in order.
 
-[max-d-min-t.html](https://hpssjellis.github.io/fred/public/eth/max-d-min-t.html)  Attempot to optimise a list of distance and time for max distance min time
+[max-d-min-t01.html](https://hpssjellis.github.io/fred/public/eth/max-d-min-t01.html)  Attempt to optimise a list of distance and time for max distance min time
+
+[max-d-min-t02.html](https://hpssjellis.github.io/fred/public/eth/max-d-min-t02.html)  
  
 
 
