@@ -47,6 +47,9 @@
 [max-d-set-t01.html](https://hpssjellis.github.io/fred/public/eth/max-d-set-t01.html)  now with set time indicies are bad
 
 [max-d-set-t02.html](https://hpssjellis.github.io/fred/public/eth/max-d-set-t02.html)  attempt 2
+
+
+[max-d-set-t03.html](https://hpssjellis.github.io/fred/public/eth/max-d-set-t03.html)  attempt 3
  
 
 
