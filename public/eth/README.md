@@ -36,3 +36,9 @@
 [ast08.html](https://hpssjellis.github.io/fred/public/eth/ast08.html)   latest as a proper link
 
 
+## LOL, I understood the question wrong. I thought the ditance times must be done in order.
+
+[max-d-min-t.html](https://hpssjellis.github.io/fred/public/eth/max-d-min-t.html)  Attempot to optimise a list of distance and time for max distance min time
+ 
+
+
