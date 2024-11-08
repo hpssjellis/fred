@@ -56,7 +56,8 @@
 
 
 
-[max-d-split-t01.html](https://hpssjellis.github.io/fred/public/eth/max-d-split-t01.html)  add split and list (meet in the middle code)
+[max-d-split-t01.html](https://hpssjellis.github.io/fred/public/eth/max-d-split-t01.html)  add split and list (meet in the middle code) Wow. This works!
+
 
 
  
