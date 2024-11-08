@@ -44,7 +44,7 @@
 [max-d-min-t02.html](https://hpssjellis.github.io/fred/public/eth/max-d-min-t02.html)  works
 
 
-[max-d-min-set-t01.html](https://hpssjellis.github.io/fred/public/eth/max-d-min-set-t01.html)  now with set time
+[max-d-set-t01.html](https://hpssjellis.github.io/fred/public/eth/max-d-set-t01.html)  now with set time
  
 
 
