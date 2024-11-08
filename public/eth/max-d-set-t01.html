@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Max Distance for Given Time</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        input, button {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Max Distance for Given Time</h1>
+    <textarea id="arrayInput" rows="10" cols="50" placeholder="Enter distances and times, one per line..."></textarea><br>
+    <input type="number" id="setTime" placeholder="Enter set time"><br>
+    <button onclick="calculateMaxDistance()">Calculate</button>
+    <h2>Result</h2>
+    <p id="result"></p>
+
+    <script>
+        function calculateMaxDistance() {
+            const input = document.getElementById('arrayInput').value;
+            const setTime = parseFloat(document.getElementById('setTime').value);
+            const lines = input.split('\n');
+            const array = lines.map(line => {
+                const [distance, time] = line.trim().split(/\s+/).map(Number);
+                return [distance, time];
+            });
+
+            if (isNaN(setTime) || !array.every(subArray => subArray.length === 2 && !isNaN(subArray[0]) && !isNaN(subArray[1]))) {
+                document.getElementById('result').innerText = 'Invalid input. Please enter valid numbers.';
+                return;
+            }
+
+            let maxDistance = -Infinity;
+            let indices = [];
+
+            array.forEach((subArray, index) => {
+                const [distance, time] = subArray;
+                if (time <= setTime && distance > maxDistance) {
+                    maxDistance = distance;
+                    indices = [index];
+                } else if (time <= setTime && distance === maxDistance) {
+                    indices.push(index);
+                }
+            });
+
+            document.getElementById('result').innerText = `Maximum distance for the given time is: ${maxDistance}\nIndices: ${indices.join(', ')}`;
+        }
+    </script>
+</body>
+</html>
