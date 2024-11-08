@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Max Distance for Lowest Time</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        input, button {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Max Distance for Lowest Time</h1>
+    <textarea id="arrayInput" rows="10" cols="50" placeholder="Enter 2D array here...">
+77728155 77424067
+6407672 40336489
+9027477 75244231
+2443353 77436554
+1019230 12750055
+695965 50404595
+12782826 88406626
+79116732 61715744
+1218175 49488443
+3598947 25319385
+39205086 62083274
+2691209 73461493
+1678584 47072869
+94491896 55374822
+15533651 97124010
+952945 83802141
+47600868 48923970
+2648727 40410173
+6676037 91702785
+5857906 93470957
+</textarea><br>
+    <button onclick="calculateMaxDistance()">Calculate</button>
+    <h2>Result</h2>
+    <p id="result"></p>
+
+    <script>
+        function calculateMaxDistance() {
+            const input = document.getElementById('arrayInput').value;
+            let array;
+            try {
+                array = JSON.parse(input);
+            } catch (e) {
+                document.getElementById('result').innerText = 'Invalid input. Please enter a valid 2D array.';
+                return;
+            }
+
+            if (!Array.isArray(array) || !array.every(subArray => Array.isArray(subArray) && subArray.length >= 2)) {
+                document.getElementById('result').innerText = 'Invalid input. Each sub-array must contain at least two elements.';
+                return;
+            }
+
+            let minTime = Infinity;
+            let maxDistance = -Infinity;
+
+            array.forEach(subArray => {
+                const distance = subArray[0];
+                const time = subArray[subArray.length - 1];
+                if (time < minTime) {
+                    minTime = time;
+                    maxDistance = distance;
+                } else if (time === minTime && distance > maxDistance) {
+                    maxDistance = distance;
+                }
+            });
+
+            document.getElementById('result').innerText = `Maximum distance for the lowest time is: ${maxDistance}`;
+        }
+    </script>
+</body>
+</html>
