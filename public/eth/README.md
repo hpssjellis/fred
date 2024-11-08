@@ -50,6 +50,9 @@
 
 
 [max-d-set-t03.html](https://hpssjellis.github.io/fred/public/eth/max-d-set-t03.html)  attempt 3, Now this works.
+
+
+[max-d-set-t04.html](https://hpssjellis.github.io/fred/public/eth/max-d-set-t04.html)  BigInt safe
  
 
 
