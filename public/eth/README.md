@@ -53,6 +53,12 @@
 
 
 [max-d-set-t04.html](https://hpssjellis.github.io/fred/public/eth/max-d-set-t04.html)  BigInt safe
+
+
+
+[max-d-split-t01.html](https://hpssjellis.github.io/fred/public/eth/max-d-split-t01.html)  add split and list (meet in the middle code)
+
+
  
 
 
