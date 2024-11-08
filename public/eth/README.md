@@ -2,11 +2,11 @@
 ## These are links to the website version of the above github .html files.
 
 
-[ast01.html](https://hpssjellis.github.io/fred/public/eth/ast01.html)     crap
+1. [ast01.html](https://hpssjellis.github.io/fred/public/eth/ast01.html)     crap
 
-[ast02.html](https://hpssjellis.github.io/fred/public/eth/ast02.html)      loading array
+1. [ast02.html](https://hpssjellis.github.io/fred/public/eth/ast02.html)      loading array
 
-[ast03.html](https://hpssjellis.github.io/fred/public/eth/ast03.html)     crap
+1. [ast03.html](https://hpssjellis.github.io/fred/public/eth/ast03.html)     crap
 
 [ast04.html](https://hpssjellis.github.io/fred/public/eth/ast04.html)     crap
 
