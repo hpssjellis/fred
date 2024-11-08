@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Max Distance for Given Time</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        input, button {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Max Distance for Given Time</h1>
+    <textarea id="arrayInput" rows="10" cols="50" placeholder="Enter distances and times, one per line...">
+77728155 77424067
+6407672 40336489
+9027477 75244231
+2443353 77436554
+1019230 12750055
+695965 50404595
+12782826 88406626
+79116732 61715744
+1218175 49488443
+3598947 25319385
+39205086 62083274
+2691209 73461493
+1678584 47072869
+94491896 55374822
+15533651 97124010
+952945 83802141
+47600868 48923970
+2648727 40410173
+6676037 91702785
+5857906 93470957</textarea><br>
+    <input type="number" id="setTime" placeholder="Enter set time" value="402645888"><br>
+    <button onclick="calculateMaxDistance()">Calculate</button>
+    <h2>Result</h2>
+    <p id="result"></p>
+
+    <script>
+        function calculateMaxDistance() {
+            const input = document.getElementById('arrayInput').value;
+            const setTime = parseFloat(document.getElementById('setTime').value);
+            const lines = input.split('\n');
+            const array = lines.map(line => {
+                const [distance, time] = line.trim().split(/\s+/).map(Number);
+                return [distance, time];
+            });
+
+            if (isNaN(setTime) || !array.every(subArray => subArray.length === 2 && !isNaN(subArray[0]) && !isNaN(subArray[1]))) {
+                document.getElementById('result').innerText = 'Invalid input. Please enter valid numbers.';
+                return;
+            }
+
+            let maxDistance = -Infinity;
+            let indices = [];
+
+            array.forEach((subArray, index) => {
+                const [distance, time] = subArray;
+                if (time <= setTime) {
+                    if (distance > maxDistance) {
+                        maxDistance = distance;
+                        indices = [index];
+                    } else if (distance === maxDistance) {
+                        indices.push(index);
+                    }
+                }
+            });
+
+            document.getElementById('result').innerText = `Maximum distance for the given time is: ${maxDistance}\nIndices: ${indices.join(', ')}`;
+        }
+    </script>
+</body>
+</html>
