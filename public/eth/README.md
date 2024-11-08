@@ -51,7 +51,7 @@ The website demo equivalent of this page is at  [https://hpssjellis.github.io/fr
 
 1. [max-d-set-t04.html](https://hpssjellis.github.io/fred/public/eth/max-d-set-t04.html)  BigInt safe
 
-1. [max-d-split-t01.html](https://hpssjellis.github.io/fred/public/eth/max-d-split-t01.html)  add split and list (meet in the middle code) Wow. This works!
+1. [max-d-split-t01.html](https://hpssjellis.github.io/fred/public/eth/max-d-split-t01.html)  add split and list (meet in the middle code) Uggghh it is incorrect somehow.
 
 
 
