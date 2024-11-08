@@ -16,7 +16,7 @@
 </head>
 <body>
     <h1>Max Distance for Lowest Time</h1>
-    <textarea id="arrayInput" rows="10" cols="50" placeholder="Enter 2D array here...">
+    <textarea id="arrayInput" rows="10" cols="50" placeholder="Enter distances and times, one per line...">
 77728155 77424067
 6407672 40336489
 9027477 75244231
@@ -36,8 +36,8 @@
 47600868 48923970
 2648727 40410173
 6676037 91702785
-5857906 93470957
-</textarea><br>
+5857906 93470957 
+    </textarea><br>
     <button onclick="calculateMaxDistance()">Calculate</button>
     <h2>Result</h2>
     <p id="result"></p>
@@ -45,16 +45,14 @@
     <script>
         function calculateMaxDistance() {
             const input = document.getElementById('arrayInput').value;
-            let array;
-            try {
-                array = JSON.parse(input);
-            } catch (e) {
-                document.getElementById('result').innerText = 'Invalid input. Please enter a valid 2D array.';
-                return;
-            }
+            const lines = input.split('\n');
+            const array = lines.map(line => {
+                const [distance, time] = line.trim().split(/\s+/).map(Number);
+                return [distance, time];
+            });
 
-            if (!Array.isArray(array) || !array.every(subArray => Array.isArray(subArray) && subArray.length >= 2)) {
-                document.getElementById('result').innerText = 'Invalid input. Each sub-array must contain at least two elements.';
+            if (!array.every(subArray => subArray.length === 2 && !isNaN(subArray[0]) && !isNaN(subArray[1]))) {
+                document.getElementById('result').innerText = 'Invalid input. Each line must contain two numbers separated by space.';
                 return;
             }
 
@@ -62,8 +60,7 @@
             let maxDistance = -Infinity;
 
             array.forEach(subArray => {
-                const distance = subArray[0];
-                const time = subArray[subArray.length - 1];
+                const [distance, time] = subArray;
                 if (time < minTime) {
                     minTime = time;
                     maxDistance = distance;
