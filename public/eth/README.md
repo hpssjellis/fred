@@ -17,8 +17,6 @@ Why do I make lots of files?  Because I always break my own code and have to go 
 
 1. [ast05.html](https://hpssjellis.github.io/fred/public/eth/ast05.html)     Presently here getting it parsed, now trying to add distance and time. 
 
-<br><br>
-
 1. [split01.html](https://hpssjellis.github.io/fred/public/eth/split01.html)  testing splits works but wrong
 
 1. [split02.html](https://hpssjellis.github.io/fred/public/eth/split02.html)  bit cleaner   but wrong
@@ -29,37 +27,26 @@ Why do I make lots of files?  Because I always break my own code and have to go 
 
 1. [split05.html](https://hpssjellis.github.io/fred/public/eth/split05.html)  split and list using recursion not the shift operators. A bit more complex. I probably will not use this.
 
-
-<br><br>
-
 1. [ast06.html](https://hpssjellis.github.io/fred/public/eth/ast06.html)  Kind of doing stuff, not really working yet. An OK code backup 
-
-
 
 1. [ast07.html](https://hpssjellis.github.io/fred/public/eth/ast07.html)   Potion add may be wrong
 
 1. [ast08.html](https://hpssjellis.github.io/fred/public/eth/ast08.html)   latest as a proper link
 
 
-## LOL, I understood the question wrong. I thought the ditance times must be done in order.
+## LOL, I understood the question wrong. I thought the distance and times must be added in the order given.
 
 1. [max-d-min-t01.html](https://hpssjellis.github.io/fred/public/eth/max-d-min-t01.html)  Attempt to optimise a list of distance and time for max distance min time
 
-
 1. [max-d-min-t02.html](https://hpssjellis.github.io/fred/public/eth/max-d-min-t02.html)  works
-
 
 1. [max-d-set-t01.html](https://hpssjellis.github.io/fred/public/eth/max-d-set-t01.html)  now with set time indicies are bad
 
 1. [max-d-set-t02.html](https://hpssjellis.github.io/fred/public/eth/max-d-set-t02.html)  attempt 2
 
-
 1. [max-d-set-t03.html](https://hpssjellis.github.io/fred/public/eth/max-d-set-t03.html)  attempt 3, Now this works.
 
-
 1. [max-d-set-t04.html](https://hpssjellis.github.io/fred/public/eth/max-d-set-t04.html)  BigInt safe
-
-
 
 1. [max-d-split-t01.html](https://hpssjellis.github.io/fred/public/eth/max-d-split-t01.html)  add split and list (meet in the middle code) Wow. This works!
 
