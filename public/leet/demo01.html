@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPA Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+        }
+        #app {
+            text-align: center;
+        }
+        input, button {
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>String Reverser</h1>
+        <input type="text" id="inputString" placeholder="Enter a string">
+        <button id="reverseButton">Reverse String</button>
+        <p id="result"></p>
+    </div>
+    <script>
+        // Function to reverse a string
+        function reverseString(str) {
+            return str.split('').reverse().join('');
+        }
+
+        // Event listener for the button
+        document.getElementById('reverseButton').addEventListener('click', function() {
+            const inputString = document.getElementById('inputString').value;
+            const result = reverseString(inputString);
+            document.getElementById('result').innerText = `Reversed String: ${result}`;
+        });
+    </script>
+</body>
+</html>
