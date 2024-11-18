@@ -34,6 +34,7 @@ https://hpssjellis.github.io/fred/public/leet/linkedlist01.html
 
 
 https://hpssjellis.github.io/fred/public/leet/xor01.html  
+https://hpssjellis.github.io/fred/public/leet/xor02.html  
 
 
 
