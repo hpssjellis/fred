@@ -42,6 +42,7 @@ https://hpssjellis.github.io/fred/public/leet/xor03.html
 
 
 https://hpssjellis.github.io/fred/public/leet/demo01.html  
+https://hpssjellis.github.io/fred/public/leet/demo03.html  
 
 
 
