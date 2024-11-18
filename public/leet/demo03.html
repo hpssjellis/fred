@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Code Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        textarea {
+            width: 80%;
+            height: 200px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        input[type="button"] {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Interactive Code Editor</h1>
+    <textarea id="codeEditor">// Write your code here\nfunction reverseString(str) {\n    return str.split('').reverse().join('');\n}\n\n// Test the function\nconsole.log(reverseString('hello'));</textarea>
+    <input type="button" value="Run Code" onclick="runCode()">
+    <pre id="result"></pre>
+
+    <script>
+        function runCode() {
+            const code = document.getElementById('codeEditor').value;
+            try {
+                const result = eval(code);
+                document.getElementById('result').innerText = result !== undefined ? result : 'Code executed successfully';
+            } catch (error) {
+                document.getElementById('result').innerText = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
