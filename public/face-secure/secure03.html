@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Webpage Security</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        video { border: 1px solid black; margin-bottom: 10px; }
+        #progress { width: 300px; height: 10px; background-color: #ddd; margin: 10px auto; }
+        #progressBar { background-color: green; width: 0%; height: 100%; }
+    </style>
+</head>
+<body>
+    <h1>Personal Webpage Security</h1>
+    <div id="training">
+        <video id="myVideo" autoplay></video><br>
+        <button onclick="captureImage()">Capture Training Image</button>
+        <button onclick="trainModel()">Train Model</button>
+        <p id="trainingMessage"></p>
+        <div id="progress">
+            <div id="progressBar"></div>
+        </div>
+    </div>
+    <div id="auth" style="display:none;">
+        <video id="myAuthVideo" autoplay></video><br>
+        <button onclick="authenticate()">Authenticate</button>
+        <p id="authMessage"></p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script>
+        const myVideo = document.getElementById('myVideo');
+        const myAuthVideo = document.getElementById('myAuthVideo');
+        const myTrainingImages = [];
+        let myModel;
+
+        // Initialize webcam
+        async function initWebcam(videoElement) {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            videoElement.srcObject = stream;
+        }
+        initWebcam(myVideo);
+        initWebcam(myAuthVideo);
+
+        // Capture a training image
+        function captureImage() {
+            const canvas = document.createElement('canvas');
+            canvas.width = myVideo.videoWidth;
+            canvas.height = myVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(myVideo, 0, 0);
+            const imageData = tf.browser.fromPixels(canvas).toFloat().div(255.0); // Normalize pixel values
+            myTrainingImages.push(imageData);
+            document.getElementById('trainingMessage').innerText = `Captured ${myTrainingImages.length} images`;
+        }
+
+        // Train the model
+        async function trainModel() {
+            if (myTrainingImages.length < 10) {
+                document.getElementById('trainingMessage').innerText = 'Capture more training images!';
+                return;
+            }
+
+            const labels = myTrainingImages.map((_, i) => i < myTrainingImages.length / 2 ? 1 : 0); // Binary labels
+            const xs = tf.stack(myTrainingImages);
+            const ys = tf.tensor(labels);
+
+            myModel = tf.sequential({
+                layers: [
+                    tf.layers.conv2d({ filters: 32, kernelSize: 3, activation: 'relu', inputShape: [xs.shape[1], xs.shape[2], 3] }),
+                    tf.layers.maxPooling2d({ poolSize: 2 }),
+                    tf.layers.flatten(),
+                    tf.layers.dense({ units: 128, activation: 'relu' }),
+                    tf.layers.dense({ units: 1, activation: 'sigmoid' })
+                ]
+            });
+
+            myModel.compile({ optimizer: 'adam', loss: 'binaryCrossentropy', metrics: ['accuracy'] });
+
+            const onEpochEnd = (epoch, logs) => {
+                const progress = (epoch + 1) / 10 * 100; // Assuming 10 epochs
+                document.getElementById('progressBar').style.width = progress + '%';
+            };
+
+            await
+
