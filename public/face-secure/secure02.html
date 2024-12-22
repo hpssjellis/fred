@@ -68,8 +68,52 @@
                 filters: 32,
                 kernelSize: 3,
                 activation: 'relu',
-                inputShape: [xs.shape
+                inputShape: [xs.shape[1], xs.shape[2], 3] // Assuming grayscale images
+            }));
+            myModel.add(tf.layers.maxPooling2d({ poolSize: 2 }));
+            myModel.add(tf.layers.flatten());
+            myModel.add(tf.layers.dense({ units: 128, activation: 'relu' }));
+            myModel.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
 
+            myModel.compile({ optimizer: 'adam', loss: 'binaryCrossentropy', metrics: ['accuracy'] });
 
+            const onEpochEnd = (epoch, logs) => {
+                const progress = (epoch + 1) / 10 * 100; // Assuming 10 epochs
+                document.getElementById('progressBar').style.width = progress + '%';
+            };
 
-                             
+            await myModel.fit(xs, ys, { epochs: 10, callbacks: { onEpochEnd: onEpochEnd } });
+            await myModel.save('localstorage://my-personal-model');
+            document.getElementById('trainingMessage').innerText = 'Model trained and saved!';
+        }
+
+        // Authenticate the user
+        async function authenticate() {
+            const canvas = document.createElement('canvas');
+            canvas.width = myAuthVideo.videoWidth;
+            canvas.height = myAuthVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(myAuthVideo, 0, 0);
+            const imageData = tf.browser.fromPixels(canvas).toFloat().div(255.0); // Normalize
+
+            try {
+                myModel = await tf.loadLayersModel('localstorage://my-personal-model');
+                const prediction = myModel.predict(imageData.expandDims(0)).dataSync()[0];
+                if (prediction > 0.7) { // Adjust threshold as needed
+                    document.getElementById('authMessage').innerText = 'Access Granted!';
+                    document.getElementById('auth').style.display = 'none';
+                    document.body.style.background = 'lightgreen';
+                } else {
+                    document.getElementById('authMessage').innerText = 'Access Denied!';
+                }
+            } catch (error) {
+                document.getElementById('authMessage').innerText = 'Error loading model.';
+            }
+        }
+
+        // Initialize webcam for authentication
+        initWebcam(myAuthVideo);
+
+    </script>
+</body>
+</html>                  
