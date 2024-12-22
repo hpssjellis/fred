@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Personal Webpage Security with face-api.js</title>
+    <style>
+        body { font-family: Arial; text-align: center; margin-top: 50px; }
+        video { border: 1px solid black; }
+        #protectedContent { display: none; border: 2px solid green; padding: 20px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Personal Webpage Security with face-api.js</h1>
+
+    <div id="training">
+        <h2>Training Phase</h2>
+        <video id="myVideo" autoplay></video><br>
+        <input type="button" value="Capture Training Image" onclick="myCaptureImage()">
+        <input type="button" value="Train Model" onclick="myTrainModel()">
+    </div>
+
+    <div id="auth" style="display:none;">
+        <h2>Authentication Phase</h2>
+        <video id="myAuthVideo" autoplay></video><br>
+        <input type="button" value="Authenticate" onclick="myAuthenticate()">
+    </div>
+
+    <div id="protectedContent">
+        <h2>Protected Content</h2>
+        <p>Congratulations! You have been verified as the correct person. Welcome to the secure section of the webpage.</p>
+    </div>
+
+    <p id="message"></p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+
+
+
+
+
+
+
+
+      <script>
+        let myVideo = document.getElementById('myVideo');
+        let myAuthVideo = document.getElementById('myAuthVideo');
+        let myTrainingDescriptors = [];
+        let myLabeledDescriptors = [];
+        let myFaceMatcher;
+
+        // Initialize webcam
+        async function myInitWebcam(videoElement) {
+            console.log("Initializing webcam...");
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            videoElement.srcObject = stream;
+            console.log("Webcam ready.");
+        }
+        myInitWebcam(myVideo);
+
+        // Load face-api.js models
+        async function myLoadModels() {
+            console.log("Loading face-api.js models...");
+            const modelPath = '/models'; // Adjust the path as necessary
+            await faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath);
+            await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
+            await faceapi.nets.faceRecognitionNet.loadFromUri(modelPath);
+            console.log("Models loaded.");
+        }
+        myLoadModels();
+
+
+
+
+
+
+
+
+
+                // Capture a training image
+        async function myCaptureImage() {
+            const canvas = document.createElement('canvas');
+            canvas.width = myVideo.videoWidth;
+            canvas.height = myVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(myVideo, 0, 0);
+            const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
+            if (detection) {
+                myTrainingDescriptors.push(detection.descriptor);
+                console.log(`Captured image ${myTrainingDescriptors.length}`);
+                document.getElementById('message').innerText = `Captured ${myTrainingDescriptors.length} images.`;
+            } else {
+                console.log("No face detected. Please try again.");
+                document.getElementById('message').innerText = "No face detected. Please try again.";
+            }
+        }
+
+        // Train the model
+        function myTrainModel() {
+            if (myTrainingDescriptors.length < 10) {
+                alert("Capture at least 10 images before training!");
+                return;
+            }
+
+            console.log("Training model...");
+            document.getElementById('message').innerText = "Training in progress. Check the console for updates.";
+
+            // Label the descriptors
+            myLabeledDescriptors = [new faceapi.LabeledFaceDescriptors('User', myTrainingDescriptors)];
+            myFaceMatcher = new faceapi.FaceMatcher(myLabeledDescriptors);
+
+            // Save descriptors to local storage
+            const descriptorsJSON = myLabeledDescriptors.map(ld => ({
+                label: ld.label,
+                descriptors: ld.descriptors.map(d => Array.from(d))
+            }));
+            localStorage.setItem('faceDescriptors', JSON.stringify(descriptorsJSON));
+            console.log("Model trained and saved to local storage.");
+            document.getElementById('message').innerText = "Model trained and saved!";
+            document.getElementById('auth').style.display = 'block';
+            myInitWebcam(myAuthVideo); // Prepare authentication webcam
+        }
+
+        // Load model from local storage
+        function myLoadModelFromLocalStorage() {
+            console.log("Checking for saved model in local storage...");
+            const descriptorsJSON = localStorage.getItem('faceDescriptors');
+            if (descriptorsJSON) {
+                const parsedDescriptors = JSON.parse(descriptorsJSON);
+                myLabeledDescriptors = parsedDescriptors.map(ld => new faceapi.LabeledFaceDescriptors(
+                    ld.label,
+                    ld.descriptors.map(d => new Float32Array(d))
+                ));
+                myFaceMatcher = new faceapi.FaceMatcher(myLabeledDescriptors);
+                console.log("Model loaded from local storage.");
+                document.getElementById('auth').style.display = 'block';
+                myInitWebcam(myAuthVideo); // Prepare authentication webcam
+            } else {
+                console.log("No saved model found in local storage.");
+            }
+        }
+        myLoadModelFromLocalStorage();
+
+        // Authenticate the user
+        async function myAuthenticate() {
+            console.log("Starting authentication...");
+            const canvas = document.createElement('canvas');
+            canvas.width = myAuthVideo.videoWidth;
+            canvas.height = myAuthVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(myAuthVideo, 0, 0);
+            const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
+            if (detection) {
+                const bestMatch = myFaceMatcher.findBestMatch(detection.descriptor);
+                console.log(`Best match: ${bestMatch.toString()}`);
+                if (bestMatch.label === 'User' && bestMatch.distance < 0.6) {
+                    document.getElementById('message').innerText = "Access Granted!";
+                    document.getElementById('protectedContent').style.display = 'block';
+                } else {
+                    document.getElementById('message').innerText = "Access Denied!";
+                }
+            } else {
+                console.log("No face detected during authentication.");
+                document.getElementById('message').innerText = "No face detected. Please try again.";
+            }
+        }
+    </script>
+</body>
+</html>
