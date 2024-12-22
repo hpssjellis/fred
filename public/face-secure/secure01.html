@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Personal Webpage Security</title>
+    <style>
+        body { font-family: Arial; text-align: center; margin-top: 50px; }
+        video { border: 1px solid black; }
+    </style>
+</head>
+<body>
+    <h1>Personal Webpage Security</h1>
+    <div id="training">
+        <video id="myVideo" autoplay></video><br>
+        <input type="button" value="Capture Training Image" onclick="myCaptureImage()">
+        <input type="button" value="Train Model" onclick="myTrainModel()">
+    </div>
+    <div id="auth" style="display:none;">
+        <video id="myAuthVideo" autoplay></video><br>
+        <input type="button" value="Authenticate" onclick="myAuthenticate()">
+    </div>
+    <p id="message"></p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script>
+        let myVideo = document.getElementById('myVideo');
+        let myAuthVideo = document.getElementById('myAuthVideo');
+        let myTrainingImages = [];
+        let myModel;
+
+        // Initialize webcam
+        async function myInitWebcam(videoElement) {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            videoElement.srcObject = stream;
+        }
+        myInitWebcam(myVideo);
+
+        // Capture a training image
+        function myCaptureImage() {
+            const canvas = document.createElement('canvas');
+            canvas.width = myVideo.videoWidth;
+            canvas.height = myVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(myVideo, 0, 0);
+            const imageData = tf.browser.fromPixels(canvas);
+            myTrainingImages.push(imageData);
+            document.getElementById('message').innerText = `Captured ${myTrainingImages.length} images`;
+        }
+
+        // Train the model
+        async function myTrainModel() {
+            const labels = myTrainingImages.map((_, i) => i < myTrainingImages.length / 2 ? 1 : 0); // Binary labels for simplicity
+            const xs = tf.stack(myTrainingImages);
+            const ys = tf.tensor(labels);
+
+            myModel = tf.sequential();
+            myModel.add(tf.layers.flatten({ inputShape: [xs.shape[1], xs.shape[2], 3] }));
+            myModel.add(tf.layers.dense({ units: 128, activation: 'relu' }));
+            myModel.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
+
+            myModel.compile({ optimizer: 'adam', loss: 'binaryCrossentropy', metrics: ['accuracy'] });
+            await myModel.fit(xs, ys, { epochs: 10 });
+            await myModel.save('localstorage://my-personal-model');
+            document.getElementById('message').innerText = 'Model trained and saved!';
+        }
+
+        // Authenticate the user
+        async function myAuthenticate() {
+            const canvas = document.createElement('canvas');
+            canvas.width = myAuthVideo.videoWidth;
+            canvas.height = myAuthVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(myAuthVideo, 0, 0);
+            const imageData = tf.browser.fromPixels(canvas);
+
+            myModel = await tf.loadLayersModel('localstorage://my-personal-model');
+            const prediction = myModel.predict(imageData.expandDims(0)).dataSync()[0];
+            if (prediction > 0.5) {
+                document.getElementById('message').innerText = 'Access Granted!';
+                document.getElementById('auth').style.display = 'none';
+                document.body.style.background = 'lightgreen';
+            } else {
+                document.getElementById('message').innerText = 'Access Denied!';
+            }
+        }
+    </script>
+</body>
+</html>
