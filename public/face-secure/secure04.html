@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Personal Webpage Security</title>
+    <style>
+        body { font-family: Arial; text-align: center; margin-top: 50px; }
+        video { border: 1px solid black; }
+        #protectedContent { display: none; border: 2px solid green; padding: 20px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Personal Webpage Security</h1>
+
+    <div id="training">
+        <h2>Training Phase</h2>
+        <video id="myVideo" autoplay></video><br>
+        <input type="button" value="Capture Training Image" onclick="myCaptureImage()">
+        <input type="button" value="Train Model" onclick="myTrainModel()">
+    </div>
+
+    <div id="auth" style="display:none;">
+        <h2>Authentication Phase</h2>
+        <video id="myAuthVideo" autoplay></video><br>
+        <input type="button" value="Authenticate" onclick="myAuthenticate()">
+    </div>
+
+    <div id="protectedContent">
+        <h2>Protected Content</h2>
+        <p>Congratulations! You have been verified as the correct person. Welcome to the secure section of the webpage.</p>
+    </div>
+
+    <p id="message"></p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script>
+        let myVideo = document.getElementById('myVideo');
+        let myAuthVideo = document.getElementById('myAuthVideo');
+        let myTrainingImages = [];
+        let myModel;
+
+        // Initialize webcam
+        async function myInitWebcam(videoElement) {
+            console.log("Initializing webcam...");
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            videoElement.srcObject = stream;
+            console.log("Webcam ready.");
+        }
+        myInitWebcam(myVideo);
+
+        // Capture a training image
+        function myCaptureImage() {
+            const canvas = document.createElement('canvas');
+            canvas.width = myVideo.videoWidth;
+            canvas.height = myVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(myVideo, 0, 0);
+            const imageData = tf.browser.fromPixels(canvas);
+            myTrainingImages.push(imageData);
+            console.log(`Captured image ${myTrainingImages.length}`);
+            document.getElementById('message').innerText = `Captured ${myTrainingImages.length} images.`;
+        }
+
+        // Train the model
+        async function myTrainModel() {
+            if (myTrainingImages.length < 10) {
+                alert("Capture at least 10 images before training!");
+                return;
+            }
+
+            console.log("Training model...");
+            document.getElementById('message').innerText = "Training in progress. Check the console for updates.";
+
+            // Generate labels (1 for user, 0 for others)
+            const halfLength = Math.floor(myTrainingImages.length / 2);
+            const labels = myTrainingImages.map((_, i) => i < halfLength ? 1 : 0);
+
+            const xs = tf.stack(myTrainingImages);
+            const ys = tf.tensor(labels);
+
+            // Build a neural network model
+            myModel = tf.sequential();
+            myModel.add(tf.layers.flatten({ inputShape: [xs.shape[1], xs.shape[2], 3] }));
+            myModel.add(tf.layers.dense({ units: 128, activation: 'relu' }));
+            myModel.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
+
+            myModel.compile({ optimizer: 'adam', loss: 'binaryCrossentropy', metrics: ['accuracy'] });
+
+            console.log("Model training started...");
+            await myModel.fit(xs, ys, {
+                epochs: 10,
+                callbacks: {
+                    onEpochEnd: (epoch, logs) => {
+                        console.log(`Epoch ${epoch + 1}: loss=${logs.loss.toFixed(4)}, accuracy=${logs.acc.toFixed(4)}`);
+                    }
+                }
+            });
+
+            console.log("Model training completed. Saving model...");
+            await myModel.save('localstorage://my-personal-model');
+            console.log("Model saved to local storage.");
+            document.getElementById('message').innerText = "Model trained and saved!";
+            document.getElementById('auth').style.display = 'block';
+            myInitWebcam(myAuthVideo); // Prepare authentication webcam
+        }
+
+        // Authenticate the user
+        async function myAuthenticate() {
+            console.log("Starting authentication...");
+            const canvas = document.createElement('canvas');
+            canvas.width = myAuthVideo.videoWidth;
+            canvas.height = myAuthVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(myAuthVideo, 0, 0);
+            const imageData = tf.browser.fromPixels(canvas);
+
+            try {
+                myModel = await tf.loadLayersModel('localstorage://my-personal-model');
+                console.log("Model loaded from local storage.");
+                const prediction = myModel.predict(imageData.expandDims(0)).dataSync()[0];
+                console.log(`Prediction: ${prediction.toFixed(2)}`);
+
+                if (prediction > 0.5) {
+                    document.getElementById('message').innerText = "Access Granted!";
+                    document.getElementById('protectedContent').style.display = 'block';
+                    document.body.style.background = 'lightgreen';
+                } else {
+                    document.getElementById('message').innerText = "Access Denied!";
+                    document.getElementById('protectedContent').style.display = 'none';
+                    console.log("Face does not match. Access denied.");
+                }
+            } catch (error) {
+                console.error("Error during authentication:", error);
+                document.getElementById('message').innerText = "Authentication failed. Check the console.";
+            }
+        }
+    </script>
+</body>
+</html>
