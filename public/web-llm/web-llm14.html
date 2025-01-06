@@ -15,15 +15,21 @@
 
   <h1>WebLLM Text to HTML</h1>
 
+ <h2>Select Model:</h2>
+    <select id="modelSelect"></select>
+    <input type="button" value="Load Selected Model" onclick="loadSelectedModel()">
+  </div>
+
   <textarea id="textInput" rows="10" cols="50" placeholder="Enter your text here, then click button after the model has loaded..."></textarea><br><br>
   <input type="button" value="Generate HTML" onclick="myLLM()">
   <div id="htmlOutput"></div>
   <div id="loading">Loading model, please wait...</div>
   <div>
-    <h2>Select Model:</h2>
-    <select id="modelSelect"></select>
-    <input type="button" value="Load Selected Model" onclick="loadSelectedModel()">
-  </div>
+
+
+
+  
+
 
   <script type="module">
     import { CreateMLCEngine, MLCEngine, prebuiltAppConfig } from "https://esm.run/@mlc-ai/web-llm";
@@ -62,14 +68,14 @@
       console.log(reply.choices[0].message.content);
       document.getElementById('htmlOutput').innerHTML = reply.choices[0].message.content;
     };
-  </script>
 
-  <script>
-    function loadSelectedModel() {
+
+    function window.loadSelectedModel() {
       const selectedModel = document.getElementById('modelSelect').value;
       loadModel(selectedModel);
     }
   </script>
+
 
 </body>
 </html>
