@@ -10,7 +10,14 @@
 
   <textarea id="textInput" rows="10" cols="50" placeholder="Enter your text here..."></textarea><br><br>
 
-  <button onclick="generateHtml()">Generate HTML</button>
+
+  <input type=button value="Generate HTML" onclick="{
+    const messages = [{ role: 'user', content: 'What is rome' }];
+    const reply = await engineInstance.chat.completions.create({ messages });
+    console.log(reply.choices[0].message.content);
+   document.getElementById('htmlOutput').innerHTML = 'hi'
+    
+  }">
 
   <div id="htmlOutput"></div>
 
