@@ -27,13 +27,7 @@
 - **Qwen (通义千问)**: Qwen2 0.5B, 1.5B, 7B
     */
 
-    // Direct instantiation
-    engineInstance = new MLCEngine({ initProgressCallback });
-    await engineInstance.reload("Llama-3.2-1B-Instruct-q4f16_1-MLC");
 
-    const messages = [{ role: "user", content: "How does WebLLM use workers?" }];
-    const reply = await engineInstance.chat.completions.create({ messages });
-    console.log(reply.choices[0].message.content);
   </script>
 
   <h1>WebLLM Text to HTML</h1>
@@ -46,9 +40,13 @@
 
   <script>
     async function myLLM() {
-      const messages = [{ role: 'user', content: 'What is rome' }];
-      const reply = await engineInstance.chat.completions.create({ messages });
-      console.log(reply.choices[0].message.content);
+    // Direct instantiation
+    engineInstance = new MLCEngine({ initProgressCallback });
+    await engineInstance.reload("Llama-3.2-1B-Instruct-q4f16_1-MLC");
+
+    const messages = [{ role: "user", content: "How does WebLLM use workers?" }];
+    const reply = await engineInstance.chat.completions.create({ messages });
+    console.log(reply.choices[0].message.content);
       document.getElementById('htmlOutput').innerHTML = reply.choices[0].message.content;
     }
   </script>
