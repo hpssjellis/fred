@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebLLM Text to HTML</title>
+  <script src="https://esm.run/@mlc-ai/web-llm"></script>
+</head>
+<body>
+
+  <h1>WebLLM Text to HTML</h1>
+
+  <textarea id="textInput" rows="10" placeholder="Enter your text here..."></textarea><br>
+
+  <button onclick="generateHtml()">Generate HTML</button>
+
+  <div id="htmlOutput"></div>
+
+  <script>
+    async function generateHtml() {
+      const textInput = document.getElementById('textInput').value;
+
+      try {
+        const { CreateMLCEngine } = await import('https://esm.run/@mlc-ai/web-llm');
+        const engine = await CreateMLCEngine();
+        const modelId = 'gpt-3.5-turbo'; // Ensure this is the correct model ID
+
+        const response = await engine.generate({
+          model: modelId,
+          prompt: `Convert the following text to HTML: ${textInput}`,
+          max_tokens: 1024,
+        });
+
+        document.getElementById('htmlOutput').innerHTML = response.text;
+
+      } catch (error) {
+        console.error("Error:", error);
+        document.getElementById('htmlOutput').innerHTML = "An error occurred.";
+      }
+    }
+  </script>
+
+</body>
+</html>
