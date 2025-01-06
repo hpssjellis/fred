@@ -18,7 +18,7 @@
  <h2>Select Model:</h2>
     <select id="modelSelect"></select>
     <input type="button" value="Load Selected Model" onclick="loadSelectedModel()">
-  </div>
+  </div><br>
 
   <textarea id="textInput" rows="10" cols="50" placeholder="Enter your text here, then click button after the model has loaded..."></textarea><br><br>
   <input type="button" value="Generate HTML" onclick="myLLM()">
@@ -70,7 +70,7 @@
     };
 
 
-    function window.loadSelectedModel() {
+    window.loadSelectedModel = async function() {
       const selectedModel = document.getElementById('modelSelect').value;
       loadModel(selectedModel);
     }
