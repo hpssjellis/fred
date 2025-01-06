@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebLLM Text to HTML SPA</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    #loading {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>WebLLM Text to HTML</h1>
+
+  <textarea id="textInput" rows="10" cols="50" placeholder="Enter your text here, then click button after the model has loaded..."></textarea><br><br>
+  <input type="button" value="Generate HTML" onclick="myLLM()">
+  <div id="htmlOutput"></div>
+  <div id="loading">Loading model, please wait...</div>
+  <div>
+    <h2>Select Model:</h2>
+    <select id="modelSelect"></select>
+    <input type="button" value="Load Selected Model" onclick="loadSelectedModel()">
+  </div>
+
+  <script type="module">
+    import { CreateMLCEngine, MLCEngine, prebuiltAppConfig } from "https://esm.run/@mlc-ai/web-llm";
+
+    let engineInstance;
+
+    const initProgressCallback = (progress) => {
+      console.log("Model loading progress:", progress);
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('loading').innerHTML = `Model loading progress: ${progress.text}`;
+    };
+
+    const loadModel = async (modelId) => {
+      const engine = await CreateMLCEngine(modelId, { initProgressCallback });
+      engineInstance = new MLCEngine({ initProgressCallback });
+      await engineInstance.reload(modelId);
+      document.getElementById('loading').style.display = 'none';
+    };
+
+    const populateModelList = () => {
+      const availableModels = prebuiltAppConfig.model_list.map((m) => m.model_id);
+      const modelSelect = document.getElementById('modelSelect');
+      availableModels.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model;
+        option.text = model;
+        modelSelect.appendChild(option);
+      });
+    };
+
+    const loadSelectedModel = () => {
+      const selectedModel = document.getElementById('modelSelect').value;
+      loadModel(selectedModel);
+    };
+
+    populateModelList();
+
+    window.myLLM = async function() {
+      const messages = [{ role: 'user', content: document.getElementById('textInput').value }];
+      const reply = await engineInstance.chat.completions.create({ messages });
+      console.log(reply.choices[0].message.content);
+      document.getElementById('htmlOutput').innerHTML = reply.choices[0].message.content;
+    };
+  </script>
+
+</body>
+</html>
