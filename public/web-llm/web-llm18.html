@@ -199,14 +199,16 @@ document.getElementById("send").addEventListener("click", function () {
       Step 2: Chat
     </p>
     <div class="chat-container">
-      <div id="chat-box" class="chat-box"></div>
       <div id="chat-stats" class="chat-stats hidden"></div>
       <div class="chat-input-container">
         <input type="text" id="user-input" placeholder="Type a message..." onkeydown="{  
-          if (event.keyCode === 13) {document.getElementById("send").click();}
+        //  if (event.keyCode === 13) {document.getElementById("send").click();}
+        alert()
         }" />
         <button id="send" disabled>Send</button>
       </div>
+      
+      <div id="chat-box" class="chat-box"></div>
     </div>
 
 
