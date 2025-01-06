@@ -44,7 +44,7 @@
     engineInstance = new MLCEngine({ initProgressCallback });
     await engineInstance.reload("Llama-3.2-1B-Instruct-q4f16_1-MLC");
 
-    const messages = [{ role: "user", content: "How does WebLLM use workers?" }];
+    const messages = [{ role: "user", content: "Tell me about Rome" }];
     const reply = await engineInstance.chat.completions.create({ messages });
     console.log(reply.choices[0].message.content);
       document.getElementById('htmlOutput').innerHTML = reply.choices[0].message.content;
