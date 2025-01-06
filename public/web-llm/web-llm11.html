@@ -18,6 +18,11 @@
       document.getElementById('htmlOutput').innerHTML = `Model loading progress: ${progress.text}`;
     };
 
+
+    const availableModels = webllm.prebuiltAppConfig.model_list.map(
+      (m) => m.model_id,
+    );
+
     // Using CreateMLCEngine
     engine = await CreateMLCEngine("Llama-3.2-1B-Instruct-q4f16_1-MLC", { initProgressCallback });
     /*
