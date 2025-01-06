@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebLLM Text to HTML</title>
+  <script src="https://cdn.jsdelivr.net/npm/@webllm/core@latest"></script> 
+</head>
+<body>
+
+  <h1>WebLLM Text to HTML</h1>
+
+  <textarea id="textInput" rows="10" cols="50" placeholder="Enter your text here..."></textarea><br><br>
+
+  <button onclick="generateHtml()">Generate HTML</button>
+
+  <div id="htmlOutput"></div>
+
+  <script>
+    async function generateHtml() {
+      const textInput = document.getElementById('textInput').value;
+
+      try {
+        const webllm = new WebLLM(); 
+        const response = await webllm.generate({
+          model: 'gpt-3.5-turbo', // Or another suitable model
+          prompt: `Convert the following text to HTML: ${textInput}`,
+          max_tokens: 1024, 
+        });
+
+        document.getElementById('htmlOutput').innerHTML = response.text; 
+
+      } catch (error) {
+        console.error("Error:", error);
+        document.getElementById('htmlOutput').innerHTML = "An error occurred.";
+      }
+    }
+  </script>
+
+</body>
+</html>
