@@ -95,7 +95,7 @@ function onMessageSend() {
   appendMessage(aiMessage);
 
 
-/*
+
   
   const onFinishGenerating = (finalMessage) => {
     updateLastMessage(finalMessage);
@@ -106,22 +106,25 @@ function onMessageSend() {
     })
   };
 
-*/
+
+
+  /*
 const onFinishGenerating = async (finalMessage) => {
   updateLastMessage(finalMessage);
   document.getElementById("send").disabled = false;
 
   let statsText;
-//  if (isStreaming) {
- //   statsText = await engine.ChatCompletionChunk.usage();
- // } else {
+  if (isStreaming) {
+  statsText = await engine.ChatCompletionChunk.usage();
+ } else {
    statsText = await engine.ChatCompletion.usage();
- // }
+ }
 
   document.getElementById('chat-stats').classList.remove('hidden');
   document.getElementById('chat-stats').textContent = statsText;
 };
-  
+
+  */
 
   streamingGenerating(
     messages,
