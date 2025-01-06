@@ -34,7 +34,7 @@ import { CreateMLCEngine, MLCEngine } from "https://esm.run/@mlc-ai/web-llm";
  // Initialize with a progress callback
  const initProgressCallback = (progress) => {
      console.log("Model loading progress:", progress);
-     document.getElementById('htmlOutput').innerHTML = `Model loading progress: ${progress}`
+     document.getElementById('htmlOutput').innerHTML = `Model loading progress: ${progress.text}`
  };
 
 // Using CreateMLCEngine
