@@ -5,6 +5,19 @@
 </head>
 <body>
 
+  <script>
+
+
+    
+
+myLLM = async function(){       // note how the brakets for passing variables is removed from the function name                                                          
+  const messages = [{ role: 'user', content: 'What is rome' }];
+  const reply = await engineInstance.chat.completions.create({ messages });
+  console.log(reply.choices[0].message.content);
+  document.getElementById('htmlOutput').innerHTML = 'hi'
+} 
+  </script>
+
   <h1>WebLLM Text to HTML</h1>
   <h3> button doesnt do anything, its all on page load and logs to console </h3>
 
@@ -21,6 +34,7 @@ import { CreateMLCEngine, MLCEngine } from "https://esm.run/@mlc-ai/web-llm";
  // Initialize with a progress callback
  const initProgressCallback = (progress) => {
      console.log("Model loading progress:", progress);
+     document.getElementById('htmlOutput').innerHTML = `Model loading progress: ${progress}`
  };
 
 // Using CreateMLCEngine
@@ -36,13 +50,6 @@ console.log(reply.choices[0].message.content);
 
 
 
-
-myLLM = async function(){       // note how the brakets for passing variables is removed from the function name                                                          
-  const messages = [{ role: 'user', content: 'What is rome' }];
-  const reply = await engineInstance.chat.completions.create({ messages });
-  console.log(reply.choices[0].message.content);
-  document.getElementById('htmlOutput').innerHTML = 'hi'
-} 
 </script>
 
 </body>
