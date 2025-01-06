@@ -14,7 +14,7 @@
     // Initialize with a progress callback
     const initProgressCallback = (progress) => {
       console.log("Model loading progress:", progress);
-      document.getElementById('htmlOutput').innerHTML = `Model loading progress: ${progress.text}`;
+      document.getElementById('htmlOutput').innerHTML = `Model loading progress: ${progress[progress.length].text}`;
     };
 
     // Using CreateMLCEngine
