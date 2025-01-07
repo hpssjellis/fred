@@ -3,6 +3,82 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Web Scraper SPA</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    iframe { width: 100%; height: 80vh; border: 1px solid #ccc; }
+    #myControls { margin: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Simple Web Scraper SPA</h1>
+  <div id="myControls">
+    <input type="text" id="myURL" placeholder="Enter a URL" style="width: 70%; padding: 5px;" value="https://en.wikipedia.org/wiki/Main_Page">
+    <input type="button" value="Start Scraping" onclick="myStartScraping()">
+  </div>
+  <iframe id="myIframe"></iframe>
+  <p>Status: <span id="myStatus">Idle</span></p>
+
+  <script>
+    async function myStartScraping() {
+      const myIframe = document.getElementById("myIframe");
+      const myStatus = document.getElementById("myStatus");
+      const myURL = document.getElementById("myURL").value;
+
+      if (!myURL.startsWith("http")) {
+        alert("Please enter a valid URL starting with http or https.");
+        return;
+      }
+
+      myStatus.innerText = "Loading...";
+      myIframe.src = myURL;
+
+      myIframe.onload = async function () {
+        try {
+          const iframeDoc = myIframe.contentDocument || myIframe.contentWindow.document;
+
+          if (!iframeDoc) {
+            myStatus.innerText = "Failed to access the content.";
+            return;
+          }
+
+          // Try to find a button or a link on the loaded page
+          const nextLinkOrButton = iframeDoc.querySelector("a, button");
+
+          if (nextLinkOrButton) {
+            alert('found link orbutton')
+            myStatus.innerText = `Navigating to: ${nextLinkOrButton.href || "Button Click"}`;
+            await myClickNext(iframeDoc, nextLinkOrButton);
+          } else {
+            myStatus.innerText = "No more links or buttons found. Stopping.";
+          }
+        } catch (error) {
+          myStatus.innerText = `Error: ${error.message}`;
+        }
+      };
+    }
+
+    async function myClickNext(iframeDoc, element) {
+      if (element.tagName.toLowerCase() === "a" && element.href) {
+        // Navigate to the next link
+        document.getElementById("myIframe").src = element.href;
+      } else if (element.tagName.toLowerCase() === "button") {
+        // Simulate a button click
+        element.click();
+      }
+    }
+  </script>
+</body>
+</html>
+
+
+<!--
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Enhanced Web Scraper SPA</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
