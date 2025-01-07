@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Page Interaction SPA</title>
+    <script>
+        async function fetchPageContent() {
+            const url = document.getElementById('urlInput').value;
+            try {
+                const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+                const data = await response.json();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.contents, 'text/html');
+
+                // Get the first link
+                const firstLink = doc.querySelector('a');
+                if (firstLink) {
+                    const linkUrl = firstLink.href;
+                    // Fetch the linked page content
+                    const linkResponse = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(linkUrl)}`);
+                    const linkData = await linkResponse.json();
+                    const linkedDoc = parser.parseFromString(linkData.contents, 'text/html');
+                    document.getElementById('output').value = linkedDoc.documentElement.innerHTML;
+                } else {
+                    document.getElementById('output').value = 'No link found on the page.';
+                }
+            } catch (error) {
+                document.getElementById('output').value = 'Error fetching the page.';
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Web Page Interaction SPA</h1>
+    <label for="urlInput">Enter Web Page URL:</label>
+    <input type="text" id="urlInput">
+    <input type="button" value="Fetch and Follow First Link" onclick="fetchPageContent()">
+    <br>
+    <label for="output">Output:</label>
+    <textarea id="output" rows="10" cols="50"></textarea>
+</body>
+</html>
