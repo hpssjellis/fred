@@ -46,7 +46,7 @@
           const nextLinkOrButton = iframeDoc.querySelector("a, button");
 
           if (nextLinkOrButton) {
-            alert('found link orbutton')
+            console.log('found link orbutton')
             myStatus.innerText = `Navigating to: ${nextLinkOrButton.href || "Button Click"}`;
             await myClickNext(iframeDoc, nextLinkOrButton);
           } else {
