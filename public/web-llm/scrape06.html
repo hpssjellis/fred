@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Web Scraper SPA</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    #myOutput { white-space: pre-wrap; text-align: left; max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Simple Web Scraper SPA</h1>
+  <div id="myControls">
+    <input type="text" id="myURL" placeholder="Enter a URL" style="width: 70%; padding: 5px;">
+    <input type="button" value="Start Scraping" onclick="myStartScraping()">
+  </div>
+  <div id="myOutput">Output will appear here...</div>
+  <p>Status: <span id="myStatus">Idle</span></p>
+
+  <script>
+    async function myStartScraping() {
+      const myURL = document.getElementById("myURL").value;
+      const myOutput = document.getElementById("myOutput");
+      const myStatus = document.getElementById("myStatus");
+
+      if (!myURL.startsWith("http")) {
+        alert("Please enter a valid URL starting with http or https.");
+        return;
+      }
+
+      myOutput.innerText = "";
+      myStatus.innerText = "Scraping started...";
+
+      let currentURL = myURL;
+
+      while (currentURL) {
+        try {
+          myStatus.innerText = `Fetching: ${currentURL}`;
+          const response = await fetch(currentURL);
+
+          if (!response.ok) {
+            myStatus.innerText = `Failed to fetch ${currentURL} - ${response.status}`;
+            break;
+          }
+
+          const html = await response.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, "text/html");
+
+          // Log the current URL
+          myOutput.innerText += `Visited: ${currentURL}\n`;
+
+          // Find the first link or button
+          const nextLink = doc.querySelector("a");
+          if (nextLink && nextLink.href) {
+            currentURL = nextLink.href; // Follow the next link
+          } else {
+            myStatus.innerText = "No more links found. Stopping.";
+            currentURL = null; // Stop the loop
+          }
+        } catch (error) {
+          myStatus.innerText = `Error: ${error.message}`;
+          break;
+        }
+      }
+
+      myStatus.innerText = "Scraping finished.";
+    }
+  </script>
+</body>
+</html>
