@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Web Scraper SPA</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    #myOutput { white-space: pre-wrap; text-align: left; max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Simple Web Scraper SPA</h1>
+  <div id="myControls">
+    <input type="text" id="myURL" placeholder="Enter a URL" style="width: 70%; padding: 5px;" value="https://en.wikipedia.org/wiki/Main_Page">
+    <input type="button" value="Start Scraping" onclick="myStartScraping()">
+  </div>
+  <div id="myOutput">Output will appear here...</div>
+  <p>Status: <span id="myStatus">Idle</span></p>
+
+  <script>
+    async function myStartScraping() {
+      const myURL = document.getElementById("myURL").value;
+      const myOutput = document.getElementById("myOutput");
+      const myStatus = document.getElementById("myStatus");
+
+      if (!myURL.startsWith("http")) {
+        alert("Please enter a valid URL starting with http or https.");
+        return;
+      }
+
+      myOutput.innerText = "";
+      myStatus.innerText = "Scraping started...";
+
+      try {
+        myStatus.innerText = `Fetching: ${myURL}`;
+        const proxyURL = "https://cors-anywhere.herokuapp.com/"; // Use a proxy server
+        const response = await fetch(proxyURL + myURL);
+
+        if (!response.ok) {
+          myStatus.innerText = `Failed to fetch ${myURL} - ${response.status}`;
+          return;
+        }
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+
+        // Extract headings and links
+        const headings = [...doc.querySelectorAll("h1, h2, h3")].map(el => el.innerText).join("\n");
+        const links = [...doc.querySelectorAll("a")].map(link => link.href).filter(href => href).join("\n");
+
+        myOutput.innerText = `Headings:\n${headings}\n\nLinks:\n${links}`;
+        myStatus.innerText = "Scraping finished.";
+      } catch (error) {
+        myStatus.innerText = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
