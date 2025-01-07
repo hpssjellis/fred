@@ -16,8 +16,8 @@
     <input type="text" id="myURL" placeholder="Enter a URL" style="width: 70%; padding: 5px;" value="https://en.wikipedia.org/wiki/Main_Page">
     <input type="button" value="Start Scraping" onclick="myStartScraping()">
   </div>
-  <iframe id="myIframe"></iframe>
   <p>Status: <span id="myStatus">Idle</span></p>
+  <iframe id="myIframe"></iframe>
 
   <script>
     async function myStartScraping() {
@@ -36,12 +36,12 @@
       myIframe.onload = async function () {
         try {
           const iframeDoc = myIframe.contentDocument || myIframe.contentWindow.document;
-
+          
           if (!iframeDoc) {
             myStatus.innerText = "Failed to access the content.";
             return;
           }
-
+          
           // Try to find a button or a link on the loaded page
           const nextLinkOrButton = iframeDoc.querySelector("a, button");
 
