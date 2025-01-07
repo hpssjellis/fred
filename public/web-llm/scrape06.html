@@ -6,7 +6,8 @@
   <title>Simple Web Scraper SPA</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-    #myOutput { white-space: pre-wrap; text-align: left; max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
+    iframe { width: 100%; height: 80vh; border: 1px solid #ccc; }
+    #myControls { margin: 20px; }
   </style>
 </head>
 <body>
@@ -15,57 +16,55 @@
     <input type="text" id="myURL" placeholder="Enter a URL" style="width: 70%; padding: 5px;">
     <input type="button" value="Start Scraping" onclick="myStartScraping()">
   </div>
-  <div id="myOutput">Output will appear here...</div>
+  <iframe id="myIframe"></iframe>
   <p>Status: <span id="myStatus">Idle</span></p>
 
   <script>
     async function myStartScraping() {
-      const myURL = document.getElementById("myURL").value;
-      const myOutput = document.getElementById("myOutput");
+      const myIframe = document.getElementById("myIframe");
       const myStatus = document.getElementById("myStatus");
+      const myURL = document.getElementById("myURL").value;
 
       if (!myURL.startsWith("http")) {
         alert("Please enter a valid URL starting with http or https.");
         return;
       }
 
-      myOutput.innerText = "";
-      myStatus.innerText = "Scraping started...";
+      myStatus.innerText = "Loading...";
+      myIframe.src = myURL;
 
-      let currentURL = myURL;
-
-      while (currentURL) {
+      myIframe.onload = async function () {
         try {
-          myStatus.innerText = `Fetching: ${currentURL}`;
-          const response = await fetch(currentURL);
+          const iframeDoc = myIframe.contentDocument || myIframe.contentWindow.document;
 
-          if (!response.ok) {
-            myStatus.innerText = `Failed to fetch ${currentURL} - ${response.status}`;
-            break;
+          if (!iframeDoc) {
+            myStatus.innerText = "Failed to access the content.";
+            return;
           }
 
-          const html = await response.text();
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, "text/html");
+          // Try to find a button or a link on the loaded page
+          const nextLinkOrButton = iframeDoc.querySelector("a, button");
 
-          // Log the current URL
-          myOutput.innerText += `Visited: ${currentURL}\n`;
-
-          // Find the first link or button
-          const nextLink = doc.querySelector("a");
-          if (nextLink && nextLink.href) {
-            currentURL = nextLink.href; // Follow the next link
+          if (nextLinkOrButton) {
+            myStatus.innerText = `Navigating to: ${nextLinkOrButton.href || "Button Click"}`;
+            await myClickNext(iframeDoc, nextLinkOrButton);
           } else {
-            myStatus.innerText = "No more links found. Stopping.";
-            currentURL = null; // Stop the loop
+            myStatus.innerText = "No more links or buttons found. Stopping.";
           }
         } catch (error) {
           myStatus.innerText = `Error: ${error.message}`;
-          break;
         }
-      }
+      };
+    }
 
-      myStatus.innerText = "Scraping finished.";
+    async function myClickNext(iframeDoc, element) {
+      if (element.tagName.toLowerCase() === "a" && element.href) {
+        // Navigate to the next link
+        document.getElementById("myIframe").src = element.href;
+      } else if (element.tagName.toLowerCase() === "button") {
+        // Simulate a button click
+        element.click();
+      }
     }
   </script>
 </body>
