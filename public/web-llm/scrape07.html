@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced Web Scraper SPA</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    #myOutput { white-space: pre-wrap; text-align: left; max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
+    .link { color: blue; cursor: pointer; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>Enhanced Web Scraper SPA</h1>
+  <div id="myControls">
+    <input type="text" id="myURL" placeholder="Enter a URL" style="width: 70%; padding: 5px;">
+    <input type="button" value="Start Scraping" onclick="myStartScraping()">
+  </div>
+  <div id="myOutput">Output will appear here...</div>
+  <p>Status: <span id="myStatus">Idle</span></p>
+
+  <script>
+    async function myStartScraping() {
+      const myURL = document.getElementById("myURL").value;
+      const myOutput = document.getElementById("myOutput");
+      const myStatus = document.getElementById("myStatus");
+
+      if (!myURL.startsWith("http")) {
+        alert("Please enter a valid URL starting with http or https.");
+        return;
+      }
+
+      myOutput.innerText = "";
+      myStatus.innerText = "Scraping started...";
+
+      try {
+        myStatus.innerText = `Fetching: ${myURL}`;
+        const response = await fetch(myURL);
+
+        if (!response.ok) {
+          myStatus.innerText = `Failed to fetch ${myURL} - ${response.status}`;
+          return;
+        }
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+
+        // Extract meaningful content
+        const content = extractReadableContent(doc);
+        myOutput.innerHTML = `<strong>Content:</strong>\n${content}\n\n<strong>Links:</strong>\n`;
+
+        // Extract all links and add them to the output
+        const links = [...doc.querySelectorAll("a")].map(link => link.href).filter(href => href);
+        if (links.length) {
+          links.forEach((link, index) => {
+            const linkElement = document.createElement("span");
+            linkElement.innerText = `Link ${index + 1}: ${link}`;
+            linkElement.className = "link";
+            linkElement.onclick = () => {
+              document.getElementById("myURL").value = link;
+              myStartScraping(); // Follow the selected link
+            };
+            myOutput.appendChild(linkElement);
+            myOutput.innerHTML += "<br>";
+          });
+        } else {
+          myOutput.innerText += "No links found on this page.";
+        }
+
+        myStatus.innerText = "Scraping finished.";
+      } catch (error) {
+        myStatus.innerText = `Error: ${error.message}`;
+      }
+    }
+
+    function extractReadableContent(doc) {
+      // Extract main headings, paragraphs, and lists
+      const headings = [...doc.querySelectorAll("h1, h2, h3, h4, h5, h6")].map(el => el.innerText).join("\n");
+      const paragraphs = [...doc.querySelectorAll("p")].map(el => el.innerText).join("\n");
+      const lists = [...doc.querySelectorAll("ul, ol")].map(list =>
+        [...list.querySelectorAll("li")].map(item => `- ${item.innerText}`).join("\n")
+      ).join("\n");
+
+      return [headings, paragraphs, lists].filter(section => section.trim()).join("\n\n");
+    }
+  </script>
+</body>
+</html>
