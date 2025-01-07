@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Page Interaction SPA</title>
+    <script>
+        async function fetchPageContent() {
+            const url = document.getElementById('urlInput').value;
+            try {
+                const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+                const data = await response.json();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.contents, 'text/html');
+
+                // Assuming the button is clicked and its response is immediately available as an element
+                const firstButton = doc.querySelector('button');
+                if (firstButton) {
+                    // Simulating a click might not actually work this way in a real scenario
+                    firstButton.click();
+
+                    // This part is highly dependent on the webpage's structure and behavior after the click
+                    // Attempt to get some response content
+                    const resultElement = doc.querySelector('.result');  // Modify selector based on actual page structure
+                    if (resultElement) {
+                        document.getElementById('output').value = resultElement.innerText;
+                    } else {
+                        document.getElementById('output').value = 'No result found after clicking the button.';
+                    }
+                } else {
+                    document.getElementById('output').value = 'No button found on the page.';
+                }
+            } catch (error) {
+                document.getElementById('output').value = 'Error fetching the page.';
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Web Page Interaction SPA</h1>
+    <label for="urlInput">Enter Web Page URL:</label>
+    <input type="text" id="urlInput">
+    <button onclick="fetchPageContent()">Fetch and Click First Button</button>
+    <br>
+    <label for="output">Output:</label>
+    <textarea id="output" rows="10" cols="50"></textarea>
+</body>
+</html>
