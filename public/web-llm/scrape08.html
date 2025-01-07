@@ -33,9 +33,13 @@
       myStatus.innerText = "Scraping started...";
 
       try {
+        const proxyURL = "https://cors-anywhere.herokuapp.com/";
         myStatus.innerText = `Fetching: ${myURL}`;
-        const proxyURL = "https://cors-anywhere.herokuapp.com/"; // Use a proxy server
-        const response = await fetch(proxyURL + myURL);
+        const response = await fetch(proxyURL + myURL, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+          }
+        });
 
         if (!response.ok) {
           myStatus.innerText = `Failed to fetch ${myURL} - ${response.status}`;
@@ -46,11 +50,8 @@
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, "text/html");
 
-        // Extract headings and links
-        const headings = [...doc.querySelectorAll("h1, h2, h3")].map(el => el.innerText).join("\n");
         const links = [...doc.querySelectorAll("a")].map(link => link.href).filter(href => href).join("\n");
-
-        myOutput.innerText = `Headings:\n${headings}\n\nLinks:\n${links}`;
+        myOutput.innerText = `Links:\n${links}`;
         myStatus.innerText = "Scraping finished.";
       } catch (error) {
         myStatus.innerText = `Error: ${error.message}`;
