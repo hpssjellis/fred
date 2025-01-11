@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Send SMS via Email Gateway</title>
+</head>
+<body>
+  <h3>Send a Text Message</h3>
+  <label for="phoneNumber">Enter Phone Number:</label>
+  <input type="text" id="phoneNumber" placeholder="1234567890"><br>
+  <label for="carrier">Select Carrier:</label>
+  <select id="carrier">
+    <option value="@txt.att.net">AT&T</option>
+    <option value="@vtext.com">Verizon</option>
+    <option value="@tmomail.net">T-Mobile</option>
+    <option value="@msg.telus.com">Telus</option>
+  </select><br>
+  <label for="message">Enter Message:</label>
+  <input type="text" id="message" placeholder="Your message here"><br>
+  <input type="button" value="Send Message" onclick="mySendEmailSMS()">
+
+  <script>
+    function mySendEmailSMS() {
+      const myPhoneNumber = document.getElementById("phoneNumber").value;
+      const myCarrier = document.getElementById("carrier").value;
+      const myMessage = document.getElementById("message").value;
+
+      if (!myPhoneNumber || !myMessage) {
+        alert("Please enter both phone number and message.");
+        return;
+      }
+
+      const myRecipient = `${myPhoneNumber}${myCarrier}`;
+      const mySubject = "Text Message via Email";
+      const myBody = encodeURIComponent(myMessage);
+
+      window.location.href = `mailto:${myRecipient}?subject=${mySubject}&body=${myBody}`;
+    }
+  </script>
+</body>
+</html>
