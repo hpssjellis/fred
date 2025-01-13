@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tone.js SPA</title>
+  <script src="https://cdn.jsdelivr.net/npm/tone@next"></script>
+</head>
+<body>
+  <h3 style="text-align: center;">Play Notes with Tone.js</h3>
+  <div style="text-align: center;">
+    <input type="button" value="Play A3 and CEG" onclick="myPlayNotes()">
+  </div>
+
+  <script>
+    async function myPlayNotes() {
+      await Tone.start(); // Ensure audio context is started
+      const mySynth = new Tone.Synth().toDestination();
+
+      // Play A3 first
+      mySynth.triggerAttackRelease("A3", "0.5");
+
+      // Delay slightly before playing the chord
+      setTimeout(() => {
+        mySynth.triggerAttackRelease(["C4", "E4", "G4"], "0.5");
+      }, 600); // Delay of 600ms
+    }
+  </script>
+</body>
+</html>
