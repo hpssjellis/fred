@@ -13,7 +13,7 @@
     <input type="button" value="Stop Animation" onclick="stopAnimation()">
 
     <script type="module">
-        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.173.0/build/three.module.js';     // wa 0.139.2
+        import * as three from 'https://cdn.jsdelivr.net/npm/three@0.173.0/build/three.module.js';     // wa 0.139.2
         import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.173.0/examples/jsm/controls/OrbitControls.js';
         import { WebGPURenderer } from 'https://cdn.jsdelivr.net/npm/three@0.173.0/build/three.webgpu.js';
 
@@ -25,40 +25,40 @@
             myRenderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(myRenderer.domElement);
 
-            myScene = new THREE.Scene();
-            myScene.background = new THREE.Color(0x87CEEB); // Sky blue
-            myScene.fog = new THREE.Fog(0x87CEEB, 5, 15);
+            myScene = new three.Scene();
+            myScene.background = new three.Color(0x87CEEB); // Sky blue
+            myScene.fog = new three.Fog(0x87CEEB, 5, 15);
 
-            myCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            myCamera = new three.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             myCamera.position.set(0, 2, 5);
 
             myControls = new OrbitControls(myCamera, myRenderer.domElement);
-            myClock = new THREE.Clock();
+            myClock = new three.Clock();
 
             // Lights
-            const myAmbientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            const myAmbientLight = new three.AmbientLight(0xffffff, 0.6);
             myScene.add(myAmbientLight);
-            const myDirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            const myDirLight = new three.DirectionalLight(0xffffff, 0.8);
             myDirLight.position.set(5, 5, 5);
             myScene.add(myDirLight);
 
             // Cube
-            const myCubeGeo = new THREE.BoxGeometry();
-            const myCubeMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-            myCube = new THREE.Mesh(myCubeGeo, myCubeMat);
+            const myCubeGeo = new three.BoxGeometry();
+            const myCubeMat = new three.MeshStandardMaterial({ color: 0x00ff00 });
+            myCube = new three.Mesh(myCubeGeo, myCubeMat);
             myScene.add(myCube);
 
             // Torus
-            const myTorusGeo = new THREE.TorusGeometry(1, 0.4, 16, 100);
-            const myTorusMat = new THREE.MeshStandardMaterial({ color: 0xff5733 });
-            myTorus = new THREE.Mesh(myTorusGeo, myTorusMat);
+            const myTorusGeo = new three.TorusGeometry(1, 0.4, 16, 100);
+            const myTorusMat = new three.MeshStandardMaterial({ color: 0xff5733 });
+            myTorus = new three.Mesh(myTorusGeo, myTorusMat);
             myTorus.position.set(2, 0, -2);
             myScene.add(myTorus);
 
             // Plane
-            const myPlaneGeo = new THREE.PlaneGeometry(10, 10);
-            const myPlaneMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide });
-            myPlane = new THREE.Mesh(myPlaneGeo, myPlaneMat);
+            const myPlaneGeo = new three.PlaneGeometry(10, 10);
+            const myPlaneMat = new three.MeshStandardMaterial({ color: 0xaaaaaa, side: three.DoubleSide });
+            myPlane = new three.Mesh(myPlaneGeo, myPlaneMat);
             myPlane.rotation.x = -Math.PI / 2;
             myPlane.position.y = -1;
             myScene.add(myPlane);
