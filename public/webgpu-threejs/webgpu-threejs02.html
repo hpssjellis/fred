@@ -13,9 +13,9 @@
     <input type="button" value="Stop Animation" onclick="stopAnimation()">
 
     <script type="module">
-        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.139.2/build/three.module.js';
-        import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.139.2/examples/jsm/controls/OrbitControls.js';
-        import { WebGPURenderer } from 'https://cdn.jsdelivr.net/npm/three@0.139.2/examples/jsm/renderers/WebGPURenderer.js';
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.173.0/build/three.module.js';     // wa 0.139.2
+        import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.173.0/examples/jsm/controls/OrbitControls.js';
+        import { WebGPURenderer } from 'https://cdn.jsdelivr.net/npm/three@0.173.0/build/three.webgpu.js';
 
         let myCamera, myScene, myRenderer, myCube, myTorus, myPlane, myControls, myClock;
         let myAnimationId;
