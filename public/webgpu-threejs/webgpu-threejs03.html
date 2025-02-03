@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js WebGPU Enhanced Scene</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+    </style>
+</head>
+<body>
+    <input type="button" value="Start Animation" onclick="startAnimation()">
+    <input type="button" value="Stop Animation" onclick="stopAnimation()">
+
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.173.0/build/three.module.js';
+        import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.173.0/examples/jsm/controls/OrbitControls.js';
+        import { WebGPURenderer } from 'https://cdn.jsdelivr.net/npm/three@0.173.0/examples/jsm/renderers/WebGPURenderer.js';
+
+        let myCamera, myScene, myRenderer, myCube, myTorus, myPlane, myControls, myClock;
+        let myAnimationId;
+
+        async function myInit() {
+            if (!navigator.gpu) {
+                alert("WebGPU is not supported on this browser.");
+                return;
+            }
+
+            myRenderer = new WebGPURenderer();
+            await myRenderer.init(); // Required for WebGPU setup
+            myRenderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(myRenderer.domElement);
+
+            myScene = new THREE.Scene();
+            myScene.background = new THREE.Color(0x87CEEB); // Sky blue
+            myScene.fog = new THREE.Fog(0x87CEEB, 5, 15);
+
+            myCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            myCamera.position.set(0, 2, 5);
+
+            myControls = new OrbitControls(myCamera, myRenderer.domElement);
+            myClock = new THREE.Clock();
+
+            // Lights
+            const myAmbientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            myScene.add(myAmbientLight);
+            const myDirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            myDirLight.position.set(5, 5, 5);
+            myScene.add(myDirLight);
+
+            // Cube
+            const myCubeGeo = new THREE.BoxGeometry();
+            const myCubeMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+            myCube = new THREE.Mesh(myCubeGeo, myCubeMat);
+            myScene.add(myCube);
+
+            // Torus
+            const myTorusGeo = new THREE.TorusGeometry(1, 0.4, 16, 100);
+            const myTorusMat = new THREE.MeshStandardMaterial({ color: 0xff5733 });
+            myTorus = new THREE.Mesh(myTorusGeo, myTorusMat);
+            myTorus.position.set(2, 0, -2);
+            myScene.add(myTorus);
+
+            // Plane
+            const myPlaneGeo = new THREE.PlaneGeometry(10, 10);
+            const myPlaneMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide });
+            myPlane = new THREE.Mesh(myPlaneGeo, myPlaneMat);
+            myPlane.rotation.x = -Math.PI / 2;
+            myPlane.position.y = -1;
+            myScene.add(myPlane);
+
+            window.addEventListener('resize', myOnResize);
+        }
+
+        function myOnResize() {
+            myCamera.aspect = window.innerWidth / window.innerHeight;
+            myCamera.updateProjectionMatrix();
+            myRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function myAnimate() {
+            myAnimationId = requestAnimationFrame(myAnimate);
+            const myElapsedTime = myClock.getElapsedTime();
+
+            myCube.rotation.x += 0.01;
+            myCube.rotation.y += 0.02;
+            myTorus.rotation.x = Math.sin(myElapsedTime) * 2;
+            myTorus.rotation.y = Math.cos(myElapsedTime) * 2;
+
+            myControls.update();
+            myRenderer.render(myScene, myCamera);
+        }
+
+        function startAnimation() {
+            if (!myAnimationId) {
+                myClock.start();
+                myAnimate();
+            }
+        }
+
+        function stopAnimation() {
+            if (myAnimationId) {
+                cancelAnimationFrame(myAnimationId);
+                myAnimationId = null;
+                myClock.stop();
+            }
+        }
+
+        window.startAnimation = startAnimation;
+        window.stopAnimation = stopAnimation;
+
+        myInit();
+    </script>
+</body>
+</html>
