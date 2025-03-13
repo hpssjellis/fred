@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Object Counter</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <style>
+        canvas {
+            position: absolute;
+            top: 50px;
+            left: 0;
+        }
+        video {
+            position: absolute;
+            top: 50px;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <h2>YOLO Object Counter</h2>
+    <video id="myVideo" width="640" height="480" autoplay></video>
+    <canvas id="myCanvas" width="640" height="480"></canvas>
+    <p id="myCountDisplay">Total Objects: 0</p>
+    <p id="myCategoryCount"></p>
+    <script>
+        let myVideo = document.getElementById("myVideo");
+        let myCanvas = document.getElementById("myCanvas");
+        let myCtx = myCanvas.getContext("2d");
+        let myCounts = {};
+        let myTotalCount = 0;
+        let myLineY = 400; // Fixed line position
+        let myTrackedObjects = new Map(); // Store previously seen objects
+
+        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+            myVideo.srcObject = stream;
+        });
+
+        async function myDetectObjects() {
+            const model = await cocoSsd.load();
+            setInterval(async () => {
+                myCtx.clearRect(0, 0, myCanvas.width, myCanvas.height);
+                myCtx.drawImage(myVideo, 0, 0, myCanvas.width, myCanvas.height);
+                
+                // Draw counting line
+                myCtx.strokeStyle = "red";
+                myCtx.lineWidth = 3;
+                myCtx.beginPath();
+                myCtx.moveTo(0, myLineY);
+                myCtx.lineTo(myCanvas.width, myLineY);
+                myCtx.stroke();
+                
+                const predictions = await model.detect(myVideo);
+                let newTrackedObjects = new Map();
+                
+                predictions.forEach(pred => {
+                    let [x, y, width, height] = pred.bbox;
+                    let objectCenterY = y + height / 2;
+                    let objectID = `${Math.round(x)}-${Math.round(y)}-${Math.round(width)}-${Math.round(height)}`;
+                    
+                    // Draw object bounding box
+                    myCtx.strokeStyle = "blue";
+                    myCtx.lineWidth = 2;
+                    myCtx.strokeRect(x, y, width, height);
+                    myCtx.fillStyle = "yellow";
+                    myCtx.fillText(pred.class, x, y - 5);
+                    
+                    // Count when crossing the line
+                    if (objectCenterY > myLineY - 5 && objectCenterY < myLineY + 5) {
+                        if (!myTrackedObjects.has(objectID)) {
+                            if (!myCounts[pred.class]) myCounts[pred.class] = 0;
+                            myCounts[pred.class]++;
+                            myTotalCount++;
+                        }
+                    }
+                    newTrackedObjects.set(objectID, true);
+                });
+                myTrackedObjects = newTrackedObjects;
+                document.getElementById("myCountDisplay").innerText = "Total Objects: " + myTotalCount;
+                document.getElementById("myCategoryCount").innerText = JSON.stringify(myCounts, null, 2);
+            }, 500);
+        }
+        myDetectObjects();
+    </script>
+</body>
+</html>
