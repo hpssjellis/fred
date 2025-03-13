@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assembly Line Object Counter</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.2.0/tf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+    }
+    .video-container {
+      position: relative;
+      margin: 20px 0;
+      border: 1px solid #ddd;
+    }
+    .video-container canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #webcam {
+      display: block;
+      width: 100%;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+    .stat-box {
+      text-align: center;
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-radius: 5px;
+      min-width: 120px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .stat-box h3 {
+      margin-top: 0;
+      color: #555;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+      margin: 10px 0;
+    }
+    .chart-container {
+      margin-top: 30px;
+      height: 200px;
+    }
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.9);
+      z-index: 100;
+    }
+    .spinner {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #4CAF50;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    input[type="range"] {
+      width: 100%;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .settings {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f9f9f9;
+      border-radius: 5px;
+    }
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    .setting-item {
+      margin-bottom: 10px;
+    }
+    .line-position {
+      margin-top: 15px;
+    }
+    .counts-by-class {
+      margin-top: 20px;
+    }
+    .count-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .count-item:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>Loading YOLO model...</p>
+  </div>
+
+  <div class="container">
+    <h1>Assembly Line Object Counter</h1>
+    
+    <div class="controls">
+      <div class="control-group">
+        <button id="startBtn">Start Camera</button>
+        <button id="stopBtn" disabled>Stop Camera</button>
+      </div>
+      <div class="control-group">
+        <button id="resetCountBtn">Reset Counts</button>
+        <button id="downloadBtn">Download Data</button>
+      </div>
+    </div>
+
+    <div class="video-container">
+      <video id="webcam" autoplay muted></video>
+      <canvas id="output"></canvas>
+    </div>
+    
+    <div class="line-position">
+      <label for="linePosition">Counting Line Position:</label>
+      <input type="range" id="linePosition" min="10" max="90" value="50">
+      <span id="linePositionValue">50%</span>
+    </div>
+
+    <div class="stats">
+      <div class="stat-box">
+        <h3>Total Count</h3>
+        <div id="totalCount" class="stat-value">0</div>
+      </div>
+      <div class="stat-box">
+        <h3>Count Rate</h3>
+        <div id="countRate" class="stat-value">0/min</div>
+      </div>
+      <div class="stat-box">
+        <h3>Detection FPS</h3>
+        <div id="fps" class="stat-value">0</div>
+      </div>
+    </div>
+
+    <div class="counts-by-class">
+      <h3>Counts by Object Type</h3>
+      <div id="classCountsContainer"></div>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="countsChart"></canvas>
+    </div>
+
+    <div class="settings">
+      <h3>Detection Settings</h3>
+      <div class="settings-grid">
+        <div class="setting-item">
+          <label for="confidenceThreshold">Confidence Threshold:</label>
+          <input type="range" id="confidenceThreshold" min="1" max="99" value="40">
+          <span id="confidenceValue">0.40</span>
+        </div>
+        <div class="setting-item">
+          <label for="iouThreshold">IOU Threshold:</label>
+          <input type="range" id="iouThreshold" min="1" max="99" value="45">
+          <span id="iouValue">0.45</span>
+        </div>
+        <div class="setting-item">
+          <label for="countDelay">Min Count Interval (ms):</label>
+          <input type="number" id="countDelay" min="100" max="5000" value="500">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // COCO class names that YOLO can detect
+    const classNames = [
+      'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 
+      'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 
+      'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 
+      'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 
+      'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket', 
+      'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 
+      'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 
+      'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 
+      'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 
+      'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
+    ];
+
+    // App state
+    let model;
+    let webcamElement;
+    let canvas;
+    let ctx;
+    let streaming = false;
+    let videoWidth = 640;
+    let videoHeight = 480;
+    let linePosition = 0.5; // As a fraction of the height
+    let lastDetectionTime = 0;
+    let fps = 0;
+    let frameCount = 0;
+    let lastFpsUpdateTime = 0;
+    let totalCount = 0;
+    let countStartTime = null;
+    let trackedObjects = {};
+    let crossedObjects = new Set();
+    let classCounts = {};
+    let countHistory = [];
+    let countChart;
+
+    // Initialize class counts
+    classNames.forEach(className => {
+      classCounts[className] = 0;
+    });
+
+    // DOM elements
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const resetCountBtn = document.getElementById('resetCountBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const linePositionSlider = document.getElementById('linePosition');
+    const linePositionValue = document.getElementById('linePositionValue');
+    const totalCountEl = document.getElementById('totalCount');
+    const countRateEl = document.getElementById('countRate');
+    const fpsEl = document.getElementById('fps');
+    const confidenceThresholdSlider = document.getElementById('confidenceThreshold');
+    const confidenceValue = document.getElementById('confidenceValue');
+    const iouThresholdSlider = document.getElementById('iouThreshold');
+    const iouValue = document.getElementById('iouValue');
+    const countDelayInput = document.getElementById('countDelay');
+    const classCountsContainer = document.getElementById('classCountsContainer');
+    const loadingIndicator = document.querySelector('.loading');
+
+    // Initialize app when the page loads
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Load YOLO model
+        model = await tf.loadGraphModel('https://cdn.jsdelivr.net/gh/Hyuto/yolov8-tfjs/models/yolov8n-web-tfjs/model.json');
+        console.log('Model loaded successfully');
+        loadingIndicator.style.display = 'none';
+        
+        // Set up webcam elements
+        webcamElement = document.getElementById('webcam');
+        canvas = document.getElementById('output');
+        ctx = canvas.getContext('2d');
+
+        // Event listeners
+        startBtn.addEventListener('click', startVideo);
+        stopBtn.addEventListener('click', stopVideo);
+        resetCountBtn.addEventListener('click', resetCounts);
+        downloadBtn.addEventListener('click', downloadData);
+        
+        linePositionSlider.addEventListener('input', (e) => {
+          linePosition = parseInt(e.target.value) / 100;
+          linePositionValue.textContent = `${e.target.value}%`;
+        });
+        
+        confidenceThresholdSlider.addEventListener('input', (e) => {
+          confidenceValue.textContent = (parseInt(e.target.value) / 100).toFixed(2);
+        });
+        
+        iouThresholdSlider.addEventListener('input', (e) => {
+          iouValue.textContent = (parseInt(e.target.value) / 100).toFixed(2);
+        });
+
+        // Initialize chart
+        initChart();
+        
+        // Update class counts display
+        updateClassCountsDisplay();
+
+      } catch (error) {
+        console.error('Error initializing app:', error);
+        loadingIndicator.innerHTML = '<p>Error loading model. Please refresh and try again.</p>';
+      }
+    });
+
+    // Initialize the counts chart
+    function initChart() {
+      const chartCanvas = document.getElementById('countsChart');
+      const chartCtx = chartCanvas.getContext('2d');
+      
+      countChart = new Chart(chartCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Objects Counted',
+            data: [],
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1,
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Count'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Time'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Start the webcam video stream
+    async function startVideo() {
+      try {
+        const constraints = {
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: 'environment'
+          }
+        };
+        
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        webcamElement.srcObject = stream;
+        
+        return new Promise((resolve) => {
+          webcamElement.onloadedmetadata = () => {
+            videoWidth = webcamElement.videoWidth;
+            videoHeight = webcamElement.videoHeight;
+            webcamElement.width = videoWidth;
+            webcamElement.height = videoHeight;
+            canvas.width = videoWidth;
+            canvas.height = videoHeight;
+            
+            streaming = true;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            countStartTime = new Date();
+            
+            // Start detection loop
+            detectFrame();
+            resolve();
+          };
+        });
+      } catch (error) {
+        console.error('Error starting video:', error);
+        alert('Error accessing webcam. Please check permissions and try again.');
+      }
+    }
+
+    // Stop the webcam video stream
+    function stopVideo() {
+      if (webcamElement.srcObject) {
+        webcamElement.srcObject.getTracks().forEach(track => track.stop());
+        webcamElement.srcObject = null;
+      }
+      streaming = false;
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    }
+
+    // Reset all counts
+    function resetCounts() {
+      totalCount = 0;
+      countStartTime = streaming ? new Date() : null;
+      crossedObjects.clear();
+      trackedObjects = {};
+      
+      // Reset class counts
+      for (const className in classCounts) {
+        classCounts[className] = 0;
+      }
+      
+      // Update UI
+      totalCountEl.textContent = totalCount;
+      countRateEl.textContent = '0/min';
+      updateClassCountsDisplay();
+      
+      // Reset chart
+      countChart.data.labels = [];
+      countChart.data.datasets[0].data = [];
+      countChart.update();
+      countHistory = [];
+    }
+
+    // Download counting data as CSV
+    function downloadData() {
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:.]/g, '-');
+      
+      let csvContent = 'Class,Count\n';
+      csvContent += `Total,${totalCount}\n`;
+      
+      for (const className in classCounts) {
+        if (classCounts[className] > 0) {
+          csvContent += `${className},${classCounts[className]}\n`;
+        }
+      }
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `assembly-line-counts-${timestamp}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // Update the class counts display
+    function updateClassCountsDisplay() {
+      classCountsContainer.innerHTML = '';
+      
+      // Sort classes by count (descending)
+      const sortedClasses = Object.keys(classCounts)
+        .filter(className => classCounts[className] > 0)
+        .sort((a, b) => classCounts[b] - classCounts[a]);
+      
+      if (sortedClasses.length === 0) {
+        classCountsContainer.innerHTML = '<p>No objects counted yet</p>';
+        return;
+      }
+      
+      sortedClasses.forEach(className => {
+        const countItem = document.createElement('div');
+        countItem.className = 'count-item';
+        countItem.innerHTML = `
+          <span>${className}</span>
+          <span>${classCounts[className]}</span>
+        `;
+        classCountsContainer.appendChild(countItem);
+      });
+    }
+
+    // Main detection loop
+    async function detectFrame() {
+      if (!streaming) return;
+      
+      const now = performance.now();
+      
+      // Update FPS counter
+      frameCount++;
+      if (now - lastFpsUpdateTime > 1000) {
+        fps = Math.round((frameCount * 1000) / (now - lastFpsUpdateTime));
+        lastFpsUpdateTime = now;
+        frameCount = 0;
+        fpsEl.textContent = fps;
+      }
+      
+      // Only run detection if enough time has passed since last detection
+      if (now - lastDetectionTime > 100) { // Limit to 10 detections per second
+        lastDetectionTime = now;
+        
+        try {
+          await detectObjects();
+        } catch (error) {
+          console.error('Error during object detection:', error);
+        }
+      } else {
+        // Just draw the video frame and line without detection
+        drawVideoFrame();
+      }
+      
+      // Update count rate
+      if (countStartTime) {
+        const countMinutes = (new Date() - countStartTime) / 60000;
+        const rate = countMinutes > 0 ? (totalCount / countMinutes).toFixed(1) : '0';
+        countRateEl.textContent = `${rate}/min`;
+      }
+      
+      // Request next frame
+      requestAnimationFrame(detectFrame);
+    }
+
+    // Draw the current video frame to the canvas
+    function drawVideoFrame() {
+      ctx.drawImage(webcamElement, 0, 0, videoWidth, videoHeight);
+      
+      // Draw counting line
+      const lineY = videoHeight * linePosition;
+      ctx.beginPath();
+      ctx.moveTo(0, lineY);
+      ctx.lineTo(videoWidth, lineY);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'red';
+      ctx.stroke();
+    }
+
+    // Detect objects in the current frame
+    async function detectObjects() {
+      // Draw the video frame first
+      drawVideoFrame();
+      
+      // Run detection
+      const confidenceThreshold = parseInt(confidenceThresholdSlider.value) / 100;
+      const iouThreshold = parseInt(iouThresholdSlider.value) / 100;
+      const minCountInterval = parseInt(countDelayInput.value);
+      
+      // Prepare input tensor from canvas
+      const imgTensor = tf.browser.fromPixels(webcamElement)
+        .transpose([0, 1, 2]) // HWC -> HWC
+        .expandDims(0);       // Add batch dimension
+
+      // Run model prediction
+      const predictions = await model.executeAsync(imgTensor);
+      
+      // Process and extract results (following YOLOv8 output format)
+      // Different YOLO models may have different output formats - adjust as needed
+      const [boxes, scores, classes] = processModelOutput(predictions, confidenceThreshold, iouThreshold);
+      
+      imgTensor.dispose();
+      predictions.forEach(tensor => tensor.dispose());
+      
+      // Track objects and count those crossing the line
+      trackAndCountObjects(boxes, scores, classes, minCountInterval);
+    }
+
+    // Process YOLOv8 model output to get boxes, scores, and classes
+    function processModelOutput(predictions, confidenceThreshold, iouThreshold) {
+      // Extract data from model output
+      // Note: This implementation is for a specific YOLOv8 model format
+      // You may need to adjust based on the exact model you're using
+      const output = predictions[0].arraySync()[0];
+      
+      const boxes = [];
+      const scores = [];
+      const classes = [];
+      
+      // Process each detection
+      for (let i = 0; i < output.length; i++) {
+        const [x, y, w, h, ...classScores] = output[i];
+        
+        // Find class with highest score
+        let maxScore = 0;
+        let classIndex = -1;
+        
+        for (let j = 0; j < classScores.length; j++) {
+          if (classScores[j] > maxScore) {
+            maxScore = classScores[j];
+            classIndex = j;
+          }
+        }
+        
+        // Filter by confidence threshold
+        if (maxScore >= confidenceThreshold) {
+          // Convert x,y,w,h to x1,y1,x2,y2 (top-left, bottom-right corners)
+          const x1 = (x - w/2) * videoWidth;
+          const y1 = (y - h/2) * videoHeight;
+          const x2 = (x + w/2) * videoWidth;
+          const y2 = (y + h/2) * videoHeight;
+          
+          boxes.push([x1, y1, x2, y2]);
+          scores.push(maxScore);
+          classes.push(classIndex);
+        }
+      }
+      
+      // Apply non-max suppression
+      const selectedIndices = tf.image.nonMaxSuppressionAsync(
+        tf.tensor2d(boxes),
+        tf.tensor1d(scores),
+        100, // Max output size
+        iouThreshold
+      );
+      
+      // Return filtered results
+      return [boxes, scores, classes];
+    }
+
+    // Track objects between frames and count those crossing the line
+    function trackAndCountObjects(boxes, scores, classes, minCountInterval) {
+      const lineY = videoHeight * linePosition;
+      const currentTime = Date.now();
+      const newTrackedObjects = {};
+      
+      // Process each detected object
+      for (let i = 0; i < boxes.length; i++) {
+        const [x1, y1, x2, y2] = boxes[i];
+        const score = scores[i];
+        const classId = classes[i];
+        const className = classNames[classId];
+        
+        // Calculate box center
+        const centerX = (x1 + x2) / 2;
+        const centerY = (y1 + y2) / 2;
+        
+        // Create object ID based on position and class
+        // This is a simple tracking approach - for production, consider a more robust tracking algorithm
+        const objectId = `${className}_${Math.round(centerX / 10)}_${Math.round(centerY / 10)}`;
+        
+        // Store current position
+        newTrackedObjects[objectId] = {
+          centerY,
+          className,
+          lastSeen: currentTime
+        };
+        
+        // Draw bounding box and label
+        ctx.beginPath();
+        ctx.rect(x1, y1, x2 - x1, y2 - y1);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'green';
+        ctx.stroke();
+        
+        ctx.fillStyle = 'green';
+        ctx.font = '16px Arial';
+        ctx.fillText(`${className}: ${score.toFixed(2)}`, x1, y1 > 20 ? y1 - 5 : y1 + 20);
+        
+        // Check if object is close to the line
+        const distanceToLine = Math.abs(centerY - lineY);
+        
+        // Check if this object has been tracked before
+        if (trackedObjects[objectId]) {
+          const previousY = trackedObjects[objectId].centerY;
+          
+          // Check if object has crossed the line (from above to below)
+          if (previousY < lineY && centerY >= lineY) {
+            // Check if this object has been counted already
+            if (!crossedObjects.has(objectId)) {
+              // Check if enough time has passed since last counting this class
+              const className = trackedObjects[objectId].className;
+              const lastCountTime = trackedObjects[objectId].lastCounted || 0;
+              
+              if (currentTime - lastCountTime > minCountInterval) {
+                // Count the object
+                totalCount++;
+                classCounts[className]++;
+                crossedObjects.add(objectId);
+                
+                // Update UI
+                totalCountEl.textContent = totalCount;
+                updateClassCountsDisplay();
+                
+                // Update chart data at most once per second
+                const timestamp = new Date().toLocaleTimeString();
+                if (countHistory.length === 0 || 
+                    currentTime - countHistory[countHistory.length - 1].time > 1000) {
+                  countHistory.push({
+                    time: currentTime,
+                    count: totalCount,
+                    label: timestamp
+                  });
+                  
+                  // Keep last 30 data points
+                  if (countHistory.length > 30) {
+                    countHistory.shift();
+                  }
+                  
+                  // Update chart
+                  countChart.data.labels = countHistory.map(point => point.label);
+                  countChart.data.datasets[0].data = countHistory.map(point => point.count);
+                  countChart.update();
+                }
+                
+                // Mark as counted
+                newTrackedObjects[objectId].lastCounted = currentTime;
+              }
+            }
+          }
+        }
+      }
+      
+      // Clean up tracking - remove objects not seen recently
+      trackedObjects = newTrackedObjects;
+    }
+  </script>
+</body>
+</html>
