@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Object Counter</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+</head>
+<body>
+    <h2>YOLO Object Counter</h2>
+    <video id="myVideo" width="640" height="480" autoplay></video>
+    <canvas id="myCanvas" width="640" height="480"></canvas>
+    <p id="myCountDisplay">Total Objects: 0</p>
+    <p id="myCategoryCount"></p>
+    <script>
+        let myVideo = document.getElementById("myVideo");
+        let myCanvas = document.getElementById("myCanvas");
+        let myCtx = myCanvas.getContext("2d");
+        let myCounts = {};
+        let myTotalCount = 0;
+        let myLineY = 400; // Fixed line position
+        
+        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+            myVideo.srcObject = stream;
+        });
+
+        async function myDetectObjects() {
+            const model = await cocoSsd.load();
+            setInterval(async () => {
+                myCtx.drawImage(myVideo, 0, 0, myCanvas.width, myCanvas.height);
+                myCtx.strokeStyle = "red";
+                myCtx.beginPath();
+                myCtx.moveTo(0, myLineY);
+                myCtx.lineTo(myCanvas.width, myLineY);
+                myCtx.stroke();
+                
+                const predictions = await model.detect(myVideo);
+                predictions.forEach(pred => {
+                    let [x, y, width, height] = pred.bbox;
+                    let objectCenterY = y + height / 2;
+                    if (objectCenterY > myLineY - 5 && objectCenterY < myLineY + 5) {
+                        if (!myCounts[pred.class]) myCounts[pred.class] = 0;
+                        myCounts[pred.class]++;
+                        myTotalCount++;
+                    }
+                    myCtx.strokeRect(x, y, width, height);
+                    myCtx.fillText(pred.class, x, y - 5);
+                });
+                document.getElementById("myCountDisplay").innerText = "Total Objects: " + myTotalCount;
+                document.getElementById("myCategoryCount").innerText = JSON.stringify(myCounts);
+            }, 1000);
+        }
+        myDetectObjects();
+    </script>
+</body>
+</html>
