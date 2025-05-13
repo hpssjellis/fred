@@ -14,7 +14,6 @@
   import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/controls/OrbitControls.js';
 
   window.myinit = function() {
-    // 2D Tonnetz placeholder on canvas
     let myctx = document.getElementById("myCanvas2D").getContext("2d");
     myctx.clearRect(0, 0, 400, 400);
     myctx.font = "16px sans-serif";
@@ -33,7 +32,6 @@
       }
     }
 
-    // 3D scene setup
     let myscene = new THREE.Scene();
     let mycamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
     let myrenderer = new THREE.WebGLRenderer();
@@ -44,7 +42,6 @@
     let mycontrols = new OrbitControls(mycamera, myrenderer.domElement);
     mycamera.position.z = 5;
 
-    // Draw 3D spheres in a harmonic grid
     for (let x = -2; x <= 2; x++) {
       for (let y = -2; y <= 2; y++) {
         let mygeometry = new THREE.SphereGeometry(0.2, 12, 12);
