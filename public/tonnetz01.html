@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Euler's Tonnetz - 2D and 3D</title>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body style="margin:0;overflow:hidden">
+  <input type="button" value="Toggle View (2D/3D)" onclick="mytoggleView()">
+
+  <script>
+    let myscene, mycamera, myrenderer, mycontrols;
+    let myis3D = false;
+    let mynodes = [];
+
+    myinit();
+
+    function myinit() {
+      myscene = new THREE.Scene();
+      mycamera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+      mycamera.position.z = 20;
+
+      myrenderer = new THREE.WebGLRenderer({antialias: true});
+      myrenderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(myrenderer.domElement);
+
+      mycontrols = new THREE.OrbitControls(mycamera, myrenderer.domElement);
+      mycontrols.enablePan = false;
+
+      mydrawTonnetz2D();
+      myanimate();
+    }
+
+    function myclearScene() {
+      while(myscene.children.length > 0){ myscene.remove(myscene.children[0]); }
+      mynodes = [];
+    }
+
+    function mydrawTonnetz2D() {
+      const mynotes = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
+      let mymaterial = new THREE.MeshBasicMaterial({ color: 0x0077ff });
+      let mytextColor = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      let mygeometry = new THREE.CircleGeometry(0.4, 16);
+
+      const myrows = 5, mycols = 7;
+      for (let r = 0; r < myrows; r++) {
+        for (let c = 0; c < mycols; c++) {
+          let myx = c * 2 + (r % 2) * 1;
+          let myy = r * 1.7;
+          let myindex = (r * mycols + c) % mynotes.length;
+
+          let mycircle = new THREE.Mesh(mygeometry, mymaterial.clone());
+          mycircle.position.set(myx, -myy, 0);
+          myscene.add(mycircle);
+          mynodes.push(mycircle);
+
+          // Add note label
+          let mycanvas = document.createElement('canvas');
+          let myctx = mycanvas.getContext('2d');
+          mycanvas.width = 128;
+          mycanvas.height = 64;
+          myctx.fillStyle = 'white';
+          myctx.font = '24px Arial';
+          myctx.fillText(mynotes[myindex], 32, 40);
+
+          let mytex = new THREE.CanvasTexture(mycanvas);
+          let mylabel = new THREE.MeshBasicMaterial({ map: mytex, transparent: true });
+          let myplane = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.75), mylabel);
+          myplane.position.set(myx, -myy, 0.1);
+          myscene.add(myplane);
+        }
+      }
+    }
+
+    function mydrawTonnetz3D() {
+      const mynotes = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
+      let mymaterial = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+      let mytextColor = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      let mygeometry = new THREE.SphereGeometry(0.4, 16, 16);
+
+      const myrows = 5, mycols = 7;
+      for (let r = 0; r < myrows; r++) {
+        for (let c = 0; c < mycols; c++) {
+          let myx = c * 2;
+          let myy = r * 2;
+          let myz = Math.sin((c + r) * 0.5) * 2;
+          let myindex = (r * mycols + c) % mynotes.length;
+
+          let mysphere = new THREE.Mesh(mygeometry, mymaterial.clone());
+          mysphere.position.set(myx, -myy, myz);
+          myscene.add(mysphere);
+          mynodes.push(mysphere);
+
+          // Add note label
+          let mycanvas = document.createElement('canvas');
+          let myctx = mycanvas.getContext('2d');
+          mycanvas.width = 128;
+          mycanvas.height = 64;
+          myctx.fillStyle = 'white';
+          myctx.font = '24px Arial';
+          myctx.fillText(mynotes[myindex], 32, 40);
+
+          let mytex = new THREE.CanvasTexture(mycanvas);
+          let mylabel = new THREE.MeshBasicMaterial({ map: mytex, transparent: true });
+          let myplane = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.75), mylabel);
+          myplane.position.set(myx, -myy, myz + 0.6);
+          myscene.add(myplane);
+        }
+      }
+    }
+
+    function mytoggleView() {
+      myclearScene();
+      if (myis3D) {
+        mydrawTonnetz2D();
+        myis3D = false;
+      } else {
+        mydrawTonnetz3D();
+        myis3D = true;
+      }
+    }
+
+    function myanimate() {
+      requestAnimationFrame(myanimate);
+      myrenderer.render(myscene, mycamera);
+      mycontrols.update();
+    }
+
+    window.addEventListener('resize', () => {
+      mycamera.aspect = window.innerWidth / window.innerHeight;
+      mycamera.updateProjectionMatrix();
+      myrenderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
