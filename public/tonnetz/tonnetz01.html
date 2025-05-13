@@ -1,65 +1,73 @@
-<!DOCTYPE html>
-<html>
+
+      <!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Euler Tonnetz 2D + 3D</title>
 </head>
 <body>
-  <input type="button" value="Start" onclick="myinit()"><br>
+  <input type="button" value="Start"><br>
   <canvas id="myCanvas2D" width="400" height="400" style="border:1px solid gray"></canvas><br>
   <div id="my3DContainer"></div>
 
-<script type="module">
-  import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.174.0/build/three.module.js';
-  import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/controls/OrbitControls.js';
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.174.0/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/controls/OrbitControls.js';
 
-  window.myinit = function() {
-    let myctx = document.getElementById("myCanvas2D").getContext("2d");
-    myctx.clearRect(0, 0, 400, 400);
-    myctx.font = "16px sans-serif";
+    function myinit() {
+      let myctx = document.getElementById("myCanvas2D").getContext("2d");
+      myctx.clearRect(0, 0, 400, 400);
+      myctx.font = "16px sans-serif";
 
-    let myNotes = ["C", "G", "D", "A", "E"];
-    let size = 60;
+      let myNotes = ["C", "G", "D", "A", "E"];
+      let size = 60;
 
-    for (let x = 0; x < myNotes.length; x++) {
-      for (let y = 0; y < 5; y++) {
-        let cx = x * size + ((y % 2) * (size / 2)) + 40;
-        let cy = y * size + 40;
-        myctx.beginPath();
-        myctx.arc(cx, cy, 20, 0, 2 * Math.PI);
-        myctx.stroke();
-        myctx.fillText(myNotes[x % myNotes.length], cx - 6, cy + 5);
+      for (let x = 0; x < myNotes.length; x++) {
+        for (let y = 0; y < 5; y++) {
+          let cx = x * size + ((y % 2) * (size / 2)) + 40;
+          let cy = y * size + 40;
+          myctx.beginPath();
+          myctx.arc(cx, cy, 20, 0, 2 * Math.PI);
+          myctx.stroke();
+          myctx.fillText(myNotes[x % myNotes.length], cx - 6, cy + 5);
+        }
       }
-    }
 
-    let myscene = new THREE.Scene();
-    let mycamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-    let myrenderer = new THREE.WebGLRenderer();
-    myrenderer.setSize(400, 400);
-    document.getElementById("my3DContainer").innerHTML = "";
-    document.getElementById("my3DContainer").appendChild(myrenderer.domElement);
+      let myscene = new THREE.Scene();
+      let mycamera = new THREE.PerspectiveCamera(75, 400 / 400, 0.1, 1000);
+      let myrenderer = new THREE.WebGLRenderer();
+      myrenderer.setSize(400, 400);
+      
+      document.getElementById("my3DContainer").innerHTML = "";
+      document.getElementById("my3DContainer").appendChild(myrenderer.domElement);
 
-    let mycontrols = new OrbitControls(mycamera, myrenderer.domElement);
-    mycamera.position.z = 5;
+      let mycontrols = new OrbitControls(mycamera, myrenderer.domElement);
+      mycontrols.enableDamping = true;
+      mycontrols.dampingFactor = 0.05;
+      mycamera.position.set(0, 0, 5);
 
-    for (let x = -2; x <= 2; x++) {
-      for (let y = -2; y <= 2; y++) {
-        let mygeometry = new THREE.SphereGeometry(0.2, 12, 12);
-        let mymaterial = new THREE.MeshBasicMaterial({ color: 0x3399ff, wireframe: true });
-        let mysphere = new THREE.Mesh(mygeometry, mymaterial);
-        mysphere.position.set(x, y, Math.sin(x + y));
-        myscene.add(mysphere);
+      for (let x = -2; x <= 2; x++) {
+        for (let y = -2; y <= 2; y++) {
+          let mygeometry = new THREE.SphereGeometry(0.2, 12, 12);
+          let mymaterial = new THREE.MeshBasicMaterial({ color: 0x3399ff, wireframe: true });
+          let mysphere = new THREE.Mesh(mygeometry, mymaterial);
+          mysphere.position.set(x, y, Math.sin(x + y) * 2);
+          myscene.add(mysphere);
+        }
       }
+
+      function myanimate() {
+        requestAnimationFrame(myanimate);
+        mycontrols.update();
+        myrenderer.render(myscene, mycamera);
+      }
+
+      myanimate();
     }
 
-    function myanimate() {
-      requestAnimationFrame(myanimate);
-      mycontrols.update();
-      myrenderer.render(myscene, mycamera);
-    }
-
-    myanimate();
-  };
-</script>
+    window.onload = function() {
+      document.querySelector("input").onclick = myinit;
+    };
+  </script>
 </body>
 </html>
