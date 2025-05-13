@@ -1,73 +1,66 @@
-
-      <!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Euler Tonnetz 2D + 3D</title>
+  <title>My Tonnetz Grid</title>
 </head>
 <body>
-  <input type="button" value="Start"><br>
-  <canvas id="myCanvas2D" width="400" height="400" style="border:1px solid gray"></canvas><br>
-  <div id="my3DContainer"></div>
 
-  <script type="module">
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.174.0/build/three.module.js';
-    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/controls/OrbitControls.js';
+<h3>My Tonnetz Grid (Centered on C)</h3>
 
-    function myinit() {
-      let myctx = document.getElementById("myCanvas2D").getContext("2d");
-      myctx.clearRect(0, 0, 400, 400);
-      myctx.font = "16px sans-serif";
+<div id="myGrid" style="font-family: monospace; line-height: 2em;"></div>
 
-      let myNotes = ["C", "G", "D", "A", "E"];
-      let size = 60;
+<script>
+let myPitchClasses = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-      for (let x = 0; x < myNotes.length; x++) {
-        for (let y = 0; y < 5; y++) {
-          let cx = x * size + ((y % 2) * (size / 2)) + 40;
-          let cy = y * size + 40;
-          myctx.beginPath();
-          myctx.arc(cx, cy, 20, 0, 2 * Math.PI);
-          myctx.stroke();
-          myctx.fillText(myNotes[x % myNotes.length], cx - 6, cy + 5);
-        }
-      }
+function myGetPitchName(baseIndex, semitoneOffset) {
+  return myPitchClasses[(baseIndex + semitoneOffset + 12) % 12];
+}
 
-      let myscene = new THREE.Scene();
-      let mycamera = new THREE.PerspectiveCamera(75, 400 / 400, 0.1, 1000);
-      let myrenderer = new THREE.WebGLRenderer();
-      myrenderer.setSize(400, 400);
-      
-      document.getElementById("my3DContainer").innerHTML = "";
-      document.getElementById("my3DContainer").appendChild(myrenderer.domElement);
+// create Tonnetz grid data
+let myGridWidth = 7;  // horizontal (perfect fifths)
+let myGridHeight = 5; // vertical (major thirds)
+let myCenterNote = "C";
+let myCenterIndex = myPitchClasses.indexOf(myCenterNote);
 
-      let mycontrols = new OrbitControls(mycamera, myrenderer.domElement);
-      mycontrols.enableDamping = true;
-      mycontrols.dampingFactor = 0.05;
-      mycamera.position.set(0, 0, 5);
+// audio synth function
+function myPlayNote(noteName) {
+  let myAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let myOsc = myAudioCtx.createOscillator();
+  let myGain = myAudioCtx.createGain();
 
-      for (let x = -2; x <= 2; x++) {
-        for (let y = -2; y <= 2; y++) {
-          let mygeometry = new THREE.SphereGeometry(0.2, 12, 12);
-          let mymaterial = new THREE.MeshBasicMaterial({ color: 0x3399ff, wireframe: true });
-          let mysphere = new THREE.Mesh(mygeometry, mymaterial);
-          mysphere.position.set(x, y, Math.sin(x + y) * 2);
-          myscene.add(mysphere);
-        }
-      }
+  let myFreqs = {
+    "C": 261.63, "C#": 277.18, "D": 293.66, "D#": 311.13, "E": 329.63,
+    "F": 349.23, "F#": 369.99, "G": 392.00, "G#": 415.30, "A": 440.00,
+    "A#": 466.16, "B": 493.88
+  };
 
-      function myanimate() {
-        requestAnimationFrame(myanimate);
-        mycontrols.update();
-        myrenderer.render(myscene, mycamera);
-      }
+  myOsc.type = "sine";
+  myOsc.frequency.value = myFreqs[noteName];
+  myOsc.connect(myGain);
+  myGain.connect(myAudioCtx.destination);
+  myGain.gain.setValueAtTime(0.2, myAudioCtx.currentTime);
+  myOsc.start();
+  myOsc.stop(myAudioCtx.currentTime + 0.5);
+}
 
-      myanimate();
+// render grid
+function myRenderTonnetz() {
+  let myHTML = "";
+  for (let y = -Math.floor(myGridHeight / 2); y <= Math.floor(myGridHeight / 2); y++) {
+    for (let x = -Math.floor(myGridWidth / 2); x <= Math.floor(myGridWidth / 2); x++) {
+      let mySemitoneOffset = x * 7 + y * 4;  // Right = perfect fifth (7), Down = major third (4)
+      let myNote = myGetPitchName(myCenterIndex, mySemitoneOffset);
+      myHTML += `<input type="button" value="${myNote}" style="width:40px;margin:2px"
+        onclick="myPlayNote('${myNote}')">`;
     }
+    myHTML += "<br>";
+  }
+  document.getElementById("myGrid").innerHTML = myHTML;
+}
 
-    window.onload = function() {
-      document.querySelector("input").onclick = myinit;
-    };
-  </script>
+myRenderTonnetz();
+</script>
+
 </body>
 </html>
