@@ -1,134 +1,182 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Euler's Tonnetz - 2D and 3D</title>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.min.js"></script>
+  <meta charset="utf-8">
+  <title>Euler Tonnetz 2D/3D Visualization</title>
 </head>
-<body style="margin:0;overflow:hidden">
-  <input type="button" value="Toggle View (2D/3D)" onclick="mytoggleView()">
+<body style="margin:0; overflow:hidden;">
 
-  <script>
-    let myscene, mycamera, myrenderer, mycontrols;
-    let myis3D = false;
-    let mynodes = [];
+<!-- Toggle button (inline style, no external CSS) -->
+<input id="toggle" type="button" value="Switch to 3D View"
+       style="position:absolute; top:10px; left:10px; z-index:1; padding:6px;">
 
-    myinit();
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.174.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/renderers/CSS2DRenderer.js';
 
-    function myinit() {
-      myscene = new THREE.Scene();
-      mycamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      mycamera.position.z = 20;
+// Scene, camera, renderer
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x202020);
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.set(0, 0, 12);
+const renderer = new THREE.WebGLRenderer({antialias: true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-      myrenderer = new THREE.WebGLRenderer({ antialias: true });
-      myrenderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(myrenderer.domElement);
+// CSS2D Renderer for text labels
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0';
+labelRenderer.domElement.style.pointerEvents = 'none'; // labels not interactive
+document.body.appendChild(labelRenderer.domElement);
 
-      mycontrols = new THREE.OrbitControls(mycamera, myrenderer.domElement);
-      mycontrols.enablePan = false;
+// OrbitControls for camera navigation
+const controls = new OrbitControls(camera, labelRenderer.domElement);
+controls.target.set(0, 0, 0);
+controls.update();
 
-      mydrawTonnetz2D();
-      myanimate();
+// Data arrays for nodes and edges
+const nodes = [];   // will hold {i,j,x2d,y2d,exp2,mesh,label}
+const edges = [];   // will hold THREE.Line objects
+
+// Mapping some common ratios to note names (5-limit just intonation)
+const noteMap = {
+  "1/1": "C", "3/2": "G", "5/4": "E", "4/3": "F",
+  "5/3": "A", "15/8": "B", "9/8": "D"
+};
+
+// Build Tonnetz nodes in a grid of i,j ∈ [-2..2]
+const unit = 2.0;        // spacing unit for x-y grid
+const zFactor = 0.4;     // scale factor for z-axis (exponent of 2)
+
+for (let j = -2; j <= 2; j++) {
+  for (let i = -2; i <= 2; i++) {
+    // Compute 2D position (triangular lattice)
+    const x2d = unit * (i + 0.5 * j);
+    const y2d = unit * (Math.sqrt(3) / 2 * j);
+    // Compute exponent of 2 to normalize pitch into [1,2)
+    let ratio = Math.pow(3, i) * Math.pow(5, j);
+    let exp2 = 0;
+    while (ratio >= 2) { ratio /= 2; exp2 += 1; }
+    while (ratio < 1)  { ratio *= 2; exp2 -= 1; }
+    // Rationalize the ratio for labeling
+    let num = Math.pow(3, Math.max(i,0)) * Math.pow(5, Math.max(j,0));
+    let den = Math.pow(3, Math.max(-i,0)) * Math.pow(5, Math.max(-j,0));
+    if (exp2 < 0) {
+      num *= Math.pow(2, -exp2);
+    } else if (exp2 > 0) {
+      den *= Math.pow(2, exp2);
     }
+    const fracStr = (den === 1) ? `${num}` : `${num}/${den}`;
+    const labelStr = noteMap[fracStr] || fracStr;
 
-    function myclearScene() {
-      while (myscene.children.length > 0) {
-        myscene.remove(myscene.children[0]);
-      }
-      mynodes = [];
+    // Create sphere mesh for node
+    const sphereGeo = new THREE.SphereGeometry(0.15, 16, 12);
+    const sphereMat = new THREE.MeshBasicMaterial({color: 0xffffff});
+    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+    sphere.position.set(x2d, y2d, 0);  // start in 2D (z=0)
+    scene.add(sphere);
+
+    // Create 2D label
+    const div = document.createElement('div');
+    div.textContent = labelStr;
+    div.style.color = 'white';
+    div.style.fontSize = '12px';
+    div.style.fontFamily = 'Arial, sans-serif';
+    div.style.padding = '2px';
+    const label = new CSS2DObject(div);
+    label.position.set(0, 0, 0);
+    sphere.add(label);  // attach label to sphere
+
+    nodes.push({i, j, x2d, y2d, exp2, mesh: sphere});
+  }
+}
+
+// Create edges between neighboring nodes (triangular tiling)
+const lineMat = new THREE.LineBasicMaterial({color: 0x888888});
+const indexNode = (i, j) => nodes.find(n => n.i===i && n.j===j);
+
+// Helper to add edge if both endpoints exist
+function addEdge(i1,j1, i2,j2) {
+  const n1 = indexNode(i1,j1), n2 = indexNode(i2,j2);
+  if (!n1 || !n2) return;
+  const points = [];
+  points.push(new THREE.Vector3(0,0,0));
+  points.push(new THREE.Vector3(0,0,0));
+  const geom = new THREE.BufferGeometry();
+  // We'll set positions after (so we can toggle z).
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(6, 3));
+  const line = new THREE.Line(geom, lineMat);
+  scene.add(line);
+  edges.push({line, n1, n2});
+}
+
+// Add edges in three lattice directions
+for (const n of nodes) {
+  const {i,j} = n;
+  addEdge(i,j, i+1,j);
+  addEdge(i,j, i,j+1);
+  addEdge(i,j, i-1,j+1);
+}
+
+// Initial placement of edges (flat)
+function updateEdges() {
+  for (const e of edges) {
+    const p1 = e.n1.mesh.position;
+    const p2 = e.n2.mesh.position;
+    const positions = e.line.geometry.attributes.position.array;
+    positions[0] = p1.x; positions[1] = p1.y; positions[2] = p1.z;
+    positions[3] = p2.x; positions[4] = p2.y; positions[5] = p2.z;
+    e.line.geometry.attributes.position.needsUpdate = true;
+  }
+}
+updateEdges();
+
+// Resize handling
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Toggle between 2D and 3D views
+let mode2D = true;
+document.getElementById('toggle').addEventListener('click', () => {
+  mode2D = !mode2D;
+  if (mode2D) {
+    document.getElementById('toggle').value = "Switch to 3D View";
+    // Flatten to z=0
+    for (const n of nodes) {
+      n.mesh.position.set(n.x2d, n.y2d, 0);
     }
-
-    function mydrawTonnetz2D() {
-      const mynotes = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
-      let mymaterial = new THREE.MeshBasicMaterial({ color: 0x0077ff });
-      let mygeometry = new THREE.CircleGeometry(0.4, 16);
-
-      const myrows = 5, mycols = 7;
-      for (let r = 0; r < myrows; r++) {
-        for (let c = 0; c < mycols; c++) {
-          let myx = c * 2 + (r % 2) * 1;
-          let myy = r * 1.7;
-          let myindex = (r * mycols + c) % mynotes.length;
-
-          let mycircle = new THREE.Mesh(mygeometry, mymaterial.clone());
-          mycircle.position.set(myx, -myy, 0);
-          myscene.add(mycircle);
-          mynodes.push(mycircle);
-
-          let mycanvas = document.createElement('canvas');
-          let myctx = mycanvas.getContext('2d');
-          mycanvas.width = 128;
-          mycanvas.height = 64;
-          myctx.fillStyle = 'white';
-          myctx.font = '24px Arial';
-          myctx.fillText(mynotes[myindex], 32, 40);
-
-          let mytex = new THREE.CanvasTexture(mycanvas);
-          let mylabel = new THREE.MeshBasicMaterial({ map: mytex, transparent: true });
-          let myplane = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.75), mylabel);
-          myplane.position.set(myx, -myy, 0.1);
-          myscene.add(myplane);
-        }
-      }
+    camera.position.set(0, 0, 12);
+    controls.target.set(0, 0, 0);
+    controls.update();
+  } else {
+    document.getElementById('toggle').value = "Switch to 2D View";
+    // Use exponent2 for z coordinate
+    for (const n of nodes) {
+      const z = n.exp2 * zFactor;
+      n.mesh.position.set(n.x2d, n.y2d, z);
     }
+    camera.position.set(8, 8, 8);
+    controls.target.set(0, 0, 0);
+    controls.update();
+  }
+  updateEdges();
+});
 
-    function mydrawTonnetz3D() {
-      const mynotes = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
-      let mymaterial = new THREE.MeshBasicMaterial({ color: 0xff6600 });
-      let mygeometry = new THREE.SphereGeometry(0.4, 16, 16);
+// Animation loop
+function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+}
+animate();
 
-      const myrows = 5, mycols = 7;
-      for (let r = 0; r < myrows; r++) {
-        for (let c = 0; c < mycols; c++) {
-          let myx = c * 2;
-          let myy = r * 2;
-          let myz = Math.sin((c + r) * 0.5) * 2;
-          let myindex = (r * mycols + c) % mynotes.length;
-
-          let mysphere = new THREE.Mesh(mygeometry, mymaterial.clone());
-          mysphere.position.set(myx, -myy, myz);
-          myscene.add(mysphere);
-          mynodes.push(mysphere);
-
-          let mycanvas = document.createElement('canvas');
-          let myctx = mycanvas.getContext('2d');
-          mycanvas.width = 128;
-          mycanvas.height = 64;
-          myctx.fillStyle = 'white';
-          myctx.font = '24px Arial';
-          myctx.fillText(mynotes[myindex], 32, 40);
-
-          let mytex = new THREE.CanvasTexture(mycanvas);
-          let mylabel = new THREE.MeshBasicMaterial({ map: mytex, transparent: true });
-          let myplane = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.75), mylabel);
-          myplane.position.set(myx, -myy, myz + 0.6);
-          myscene.add(myplane);
-        }
-      }
-    }
-
-    function mytoggleView() {
-      myclearScene();
-      if (myis3D) {
-        mydrawTonnetz2D();
-        myis3D = false;
-      } else {
-        mydrawTonnetz3D();
-        myis3D = true;
-      }
-    }
-
-    function myanimate() {
-      requestAnimationFrame(myanimate);
-      myrenderer.render(myscene, mycamera);
-      mycontrols.update();
-    }
-
-    window.addEventListener('resize', () => {
-      mycamera.aspect = window.innerWidth / window.innerHeight;
-      mycamera.updateProjectionMatrix();
-      myrenderer.setSize(window.innerWidth, window.innerHeight);
-    });
-  </script>
+</script>
 </body>
 </html>
