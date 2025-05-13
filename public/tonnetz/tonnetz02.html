@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>My Tonnetz Grid with Instructions</title>
+</head>
+<body>
+
+<h3>My Tonnetz Grid (Centered on C)</h3>
+
+<p>
+This is a harmonic Tonnetz grid using 12-tone equal temperament. The directions correspond to musical intervals:
+<ul>
+  <li><b>→ Right</b>: Perfect Fifth (e.g., C → G)</li>
+  <li><b>← Left</b>: Perfect Fourth (e.g., G → C)</li>
+  <li><b>↓ Down</b>: Major Third (e.g., C → E)</li>
+  <li><b>↑ Up</b>: Minor Sixth (inverse of Major Third)</li>
+  <li><b>↘ Diagonal Down-Right</b>: Combine Fifth + Major Third (e.g., C → B)</li>
+  <li>Click on any note to hear it.</li>
+</ul>
+</p>
+
+<div id="myGrid" style="font-family: monospace; line-height: 2em;"></div>
+
+<script>
+let myPitchClasses = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+function myGetPitchName(baseIndex, semitoneOffset) {
+  return myPitchClasses[(baseIndex + semitoneOffset + 12) % 12];
+}
+
+// create Tonnetz grid data
+let myGridWidth = 7;  // horizontal (perfect fifths)
+let myGridHeight = 5; // vertical (major thirds)
+let myCenterNote = "C";
+let myCenterIndex = myPitchClasses.indexOf(myCenterNote);
+
+// audio synth function
+function myPlayNote(noteName) {
+  let myAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let myOsc = myAudioCtx.createOscillator();
+  let myGain = myAudioCtx.createGain();
+
+  let myFreqs = {
+    "C": 261.63, "C#": 277.18, "D": 293.66, "D#": 311.13, "E": 329.63,
+    "F": 349.23, "F#": 369.99, "G": 392.00, "G#": 415.30, "A": 440.00,
+    "A#": 466.16, "B": 493.88
+  };
+
+  myOsc.type = "sine";
+  myOsc.frequency.value = myFreqs[noteName];
+  myOsc.connect(myGain);
+  myGain.connect(myAudioCtx.destination);
+  myGain.gain.setValueAtTime(0.2, myAudioCtx.currentTime);
+  myOsc.start();
+  myOsc.stop(myAudioCtx.currentTime + 0.5);
+}
+
+// render grid
+function myRenderTonnetz() {
+  let myHTML = "";
+  for (let y = -Math.floor(myGridHeight / 2); y <= Math.floor(myGridHeight / 2); y++) {
+    for (let x = -Math.floor(myGridWidth / 2); x <= Math.floor(myGridWidth / 2); x++) {
+      let mySemitoneOffset = x * 7 + y * 4;  // Right = perfect fifth (7), Down = major third (4)
+      let myNote = myGetPitchName(myCenterIndex, mySemitoneOffset);
+      myHTML += `<input type="button" value="${myNote}" style="width:40px;margin:2px"
+        onclick="myPlayNote('${myNote}')">`;
+    }
+    myHTML += "<br>";
+  }
+  document.getElementById("myGrid").innerHTML = myHTML;
+}
+
+myRenderTonnetz();
+</script>
+
+</body>
+</html>
