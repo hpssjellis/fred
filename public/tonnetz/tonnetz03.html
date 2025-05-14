@@ -3,12 +3,13 @@
 <head>
   <title>3D Torus with Unwrap</title>
   <style>
-    body { margin: 0; overflow: hidden; font-family: sans-serif; }
+    body { margin: 0; overflow: hidden; }
     #myButton { position: absolute; top: 10px; left: 10px; z-index: 10; }
   </style>
 </head>
 <body>
   <input type="button" value="Unwrap Skin" id="myButton" onclick="myToggleUnwrap()">
+
   <script type="module">
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
     import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
@@ -25,10 +26,8 @@
 
       myControls = new OrbitControls(myCamera, myRenderer.domElement);
       myCamera.position.z = 5;
-      myControls.update();
 
       myTexture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/uv_grid_opengl.jpg');
-
       const myGeometry = new THREE.TorusGeometry(1, 0.4, 32, 64);
       const myMaterial = new THREE.MeshBasicMaterial({ map: myTexture });
       myTorus = new THREE.Mesh(myGeometry, myMaterial);
@@ -54,6 +53,7 @@
       myRenderer.render(myScene, myCamera);
     }
 
+    // ✅ Expose globally for HTML onclick
     window.myToggleUnwrap = function () {
       myShowing2D = !myShowing2D;
       myTorus.visible = !myShowing2D;
