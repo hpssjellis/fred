@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>3D Torus Example</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    input { position: absolute; top: 10px; left: 10px; z-index: 10; }
+  </style>
+</head>
+<body>
+  <input type="button" value="Rotate Toggle" onclick="myToggleRotate()">
+
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+    let myScene, myCamera, myRenderer, myTorus, myControls;
+    let myShouldRotate = true;
+
+    function myInit() {
+      myScene = new THREE.Scene();
+      myCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      myRenderer = new THREE.WebGLRenderer({ antialias: true });
+      myRenderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(myRenderer.domElement);
+
+      const myGeometry = new THREE.TorusGeometry(1, 0.4, 16, 100);
+      const myMaterial = new THREE.MeshNormalMaterial();
+      myTorus = new THREE.Mesh(myGeometry, myMaterial);
+      myScene.add(myTorus);
+
+      myCamera.position.z = 5;
+      myControls = new OrbitControls(myCamera, myRenderer.domElement);
+
+      window.addEventListener('resize', () => {
+        myCamera.aspect = window.innerWidth / window.innerHeight;
+        myCamera.updateProjectionMatrix();
+        myRenderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      myAnimate();
+    }
+
+    function myAnimate() {
+      requestAnimationFrame(myAnimate);
+      if (myShouldRotate) {
+        myTorus.rotation.x += 0.01;
+        myTorus.rotation.y += 0.01;
+      }
+      myControls.update();
+      myRenderer.render(myScene, myCamera);
+    }
+
+    // ✅ expose globally
+    window.myToggleRotate = function () {
+      myShouldRotate = !myShouldRotate;
+    };
+
+    myInit();
+  </script>
+</body>
+</html>
