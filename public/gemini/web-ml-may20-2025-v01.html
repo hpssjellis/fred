@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body style="font-family: 'Inter', sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0;">
+    <div class="container flex flex-col items-center gap-6 p-8 bg-white rounded-2xl shadow-xl md:flex-row md:justify-around md:items-start"
+         style="background-color: #ffffff; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); max-width: 90%; width: 100%;">
+        <div class="video-section flex flex-col items-center gap-4 flex-1">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Live Webcam Feed</h2>
+            <video id="webcamVideo" autoplay playsinline
+                   style="width: 100%; max-width: 640px; height: auto; border-radius: 0.75rem; background-color: #333; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);"></video>
+            <div class="flex gap-4 mt-4">
+                <button id="startButton"
+                        style="background-color: #4CAF50; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">Start Webcam</button>
+                <button id="stopButton" disabled
+                        style="background-color: #f44336; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">Stop Webcam</button>
+                <button id="segmentButton" disabled
+                        style="background-color: #007bff; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">Segment Frame</button>
+            </div>
+            <div id="messageBox"
+                 style="background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; border-radius: 0.5rem; padding: 1rem; margin-top: 1rem; width: 100%; max-width: 640px; text-align: center; display: none;"></div>
+        </div>
+
+        <div class="detection-section flex flex-col items-center gap-4 flex-1">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Image Analysis Results</h2>
+            <div id="detectionResults" class="bg-gray-100 p-6 rounded-lg w-full max-w-640px min-h-[150px] flex items-center justify-center text-gray-600 text-center">
+                <p>
+                    Click "Segment Frame" to analyze the current webcam image.
+                    Results from image analysis will appear here.
+                </p>
+            </div>
+            <canvas id="captureCanvas" style="display: none;"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Get references to DOM elements
+        const webcamVideo = document.getElementById('webcamVideo');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const segmentButton = document.getElementById('segmentButton');
+        const detectionResults = document.getElementById('detectionResults');
+        const messageBox = document.getElementById('messageBox');
+        const captureCanvas = document.getElementById('captureCanvas');
+        const ctx = captureCanvas.getContext('2d');
+
+        let currentStream; // Variable to hold the webcam stream
+
+        /**
+         * Displays a message in the message box.
+         * @param {string} message - The message to display.
+         * @param {string} type - The type of message (e.g., 'success', 'error', 'info').
+         */
+        function showMessage(message, type = 'info') {
+            messageBox.textContent = message;
+            // Reset inline style for display to 'block' to make it visible
+            messageBox.style.display = 'block';
+            // Dynamically apply background and text color based on type
+            if (type === 'error') {
+                messageBox.style.backgroundColor = '#f8d7da'; // Light red
+                messageBox.style.color = '#721c24'; // Dark red
+                messageBox.style.borderColor = '#f5c6cb'; // Red border
+            } else if (type === 'success') {
+                messageBox.style.backgroundColor = '#d4edda'; // Light green
+                messageBox.style.color = '#155724'; // Dark green
+                messageBox.style.borderColor = '#c3e6cb'; // Green border
+            } else {
+                messageBox.style.backgroundColor = '#fff3cd'; // Light yellow
+                messageBox.style.color = '#664d03'; // Dark yellow
+                messageBox.style.borderColor = '#ffecb5'; // Yellow border
+            }
+
+            // Hide message after a few seconds
+            setTimeout(() => {
+                messageBox.style.display = 'none'; // Hide it again
+            }, 5000);
+        }
+
+        /**
+         * Starts the webcam stream.
+         */
+        async function startWebcam() {
+            try {
+                // Request access to the user's media devices (video only)
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                currentStream = stream; // Store the stream for later stopping
+                webcamVideo.srcObject = stream; // Set the video element's source to the stream
+
+                // When video metadata is loaded, set canvas dimensions to match video
+                webcamVideo.onloadedmetadata = () => {
+                    captureCanvas.width = webcamVideo.videoWidth;
+                    captureCanvas.height = webcamVideo.videoHeight;
+                };
+
+                startButton.disabled = true; // Disable start button
+                stopButton.disabled = false; // Enable stop button
+                segmentButton.disabled = false; // Enable segment button
+                showMessage('Webcam started successfully!', 'success');
+            } catch (err) {
+                console.error('Error accessing webcam:', err);
+                if (err.name === 'NotAllowedError') {
+                    showMessage('Permission denied: Please allow webcam access in your browser settings.', 'error');
+                } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                    showMessage('No webcam found: Please ensure a webcam is connected and working.', 'error');
+                } else {
+                    showMessage(`Error starting webcam: ${err.message}`, 'error');
+                }
+            }
+        }
+
+        /**
+         * Stops the webcam stream.
+         */
+        function stopWebcam() {
+            if (currentStream) {
+                // Get all tracks from the stream and stop each one
+                currentStream.getTracks().forEach(track => track.stop());
+                webcamVideo.srcObject = null; // Clear the video element's source
+                startButton.disabled = false; // Enable start button
+                stopButton.disabled = true; // Disable stop button
+                segmentButton.disabled = true; // Disable segment button
+                detectionResults.innerHTML = '<p>Click "Segment Frame" to analyze the current webcam image.<br>Results from image analysis will appear here.</p>';
+                showMessage('Webcam stopped.', 'info');
+            }
+        }
+
+        /**
+         * Captures a frame from the video and sends it for analysis.
+         */
+        async function segmentFrame() {
+            if (!currentStream || webcamVideo.paused || webcamVideo.ended) {
+                showMessage('Webcam is not active. Please start the webcam first.', 'info');
+                return;
+            }
+
+            detectionResults.innerHTML = '<p>Analyzing frame... Please wait.</p>';
+            showMessage('Capturing and analyzing frame...', 'info');
+
+            // Draw the current video frame onto the canvas
+            ctx.drawImage(webcamVideo, 0, 0, captureCanvas.width, captureCanvas.height);
+
+            // Get the image data as a Base64 string
+            const imageDataUrl = captureCanvas.toDataURL('image/png');
+            const base64ImageData = imageDataUrl.split(',')[1]; // Extract base64 part
+
+            try {
+                let chatHistory = [];
+                const prompt = "Describe the objects and scene in this image in detail. Focus on identifying distinct elements.";
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+
+                const payload = {
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [
+                                { text: prompt },
+                                {
+                                    inlineData: {
+                                        mimeType: "image/png",
+                                        data: base64ImageData
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                };
+
+                const apiKey = ""; // If you want to use models other than gemini-2.0-flash or imagen-3.0-generate-002, provide an API key here. Otherwise, leave this as-is.
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    detectionResults.innerHTML = `<p>${text}</p>`;
+                    showMessage('Analysis complete!', 'success');
+                } else {
+                    detectionResults.innerHTML = '<p>No analysis results found or unexpected response structure.</p>';
+                    showMessage('Analysis failed: No results.', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error during image analysis:', error);
+                detectionResults.innerHTML = `<p>Error performing image analysis: ${error.message}</p>`;
+                showMessage(`Analysis error: ${error.message}`, 'error');
+            }
+        }
+
+        // Add event listeners to the buttons
+        startButton.addEventListener('click', startWebcam);
+        stopButton.addEventListener('click', stopWebcam);
+        segmentButton.addEventListener('click', segmentFrame);
+
+        // Initial state: stop and segment buttons disabled
+        stopButton.disabled = true;
+        segmentButton.disabled = true;
+    </script>
+</body>
+</html>
