@@ -3,37 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webcam Viewer</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Webcam Object Detector</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.13.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
+    <style>
+        /* Minimal CSS for offline UI */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden; /* Prevent horizontal scroll on small screens */
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 1rem; /* Rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            max-width: 90%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        video, canvas {
+            width: 100%;
+            max-width: 640px; /* Max width for video and canvas */
+            height: auto; /* Maintain aspect ratio */
+            border-radius: 0.75rem; /* Rounded corners */
+            background-color: #333;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            display: block; /* Ensure they take up full width */
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border: none; /* Remove default button border */
+            transition: background-color 0.2s ease-in-out; /* Smooth transition */
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .start-button {
+            background-color: #4CAF50; /* Green */
+            color: white;
+        }
+        .start-button:hover:not(:disabled) {
+            background-color: #45a049;
+        }
+        .stop-button {
+            background-color: #f44336; /* Red */
+            color: white;
+        }
+        .stop-button:hover:not(:disabled) {
+            background-color: #da190b;
+        }
+        .detect-button {
+            background-color: #007bff; /* Blue */
+            color: white;
+        }
+        .detect-button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        .message-box {
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
+            width: 100%;
+            max-width: 640px;
+            text-align: center;
+            display: none; /* Hidden by default */
+            font-size: 0.9rem;
+        }
+        .message-box.info {
+            background-color: #fff3cd;
+            color: #664d03;
+            border: 1px solid #ffecb5;
+        }
+        .message-box.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message-box.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .detection-results-box {
+            background-color: #f3f4f6; /* bg-gray-100 */
+            padding: 1.5rem; /* p-6 */
+            border-radius: 0.5rem; /* rounded-lg */
+            width: 100%;
+            max-width: 640px;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column; /* Stack results vertically */
+            align-items: flex-start; /* Align text to start */
+            justify-content: center;
+            color: #4b5563; /* text-gray-600 */
+            text-align: left; /* Align text to left */
+            overflow-y: auto; /* Scroll for many results */
+        }
+        .detection-results-box p {
+            margin-bottom: 0.5rem;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #007bff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive adjustments */
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row;
+                justify-content: space-around;
+                align-items: flex-start;
+            }
+            .video-section, .detection-section {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+            }
+        }
+    </style>
 </head>
 <body style="font-family: 'Inter', sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0;">
-    <div class="container flex flex-col items-center gap-6 p-8 bg-white rounded-2xl shadow-xl md:flex-row md:justify-around md:items-start"
-         style="background-color: #ffffff; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); max-width: 90%; width: 100%;">
-        <div class="video-section flex flex-col items-center gap-4 flex-1">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Live Webcam Feed</h2>
-            <video id="webcamVideo" autoplay playsinline
-                   style="width: 100%; max-width: 640px; height: auto; border-radius: 0.75rem; background-color: #333; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);"></video>
-            <div class="flex gap-4 mt-4">
-                <button id="startButton"
-                        style="background-color: #4CAF50; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">Start Webcam</button>
-                <button id="stopButton" disabled
-                        style="background-color: #f44336; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">Stop Webcam</button>
-                <button id="segmentButton" disabled
-                        style="background-color: #007bff; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">Segment Frame</button>
+    <div class="container">
+        <div class="video-section">
+            <h2 style="font-size: 1.5rem; font-weight: bold; color: #1f2937; margin-bottom: 1rem;">Live Webcam Feed</h2>
+            <video id="webcamVideo" autoplay playsinline></video>
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button id="startButton" class="start-button">Start Webcam</button>
+                <button id="stopButton" class="stop-button" disabled>Stop Webcam</button>
+                <button id="detectButton" class="detect-button" disabled>Detect Objects</button>
             </div>
-            <div id="messageBox"
-                 style="background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; border-radius: 0.5rem; padding: 1rem; margin-top: 1rem; width: 100%; max-width: 640px; text-align: center; display: none;"></div>
+            <div id="messageBox" class="message-box"></div>
         </div>
 
-        <div class="detection-section flex flex-col items-center gap-4 flex-1">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Image Analysis Results</h2>
-            <div id="detectionResults" class="bg-gray-100 p-6 rounded-lg w-full max-w-640px min-h-[150px] flex items-center justify-center text-gray-600 text-center">
+        <div class="detection-section">
+            <h2 style="font-size: 1.5rem; font-weight: bold; color: #1f2937; margin-bottom: 1rem;">Detected Objects</h2>
+            <div id="detectionResults" class="detection-results-box">
                 <p>
-                    Click "Segment Frame" to analyze the current webcam image.
-                    Results from image analysis will appear here.
+                    Loading object detection model...
                 </p>
+                <div class="loading-spinner"></div>
             </div>
-            <canvas id="captureCanvas" style="display: none;"></canvas>
+            <canvas id="outputCanvas" style="display: none;"></canvas>
         </div>
     </div>
 
@@ -42,13 +177,15 @@
         const webcamVideo = document.getElementById('webcamVideo');
         const startButton = document.getElementById('startButton');
         const stopButton = document.getElementById('stopButton');
-        const segmentButton = document.getElementById('segmentButton');
+        const detectButton = document.getElementById('detectButton');
         const detectionResults = document.getElementById('detectionResults');
         const messageBox = document.getElementById('messageBox');
-        const captureCanvas = document.getElementById('captureCanvas');
-        const ctx = captureCanvas.getContext('2d');
+        const outputCanvas = document.getElementById('outputCanvas'); // New canvas for drawing
+        const ctx = outputCanvas.getContext('2d');
 
         let currentStream; // Variable to hold the webcam stream
+        let model = undefined; // Variable to hold the loaded COCO-SSD model
+        let animationFrameId; // To control the detection loop
 
         /**
          * Displays a message in the message box.
@@ -57,22 +194,7 @@
          */
         function showMessage(message, type = 'info') {
             messageBox.textContent = message;
-            // Reset inline style for display to 'block' to make it visible
-            messageBox.style.display = 'block';
-            // Dynamically apply background and text color based on type
-            if (type === 'error') {
-                messageBox.style.backgroundColor = '#f8d7da'; // Light red
-                messageBox.style.color = '#721c24'; // Dark red
-                messageBox.style.borderColor = '#f5c6cb'; // Red border
-            } else if (type === 'success') {
-                messageBox.style.backgroundColor = '#d4edda'; // Light green
-                messageBox.style.color = '#155724'; // Dark green
-                messageBox.style.borderColor = '#c3e6cb'; // Green border
-            } else {
-                messageBox.style.backgroundColor = '#fff3cd'; // Light yellow
-                messageBox.style.color = '#664d03'; // Dark yellow
-                messageBox.style.borderColor = '#ffecb5'; // Yellow border
-            }
+            messageBox.className = `message-box ${type} block`; // Apply type class and make visible
 
             // Hide message after a few seconds
             setTimeout(() => {
@@ -81,24 +203,54 @@
         }
 
         /**
+         * Loads the COCO-SSD object detection model.
+         */
+        async function loadModel() {
+            detectionResults.innerHTML = '<p>Loading object detection model...</p><div class="loading-spinner"></div>';
+            detectButton.disabled = true; // Disable until model is loaded
+            try {
+                // Load the COCO-SSD model
+                model = await cocoSsd.load();
+                detectionResults.innerHTML = '<p>Model loaded. Start webcam to detect objects.</p>';
+                showMessage('Object detection model loaded successfully!', 'success');
+                // Only enable detect button if webcam is also active
+                if (!startButton.disabled) { // If webcam is not yet started, detect button remains disabled
+                    detectButton.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error loading COCO-SSD model:', error);
+                detectionResults.innerHTML = `<p style="color: red;">Error loading model: ${error.message}. Check console for details.</p>`;
+                showMessage('Failed to load object detection model.', 'error');
+            }
+        }
+
+        /**
          * Starts the webcam stream.
          */
         async function startWebcam() {
-            try {
-                // Request access to the user's media devices (video only)
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                currentStream = stream; // Store the stream for later stopping
-                webcamVideo.srcObject = stream; // Set the video element's source to the stream
+            if (model === undefined) {
+                showMessage('Model is still loading. Please wait.', 'info');
+                return;
+            }
 
-                // When video metadata is loaded, set canvas dimensions to match video
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                currentStream = stream;
+                webcamVideo.srcObject = stream;
+
                 webcamVideo.onloadedmetadata = () => {
-                    captureCanvas.width = webcamVideo.videoWidth;
-                    captureCanvas.height = webcamVideo.videoHeight;
+                    // Set output canvas dimensions to match video
+                    outputCanvas.width = webcamVideo.videoWidth;
+                    outputCanvas.height = webcamVideo.videoHeight;
+                    outputCanvas.style.display = 'block'; // Show canvas for drawing
+                    webcamVideo.style.display = 'none'; // Hide video element, drawing on canvas instead
+                    // Start detection loop
+                    detectFrame();
                 };
 
-                startButton.disabled = true; // Disable start button
-                stopButton.disabled = false; // Enable stop button
-                segmentButton.disabled = false; // Enable segment button
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                detectButton.disabled = false;
                 showMessage('Webcam started successfully!', 'success');
             } catch (err) {
                 console.error('Error accessing webcam:', err);
@@ -113,99 +265,100 @@
         }
 
         /**
-         * Stops the webcam stream.
+         * Stops the webcam stream and detection.
          */
         function stopWebcam() {
             if (currentStream) {
-                // Get all tracks from the stream and stop each one
                 currentStream.getTracks().forEach(track => track.stop());
-                webcamVideo.srcObject = null; // Clear the video element's source
-                startButton.disabled = false; // Enable start button
-                stopButton.disabled = true; // Disable stop button
-                segmentButton.disabled = true; // Disable segment button
-                detectionResults.innerHTML = '<p>Click "Segment Frame" to analyze the current webcam image.<br>Results from image analysis will appear here.</p>';
+                webcamVideo.srcObject = null;
+                cancelAnimationFrame(animationFrameId); // Stop the detection loop
+                ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height); // Clear canvas
+                outputCanvas.style.display = 'none'; // Hide canvas
+                webcamVideo.style.display = 'block'; // Show video element again
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                detectButton.disabled = true; // Disable detect button when webcam is off
+                detectionResults.innerHTML = '<p>Model loaded. Start webcam to detect objects.</p>';
                 showMessage('Webcam stopped.', 'info');
             }
         }
 
         /**
-         * Captures a frame from the video and sends it for analysis.
+         * Performs object detection on the current video frame.
          */
-        async function segmentFrame() {
-            if (!currentStream || webcamVideo.paused || webcamVideo.ended) {
-                showMessage('Webcam is not active. Please start the webcam first.', 'info');
-                return;
+        async function detectFrame() {
+            if (webcamVideo.paused || webcamVideo.ended || !model) {
+                return; // Stop if video is not playing or model not loaded
             }
 
-            detectionResults.innerHTML = '<p>Analyzing frame... Please wait.</p>';
-            showMessage('Capturing and analyzing frame...', 'info');
+            // Draw the current video frame onto the output canvas
+            ctx.drawImage(webcamVideo, 0, 0, outputCanvas.width, outputCanvas.height);
 
-            // Draw the current video frame onto the canvas
-            ctx.drawImage(webcamVideo, 0, 0, captureCanvas.width, captureCanvas.height);
+            // Perform detection using the COCO-SSD model
+            const predictions = await model.detect(outputCanvas); // Pass the canvas element directly
 
-            // Get the image data as a Base64 string
-            const imageDataUrl = captureCanvas.toDataURL('image/png');
-            const base64ImageData = imageDataUrl.split(',')[1]; // Extract base64 part
+            // Clear previous results and display new ones
+            detectionResults.innerHTML = '';
+            if (predictions.length > 0) {
+                detectionResults.innerHTML = '<p style="font-weight: bold;">Detected Objects:</p>';
+                predictions.forEach(prediction => {
+                    detectionResults.innerHTML += `<p>${prediction.class} (${Math.round(prediction.score * 100)}%)</p>`;
 
-            try {
-                let chatHistory = [];
-                const prompt = "Describe the objects and scene in this image in detail. Focus on identifying distinct elements.";
-                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                    // Draw bounding box
+                    ctx.beginPath();
+                    ctx.rect(...prediction.bbox);
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#00FF00'; // Green bounding box
+                    ctx.fillStyle = '#00FF00'; // Green text background
+                    ctx.stroke();
 
-                const payload = {
-                    contents: [
-                        {
-                            role: "user",
-                            parts: [
-                                { text: prompt },
-                                {
-                                    inlineData: {
-                                        mimeType: "image/png",
-                                        data: base64ImageData
-                                    }
-                                }
-                            ]
-                        }
-                    ],
-                };
+                    // Draw label background
+                    const text = `${prediction.class} (${Math.round(prediction.score * 100)}%)`;
+                    ctx.font = '16px Arial';
+                    ctx.textBaseline = 'top';
+                    const textWidth = ctx.measureText(text).width;
+                    const textHeight = parseInt(ctx.font, 10); // Get font size
+                    ctx.fillRect(prediction.bbox[0], prediction.bbox[1] > textHeight ? prediction.bbox[1] - textHeight : prediction.bbox[1], textWidth + 4, textHeight);
 
-                const apiKey = ""; // If you want to use models other than gemini-2.0-flash or imagen-3.0-generate-002, provide an API key here. Otherwise, leave this as-is.
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    // Draw label text
+                    ctx.fillStyle = '#000000'; // Black text
+                    ctx.fillText(text, prediction.bbox[0] + 2, prediction.bbox[1] > textHeight ? prediction.bbox[1] - textHeight + 2 : prediction.bbox[1] + 2);
                 });
-
-                const result = await response.json();
-
-                if (result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
-                    const text = result.candidates[0].content.parts[0].text;
-                    detectionResults.innerHTML = `<p>${text}</p>`;
-                    showMessage('Analysis complete!', 'success');
-                } else {
-                    detectionResults.innerHTML = '<p>No analysis results found or unexpected response structure.</p>';
-                    showMessage('Analysis failed: No results.', 'error');
-                }
-
-            } catch (error) {
-                console.error('Error during image analysis:', error);
-                detectionResults.innerHTML = `<p>Error performing image analysis: ${error.message}</p>`;
-                showMessage(`Analysis error: ${error.message}`, 'error');
+            } else {
+                detectionResults.innerHTML = '<p>No objects detected.</p>';
             }
+
+            // Request next animation frame to continue detection
+            animationFrameId = requestAnimationFrame(detectFrame);
         }
 
         // Add event listeners to the buttons
         startButton.addEventListener('click', startWebcam);
         stopButton.addEventListener('click', stopWebcam);
-        segmentButton.addEventListener('click', segmentFrame);
+        // The detect button will now start/stop the continuous detection loop
+        detectButton.addEventListener('click', () => {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+                detectButton.textContent = 'Resume Detection';
+                showMessage('Detection paused.', 'info');
+            } else {
+                detectFrame();
+                detectButton.textContent = 'Pause Detection';
+                showMessage('Detection resumed.', 'info');
+            }
+        });
 
-        // Initial state: stop and segment buttons disabled
+
+        // Initial state: stop and detect buttons disabled
         stopButton.disabled = true;
-        segmentButton.disabled = true;
+        detectButton.disabled = true;
+
+        // Load the model when the page loads
+        window.onload = loadModel;
+
+        // Confirm script execution
+        console.log("Script fully loaded and executed.");
     </script>
 </body>
 </html>
