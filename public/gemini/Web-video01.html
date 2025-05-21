@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Recorder</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            background-color: #f0f0f0;
+        }
+        #video-container {
+            position: relative;
+            width: 640px; /* Standard webcam width */
+            height: 480px; /* Standard webcam height */
+            background-color: #333;
+            border: 2px solid #555;
+            margin-bottom: 20px;
+            overflow: hidden; /* To hide any overflow from the video element */
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        canvas {
+            display: none; /* Hidden by default, used for image capture */
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            background-color: #007bff;
+            transition: background-color 0.2s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #recordButton.recording {
+            background-color: #dc3545; /* Red for recording */
+        }
+        #recordButton.recording:hover {
+            background-color: #c82333;
+        }
+        .downloads {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .downloads h2 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .downloads ul {
+            list-style: none;
+            padding: 0;
+        }
+        .downloads li {
+            margin-bottom: 5px;
+        }
+        .downloads a {
+            text-decoration: none;
+            color: #007bff;
+        }
+        .downloads a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Webcam Recorder</h1>
+
+    <div id="video-container">
+        <video id="webcamFeed" autoplay playsinline></video>
+        <canvas id="photoCanvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <button id="startButton">Start Webcam</button>
+        <button id="captureButton" disabled>Capture Photo</button>
+        <button id="recordButton" disabled>Start Recording</button>
+        <button id="stopButton" disabled>Stop Recording</button>
+    </div>
+
+    <div class="downloads">
+        <h2>Downloads</h2>
+        <ul id="downloadList">
+            </ul>
+    </div>
+
+    <script>
+        const webcamFeed = document.getElementById('webcamFeed');
+        const photoCanvas = document.getElementById('photoCanvas');
+        const startButton = document.getElementById('startButton');
+        const captureButton = document.getElementById('captureButton');
+        const recordButton = document.getElementById('recordButton');
+        const stopButton = document.getElementById('stopButton');
+        const downloadList = document.getElementById('downloadList');
+
+        let stream;
+        let mediaRecorder;
+        let recordedChunks = [];
+
+        startButton.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                webcamFeed.srcObject = stream;
+                startButton.disabled = true;
+                captureButton.disabled = false;
+                recordButton.disabled = false;
+            } catch (err) {
+                console.error('Error accessing webcam:', err);
+                alert('Could not start webcam. Please ensure camera access is granted.');
+            }
+        });
+
+        captureButton.addEventListener('click', () => {
+            photoCanvas.width = webcamFeed.videoWidth;
+            photoCanvas.height = webcamFeed.videoHeight;
+            const context = photoCanvas.getContext('2d');
+            context.drawImage(webcamFeed, 0, 0, photoCanvas.width, photoCanvas.height);
+
+            const imageDataURL = photoCanvas.toDataURL('image/png');
+            addDownloadLink(imageDataURL, 'photo', 'png');
+        });
+
+        recordButton.addEventListener('click', () => {
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp8' }); // Using WebM for broad compatibility
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const videoURL = URL.createObjectURL(blob);
+                addDownloadLink(videoURL, 'video', 'webm');
+            };
+
+            mediaRecorder.start();
+            recordButton.textContent = 'Recording...';
+            recordButton.classList.add('recording');
+            recordButton.disabled = true;
+            stopButton.disabled = false;
+            captureButton.disabled = true; // Disable photo capture during video recording
+        });
+
+        stopButton.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                recordButton.textContent = 'Start Recording';
+                recordButton.classList.remove('recording');
+                recordButton.disabled = false;
+                stopButton.disabled = true;
+                captureButton.disabled = false; // Re-enable photo capture
+            }
+        });
+
+        function addDownloadLink(url, type, extension) {
+            const listItem = document.createElement('li');
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${type}-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.${extension}`;
+            link.textContent = `Download ${type} (${new Date().toLocaleTimeString()})`;
+            listItem.appendChild(link);
+            downloadList.appendChild(listItem);
+        }
+    </script>
+</body>
+</html>
