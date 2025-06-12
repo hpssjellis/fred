@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>General Protocol Server</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f0f0f0; color: #333; }
+        .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
+        .panel { flex: 1; background-color: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; min-width: 300px; }
+        h1, h2, h3 { margin-top: 0; margin-bottom: 15px; }
+        .log-box, .client-list-box { border: 1px solid #eee; background-color: #fafafa; padding: 10px; height: 250px; overflow-y: auto; margin-bottom: 15px; border-radius: 4px; font-size: 0.9em; white-space: pre-wrap; word-break: break-word; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 10px; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        .client-item { margin-bottom: 5px; }
+        .client-item strong { color: #0056b3; }
+        @media (max-width: 768px) { .container { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Server Panel -->
+        <div id="server-panel" class="panel">
+            <h2>General Protocol Server</h2>
+            <button id="spawn-client-button">Spawn New Client</button>
+
+            <h3>Connected Clients (<span id="connected-clients-count">0</span>)</h3>
+            <div id="client-list" class="client-list-box">
+                <p style="color: gray; font-style: italic;">No clients connected yet.</p>
+            </div>
+            <h3>Server Logs</h3>
+            <div id="server-logs" class="log-box"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // BroadcastChannel name for all communication
+        const CHANNEL_NAME = 'general_protocol_channel';
+
+        // --- Message Structure ---
+        // A generic message interface for communication between server and clients
+        // type: unique string identifying the message
+        // source: 'server' or 'client'
+        // senderId: unique ID of the sender (server is 'server', clients are 'client-xyz')
+        // targetId: 'broadcast' for all, or a specific client ID for targeted messages
+        // payload: data specific to the message type
+
+        // --- Server-side Logic ---
+
+        class GeneralServer {
+            clients = new Map(); // clientId -> { id, name, status }
+            logs = [];
+            logListeners = [];
+            clientUpdateListeners = [];
+            broadcastChannel;
+
+            constructor() {
+                this.addLog('Server started (simulated, awaiting client connections).');
+
+                // Initialize BroadcastChannel
+                this.broadcastChannel = new BroadcastChannel(CHANNEL_NAME);
+                this.broadcastChannel.onmessage = this.handleIncomingMessage.bind(this);
+
+                // Add a listener for when the server page is closed or reloaded
+                window.addEventListener('beforeunload', () => {
+                    this.broadcastMessageToClients('SERVER_SHUTDOWN', { reason: 'Server tab closing or reloading.' });
+                    this.addLog('Server is shutting down. Notifying clients.');
+                    this.broadcastChannel.close(); // Close the channel
+                });
+            }
+
+            addLog(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = `[${timestamp}] SERVER: ${message}`;
+                this.logs.push(logEntry);
+                this.logListeners.forEach(listener => listener(logEntry));
+            }
+
+            // Sends a message to a specific client or broadcasts to all
+            sendMessage(targetId, type, payload) {
+                const message = {
+                    source: 'server',
+                    senderId: 'server',
+                    type,
+                    targetId,
+                    payload,
+                    timestamp: new Date().toISOString()
+                };
+                this.broadcastChannel.postMessage(message);
+            }
+
+            // Broadcasts a message to all connected clients
+            broadcastMessageToClients(type, payload) {
+                this.sendMessage('broadcast', type, payload);
+            }
+
+            handleIncomingMessage(event) {
+                const msg = event.data;
+                if (msg.source !== 'client') {
+                    // Ignore messages not from clients
+                    return;
+                }
+
+                this.addLog(`Received message from client ${msg.senderId} (${msg.type})`);
+
+                switch (msg.type) {
+                    case 'CLIENT_CONNECT':
+                        const requestedName = msg.payload.requestedName;
+                        const clientNameTaken = Array.from(this.clients.values()).some(c => c.name === requestedName);
+
+                        if (clientNameTaken) {
+                            this.addLog(`Connection rejected for ${msg.senderId}: Name "${requestedName}" is already taken.`);
+                            this.sendMessage(msg.senderId, 'SERVER_REJECTED_CONNECTION', { reason: `Name "${requestedName}" is already taken.` });
+                        } else {
+                            const newClient = {
+                                id: msg.senderId,
+                                name: requestedName || msg.senderId, // Use requested name or fallback to ID
+                                status: 'connected'
+                            };
+                            this.clients.set(msg.senderId, newClient);
+                            this.addLog(`Client ${newClient.id} (${newClient.name}) connected.`);
+                            this.sendMessage(msg.senderId, 'SERVER_ACCEPTED_CONNECTION', { assignedName: newClient.name });
+                            this.updateClientListAndNotify();
+                            this.broadcastMessageToClients('SERVER_BROADCAST_MESSAGE', { senderName: 'Server', text: `${newClient.name} has joined.` });
+                        }
+                        break;
+
+                    case 'CLIENT_MESSAGE':
+                        const sendingClient = this.clients.get(msg.senderId);
+                        if (sendingClient && sendingClient.status === 'connected') {
+                            this.addLog(`Message from ${sendingClient.name}: "${msg.payload.text}"`);
+                            this.broadcastMessageToClients('SERVER_BROADCAST_MESSAGE', {
+                                senderName: sendingClient.name,
+                                text: msg.payload.text
+                            });
+                        } else {
+                            this.addLog(`Received message from unknown/disconnected client ${msg.senderId}`);
+                        }
+                        break;
+
+                    case 'CLIENT_DISCONNECT':
+                        const disconnectedClient = this.clients.get(msg.senderId);
+                        if (disconnectedClient) {
+                            this.clients.delete(msg.senderId);
+                            this.addLog(`Client ${disconnectedClient.id} (${disconnectedClient.name}) disconnected.`);
+                            this.updateClientListAndNotify();
+                            this.broadcastMessageToClients('SERVER_DISCONNECTED_CLIENT', { clientId: disconnectedClient.id, clientName: disconnectedClient.name });
+                            this.broadcastMessageToClients('SERVER_BROADCAST_MESSAGE', { senderName: 'Server', text: `${disconnectedClient.name} has left.` });
+                        } else {
+                            this.addLog(`Unknown client ${msg.senderId} attempted to disconnect.`);
+                        }
+                        break;
+
+                    case 'CLIENT_PONG': // Simple heartbeat response
+                        // this.addLog(`Client ${msg.senderId} responded to ping.`);
+                        break;
+
+                    default:
+                        this.addLog(`Unknown message type received from client ${msg.senderId}: ${msg.type}`);
+                        break;
+                }
+            }
+
+            updateClientListAndNotify() {
+                this.clientUpdateListeners.forEach(listener => listener());
+                // Also broadcast the updated client list to all clients
+                const clientList = Array.from(this.clients.values()).map(c => ({ id: c.id, name: c.name, status: c.status }));
+                this.broadcastMessageToClients('SERVER_CLIENT_LIST_UPDATE', { clients: clientList });
+            }
+
+            onLog(listener) {
+                this.logListeners.push(listener);
+                return () => this.logListeners = this.logListeners.filter(l => l !== listener);
+            }
+
+            onClientUpdate(listener) {
+                this.clientUpdateListeners.push(listener);
+                return () => this.clientUpdateListeners = this.clientUpdateListeners.filter(l => l !== listener);
+            }
+
+            getClients() {
+                return Array.from(this.clients.values());
+            }
+        }
+
+        // --- DOM Elements and UI Logic ---
+
+        let server;
+        const serverLogsDiv = document.getElementById('server-logs');
+        const clientListDiv = document.getElementById('client-list');
+        const connectedClientsCountSpan = document.getElementById('connected-clients-count');
+        const spawnClientButton = document.getElementById('spawn-client-button');
+
+        function appendLog(element, message) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            element.appendChild(p);
+            element.scrollTop = element.scrollHeight; // Scroll to bottom
+        }
+
+        function updateClientList() {
+            clientListDiv.innerHTML = ''; // Clear existing list
+            const clients = server.getClients();
+            if (clients.length === 0) {
+                const p = document.createElement('p');
+                p.style.color = 'gray';
+                p.style.fontStyle = 'italic';
+                p.textContent = 'No clients connected yet.';
+                clientListDiv.appendChild(p);
+            } else {
+                clients.forEach(client => {
+                    const p = document.createElement('p');
+                    p.classList.add('client-item');
+                    p.innerHTML = `<strong>${client.name}</strong> (ID: ${client.id.substring(0, 8)}...) - Status: ${client.status}`;
+                    clientListDiv.appendChild(p);
+                });
+            }
+            connectedClientsCountSpan.textContent = clients.length;
+        }
+
+        function spawnNewClient() {
+            // Open client.html in a new tab
+            window.open('./mcp03-client.html', '_blank', 'noopener');
+        }
+
+        // Initialize on window load
+        window.onload = function() {
+            server = new GeneralServer();
+
+            server.onLog((log) => {
+                appendLog(serverLogsDiv, log);
+            });
+
+            server.onClientUpdate(() => {
+                updateClientList();
+            });
+
+            spawnClientButton.addEventListener('click', spawnNewClient);
+
+            updateClientList(); // Initial list update
+        };
+    </script>
+</body>
+</html>
+
+
