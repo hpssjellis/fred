@@ -1,0 +1,461 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>General Protocol Server with Multiple Clients</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f0f0f0; color: #333; }
+        .main-container { display: flex; gap: 20px; max-width: 1400px; margin: 0 auto; flex-wrap: wrap; }
+        .server-panel { flex: 1; min-width: 350px; background-color: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .client-container { display: flex; flex-wrap: wrap; gap: 20px; flex: 2; min-width: 350px; }
+        .client-panel { flex: 1; min-width: 300px; max-width: 450px; background-color: #f9f9f9; padding: 15px; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; flex-direction: column; }
+
+        h1, h2, h3 { margin-top: 0; margin-bottom: 15px; }
+        .log-box, .client-list-box, .chat-box { border: 1px solid #eee; background-color: #fafafa; padding: 10px; height: 180px; overflow-y: auto; margin-bottom: 15px; border-radius: 4px; font-size: 0.9em; white-space: pre-wrap; word-break: break-word; }
+        input[type="text"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 10px; }
+        button.spawn-button { background-color: #007bff; }
+        button.spawn-button:hover { background-color: #0056b3; }
+        button.connect-button { background-color: #28a745; }
+        button.connect-button:hover { background-color: #218838; }
+        button.send-button { background-color: #6f42c1; }
+        button.send-button:hover { background-color: #56369f; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        .client-item { margin-bottom: 5px; }
+        .client-item strong { color: #0056b3; }
+        .message { margin-bottom: 5px; }
+        .message .sender { font-weight: bold; }
+        .system-message { color: #888; font-style: italic; }
+
+        @media (max-width: 1024px) {
+            .main-container { flex-direction: column; }
+            .server-panel, .client-container { min-width: unset; flex: none; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Server Panel -->
+        <div id="server-panel" class="server-panel">
+            <h2>General Protocol Server</h2>
+            <button id="spawn-client-button" class="spawn-button">Spawn New Client</button>
+
+            <h3>Connected Clients (<span id="connected-clients-count">0</span>)</h3>
+            <div id="client-list" class="client-list-box">
+                <p style="color: gray; font-style: italic;">No clients connected yet.</p>
+            </div>
+            <h3>Server Logs</h3>
+            <div id="server-logs" class="log-box"></div>
+        </div>
+
+        <!-- Clients Container (where new client panels will be added) -->
+        <div id="clients-container" class="client-container">
+            <!-- Client panels will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <script type="module">
+        // --- General Message Structure ---
+        // type: unique string identifying the message (e.g., 'CLIENT_CONNECT', 'SERVER_BROADCAST_MESSAGE')
+        // source: 'server' or 'client'
+        // senderId: unique ID of the sender (server is 'server', clients are 'client-xyz')
+        // targetId: 'broadcast' for all, or a specific client ID for targeted messages
+        // payload: data specific to the message type
+        // timestamp: ISO string of when the message was sent
+
+        // --- Server-side Logic ---
+
+        class GeneralServer {
+            clients = new Map(); // clientId -> { clientInstance, name, status }
+            logs = [];
+            logListeners = [];
+            clientUpdateListeners = [];
+
+            constructor() {
+                this.addLog('Server started (simulated).');
+            }
+
+            addLog(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = `[${timestamp}] SERVER: ${message}`;
+                this.logs.push(logEntry);
+                this.logListeners.forEach(listener => listener(logEntry));
+            }
+
+            // Sends a message directly to a client instance
+            sendMessageToClient(targetClientInstance, type, payload) {
+                const message = {
+                    source: 'server',
+                    senderId: 'server',
+                    type,
+                    targetId: targetClientInstance.clientId,
+                    payload,
+                    timestamp: new Date().toISOString()
+                };
+                // Direct call to client's message handling method
+                targetClientInstance.receiveMessage(message);
+            }
+
+            // Broadcasts a message to all connected client instances
+            broadcastMessageToClients(type, payload) {
+                const message = {
+                    source: 'server',
+                    senderId: 'server',
+                    type,
+                    targetId: 'broadcast',
+                    payload,
+                    timestamp: new Date().toISOString()
+                };
+                this.clients.forEach(clientInfo => {
+                    clientInfo.clientInstance.receiveMessage(message);
+                });
+            }
+
+            // Called directly by a client instance when it wants to send a message to the server
+            handleIncomingClientMessage(msg, sendingClientInstance) {
+                if (msg.source !== 'client') {
+                    this.addLog('Received non-client message, ignoring.');
+                    return;
+                }
+
+                this.addLog(`Received message from client ${msg.senderId} (${msg.type})`);
+
+                switch (msg.type) {
+                    case 'CLIENT_CONNECT':
+                        const requestedName = msg.payload.requestedName;
+                        const clientNameTaken = Array.from(this.clients.values()).some(c => c.name === requestedName);
+
+                        if (clientNameTaken) {
+                            this.addLog(`Connection rejected for ${msg.senderId}: Name "${requestedName}" is already taken.`);
+                            this.sendMessageToClient(sendingClientInstance, 'SERVER_REJECTED_CONNECTION', { reason: `Name "${requestedName}" is already taken.` });
+                        } else {
+                            const newClientInfo = {
+                                id: msg.senderId,
+                                clientInstance: sendingClientInstance, // Store reference to the client instance
+                                name: requestedName || msg.senderId,
+                                status: 'connected'
+                            };
+                            this.clients.set(msg.senderId, newClientInfo);
+                            this.addLog(`Client ${newClientInfo.id} (${newClientInfo.name}) connected.`);
+                            this.sendMessageToClient(sendingClientInstance, 'SERVER_ACCEPTED_CONNECTION', { assignedName: newClientInfo.name });
+                            this.updateClientListAndNotify();
+                            this.broadcastMessageToClients('SERVER_BROADCAST_MESSAGE', { senderName: 'Server', text: `${newClientInfo.name} has joined.` });
+                        }
+                        break;
+
+                    case 'CLIENT_MESSAGE':
+                        const sendingClientInfo = this.clients.get(msg.senderId);
+                        if (sendingClientInfo && sendingClientInfo.status === 'connected') {
+                            this.addLog(`Message from ${sendingClientInfo.name}: "${msg.payload.text}"`);
+                            this.broadcastMessageToClients('SERVER_BROADCAST_MESSAGE', {
+                                senderName: sendingClientInfo.name,
+                                text: msg.payload.text
+                            });
+                        } else {
+                            this.addLog(`Received message from unknown/disconnected client ${msg.senderId}`);
+                        }
+                        break;
+
+                    case 'CLIENT_DISCONNECT':
+                        const disconnectedClientInfo = this.clients.get(msg.senderId);
+                        if (disconnectedClientInfo) {
+                            this.clients.delete(msg.senderId);
+                            this.addLog(`Client ${disconnectedClientInfo.id} (${disconnectedClientInfo.name}) disconnected.`);
+                            this.updateClientListAndNotify();
+                            this.broadcastMessageToClients('SERVER_DISCONNECTED_CLIENT', { clientId: disconnectedClientInfo.id, clientName: disconnectedClientInfo.name });
+                            this.broadcastMessageToClients('SERVER_BROADCAST_MESSAGE', { senderName: 'Server', text: `${disconnectedClientInfo.name} has left.` });
+                        } else {
+                            this.addLog(`Unknown client ${msg.senderId} attempted to disconnect.`);
+                        }
+                        break;
+
+                    case 'CLIENT_PONG': // Simple heartbeat response
+                        // this.addLog(`Client ${msg.senderId} responded to ping.`);
+                        break;
+
+                    default:
+                        this.addLog(`Unknown message type received from client ${msg.senderId}: ${msg.type}`);
+                        break;
+                }
+            }
+
+            updateClientListAndNotify() {
+                this.clientUpdateListeners.forEach(listener => listener());
+                // Optionally, server could broadcast the full client list too if needed by clients
+                // this.broadcastMessageToClients('SERVER_CLIENT_LIST_UPDATE', { clients: Array.from(this.clients.values()).map(c => ({ id: c.id, name: c.name, status: c.status })) });
+            }
+
+            onLog(listener) {
+                this.logListeners.push(listener);
+                return () => this.logListeners = this.logListeners.filter(l => l !== listener);
+            }
+
+            onClientUpdate(listener) {
+                this.clientUpdateListeners.push(listener);
+                return () => this.clientUpdateListeners = this.clientUpdateListeners.filter(l => l !== listener);
+            }
+
+            getClients() {
+                // Return just the relevant client info, not the internal instance references
+                return Array.from(this.clients.values()).map(c => ({ id: c.id, name: c.name, status: c.status }));
+            }
+        }
+
+        // --- Client-side Logic (now embedded for each dynamic client) ---
+
+        class GeneralClient {
+            clientId;
+            clientName = null;
+            isConnected = false;
+            server; // Reference to the single server instance
+            logs = [];
+            chatMessages = [];
+            logListeners = [];
+            chatListeners = [];
+            uiElements; // Reference to the dynamically created UI elements
+
+            constructor(serverInstance, uiElements) {
+                this.server = serverInstance;
+                this.uiElements = uiElements; // Store the UI elements specific to this client instance
+                this.clientId = `client-${Math.random().toString(36).substring(2, 9)}`;
+                this.addLog(`Client instance created with ID: ${this.clientId}`);
+
+                // Set up event listeners for this client's specific UI
+                this.uiElements.connectButton.addEventListener('click', this.handleConnect.bind(this));
+                this.uiElements.clientNameInput.addEventListener('input', this.updateUIForConnectionStatus.bind(this));
+                this.uiElements.clientNameInput.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        this.handleConnect();
+                    }
+                });
+
+                this.uiElements.sendChatButton.addEventListener('click', this.handleSendMessage.bind(this));
+                this.uiElements.chatInput.addEventListener('input', this.updateUIForConnectionStatus.bind(this));
+                this.uiElements.chatInput.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        this.handleSendMessage();
+                    }
+                });
+
+                this.updateUIForConnectionStatus(); // Initial UI state
+            }
+
+            addLog(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = `[${timestamp}] CLIENT (${this.clientName || this.clientId}): ${message}`;
+                this.logs.push(logEntry);
+                this.logListeners.forEach(listener => listener(logEntry));
+                // Update specific client's log UI
+                appendLog(this.uiElements.clientLogsDiv, logEntry);
+            }
+
+            // Called directly by the server to send a message to this client
+            receiveMessage(msg) {
+                this.addLog(`Received server message (${msg.type}): ${JSON.stringify(msg.payload).substring(0, 50)}...`);
+
+                switch (msg.type) {
+                    case 'SERVER_ACCEPTED_CONNECTION':
+                        this.isConnected = true;
+                        this.clientName = msg.payload.assignedName;
+                        this.addLog(`Connection successful! Assigned name: ${this.clientName}`);
+                        this.chatMessages.push({ sender: 'System', text: `You are connected as ${this.clientName}.` });
+                        this.updateChatUI();
+                        this.updateUIForConnectionStatus();
+                        break;
+
+                    case 'SERVER_REJECTED_CONNECTION':
+                        this.isConnected = false;
+                        this.clientName = null;
+                        this.addLog(`Connection rejected: ${msg.payload.reason}`);
+                        this.chatMessages.push({ sender: 'System', text: `Connection rejected: ${msg.payload.reason}` });
+                        this.updateChatUI();
+                        this.updateUIForConnectionStatus();
+                        break;
+
+                    case 'SERVER_BROADCAST_MESSAGE':
+                        this.chatMessages.push({ sender: msg.payload.senderName, text: msg.payload.text, timestamp: msg.timestamp });
+                        this.updateChatUI();
+                        break;
+
+                    case 'SERVER_DISCONNECTED_CLIENT':
+                         // Only process if this client is not the one disconnecting itself
+                        if (msg.payload.clientId !== this.clientId) {
+                            this.chatMessages.push({ sender: 'System', text: `${msg.payload.clientName} has left.` });
+                            this.updateChatUI();
+                        }
+                        break;
+
+                    case 'SERVER_SHUTDOWN':
+                        if (this.isConnected) {
+                            this.isConnected = false;
+                            this.clientName = null;
+                            this.addLog(`Server disconnected: ${msg.payload.reason}`);
+                            this.chatMessages.push({ sender: 'System', text: `Server disconnected: ${msg.payload.reason}` });
+                            this.updateChatUI();
+                            this.updateUIForConnectionStatus();
+                        }
+                        break;
+
+                    default:
+                        this.addLog(`Unhandled server message type: ${msg.type}`);
+                        break;
+                }
+            }
+
+            // Sends a message to the server instance directly
+            sendMessageToServer(type, payload) {
+                const message = {
+                    source: 'client',
+                    senderId: this.clientId,
+                    type,
+                    targetId: 'server',
+                    payload,
+                    timestamp: new Date().toISOString()
+                };
+                // Direct call to server's message handling method, passing itself as sender
+                this.server.handleIncomingClientMessage(message, this);
+            }
+
+            async handleConnect() {
+                const name = this.uiElements.clientNameInput.value.trim();
+                if (name) {
+                    this.addLog(`Attempting to connect as "${name}"...`);
+                    this.sendMessageToServer('CLIENT_CONNECT', { requestedName: name });
+                }
+            }
+
+            async handleSendMessage() {
+                const message = this.uiElements.chatInput.value.trim();
+                if (message) {
+                    this.sendMessageToServer('CLIENT_MESSAGE', { text: message });
+                    this.uiElements.chatInput.value = '';
+                }
+                this.updateUIForConnectionStatus(); // Re-evaluate disabled state for send button
+            }
+
+            updateUIForConnectionStatus() {
+                this.uiElements.clientTitle.textContent = this.isConnected ? `General Protocol Client (${this.clientName})` : `General Protocol Client (Not Connected)`;
+                this.uiElements.connectionSection.style.display = this.isConnected ? 'none' : 'block';
+                this.uiElements.chatSection.style.display = this.isConnected ? 'block' : 'none';
+
+                this.uiElements.clientNameInput.disabled = this.isConnected;
+                this.uiElements.connectButton.disabled = this.isConnected || !this.uiElements.clientNameInput.value.trim();
+                this.uiElements.sendChatButton.disabled = !this.isConnected || !this.uiElements.chatInput.value.trim();
+            }
+
+            updateChatUI() {
+                this.uiElements.clientChatMessagesDiv.innerHTML = '';
+                this.chatMessages.forEach(msg => {
+                    const p = document.createElement('p');
+                    p.classList.add('message');
+                    if (msg.sender === 'System') {
+                        p.classList.add('system-message');
+                        p.textContent = msg.text;
+                    } else {
+                        p.innerHTML = `<span class="sender">${msg.sender}:</span> ${msg.text} <span style="color: gray; font-size: 0.8em; margin-left: 5px;">(${new Date(msg.timestamp || Date.now()).toLocaleTimeString()})</span>`;
+                    }
+                    this.uiElements.clientChatMessagesDiv.appendChild(p);
+                    this.uiElements.clientChatMessagesDiv.scrollTop = this.uiElements.clientChatMessagesDiv.scrollHeight;
+                });
+            }
+        }
+
+        // --- Global DOM Utilities & Application Setup ---
+
+        let serverInstance;
+        const clientsContainer = document.getElementById('clients-container');
+        const serverLogsDiv = document.getElementById('server-logs');
+        const clientListDiv = document.getElementById('client-list');
+        const connectedClientsCountSpan = document.getElementById('connected-clients-count');
+        const spawnClientButton = document.getElementById('spawn-client-button');
+
+        function appendLog(element, message) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            element.appendChild(p);
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function updateServerClientList() {
+            clientListDiv.innerHTML = '';
+            const clients = serverInstance.getClients();
+            if (clients.length === 0) {
+                const p = document.createElement('p');
+                p.style.color = 'gray';
+                p.style.fontStyle = 'italic';
+                p.textContent = 'No clients connected yet.';
+                clientListDiv.appendChild(p);
+            } else {
+                clients.forEach(client => {
+                    const p = document.createElement('p');
+                    p.classList.add('client-item');
+                    p.innerHTML = `<strong>${client.name}</strong> (ID: ${client.id.substring(0, 8)}...) - Status: ${client.status}`;
+                    clientListDiv.appendChild(p);
+                });
+            }
+            connectedClientsCountSpan.textContent = clients.length;
+        }
+
+        function createClientPanelAndInstance() {
+            // 1. Create HTML elements for the new client panel
+            const panel = document.createElement('div');
+            panel.classList.add('client-panel');
+            const clientId = `client-${Math.random().toString(36).substring(2, 9)}`; // Unique ID for panel and its elements
+
+            panel.innerHTML = `
+                <h2 id="client-title-${clientId}">General Protocol Client (Not Connected)</h2>
+                <div id="connection-section-${clientId}">
+                    <h3>Connect to Server</h3>
+                    <input type="text" id="client-name-input-${clientId}" placeholder="Enter your client name">
+                    <button id="connect-button-${clientId}" class="connect-button">Connect</button>
+                </div>
+                <div id="chat-section-${clientId}" style="display: none;">
+                    <h3>Chat</h3>
+                    <div id="client-chat-messages-${clientId}" class="chat-box"></div>
+                    <input type="text" id="chat-input-${clientId}" placeholder="Type your message">
+                    <button id="send-chat-button-${clientId}" class="send-button">Send Message</button>
+                </div>
+                <h3>Client Logs</h3>
+                <div id="client-logs-${clientId}" class="log-box"></div>
+            `;
+            clientsContainer.appendChild(panel);
+
+            // 2. Get references to the newly created UI elements
+            const uiElements = {
+                clientTitle: panel.querySelector(`#client-title-${clientId}`),
+                connectionSection: panel.querySelector(`#connection-section-${clientId}`),
+                clientNameInput: panel.querySelector(`#client-name-input-${clientId}`),
+                connectButton: panel.querySelector(`#connect-button-${clientId}`),
+                chatSection: panel.querySelector(`#chat-section-${clientId}`),
+                clientChatMessagesDiv: panel.querySelector(`#client-chat-messages-${clientId}`),
+                chatInput: panel.querySelector(`#chat-input-${clientId}`),
+                sendChatButton: panel.querySelector(`#send-chat-button-${clientId}`),
+                clientLogsDiv: panel.querySelector(`#client-logs-${clientId}`)
+            };
+
+            // 3. Instantiate a new GeneralClient, passing the server and its specific UI elements
+            new GeneralClient(serverInstance, uiElements);
+        }
+
+        // Initialize on window load
+        window.onload = function() {
+            serverInstance = new GeneralServer();
+
+            serverInstance.onLog((log) => {
+                appendLog(serverLogsDiv, log);
+            });
+
+            serverInstance.onClientUpdate(() => {
+                updateServerClientList();
+            });
+
+            spawnClientButton.addEventListener('click', createClientPanelAndInstance);
+
+            updateServerClientList(); // Initial list update
+        };
+    </script>
+</body>
+</html>
+
