@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>General Protocol Client</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f0f0f0; color: #333; }
+        .panel { background-color: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; max-width: 600px; margin: 0 auto; }
+        h1, h2, h3 { margin-top: 0; margin-bottom: 15px; }
+        .log-box, .chat-box { border: 1px solid #eee; background-color: #fafafa; padding: 10px; height: 180px; overflow-y: auto; margin-bottom: 15px; border-radius: 4px; font-size: 0.9em; white-space: pre-wrap; word-break: break-word; }
+        input[type="text"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%; }
+        button:hover { background-color: #218838; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        .message { margin-bottom: 5px; }
+        .message .sender { font-weight: bold; }
+        .system-message { color: #888; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <h2 id="client-title">General Protocol Client (Not Connected)</h2>
+
+        <!-- Connection/Login Section -->
+        <div id="connection-section">
+            <h3>Connect to Server</h3>
+            <input type="text" id="client-name-input" placeholder="Enter your client name">
+            <button id="connect-button">Connect</button>
+        </div>
+
+        <!-- Chat Section -->
+        <div id="chat-section" style="display: none;">
+            <h3>Chat</h3>
+            <div id="client-chat-messages" class="chat-box"></div>
+            <input type="text" id="chat-input" placeholder="Type your message">
+            <button id="send-chat-button">Send Message</button>
+        </div>
+
+        <!-- Client Logs -->
+        <h3>Client Logs</h3>
+        <div id="client-logs" class="log-box"></div>
+    </div>
+
+    <script type="module">
+        // BroadcastChannel name for all communication
+        const CHANNEL_NAME = 'general_protocol_channel';
+
+        // --- Client-side Logic ---
+
+        class GeneralClient {
+            clientId;
+            clientName = null;
+            isConnected = false;
+            logs = [];
+            chatMessages = [];
+            logListeners = [];
+            chatListeners = [];
+            broadcastChannel;
+
+            constructor() {
+                this.clientId = `client-${Math.random().toString(36).substring(2, 9)}`;
+                this.addLog(`Client instance created with ID: ${this.clientId}`);
+
+                this.broadcastChannel = new BroadcastChannel(CHANNEL_NAME);
+                this.broadcastChannel.onmessage = this.handleIncomingMessage.bind(this);
+
+                // Send a disconnect message when the tab is closed or reloaded
+                window.addEventListener('beforeunload', () => {
+                    if (this.isConnected) {
+                        this.sendMessage('CLIENT_DISCONNECT', {});
+                        this.addLog('Client tab closing. Notifying server of disconnect.');
+                    }
+                    this.broadcastChannel.close(); // Close the channel
+                });
+
+                // Periodically send a "ping" to the server (optional, for robustness)
+                setInterval(() => {
+                    if (this.isConnected) {
+                        this.sendMessage('CLIENT_PING', {});
+                    }
+                }, 30000); // Every 30 seconds
+            }
+
+            addLog(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = `[${timestamp}] CLIENT (${this.clientName || this.clientId}): ${message}`;
+                this.logs.push(logEntry);
+                this.logListeners.forEach(listener => listener(logEntry));
+            }
+
+            sendMessage(type, payload) {
+                const message = {
+                    source: 'client',
+                    senderId: this.clientId,
+                    type,
+                    targetId: 'server', // Messages from client always target the server first
+                    payload,
+                    timestamp: new Date().toISOString()
+                };
+                this.broadcastChannel.postMessage(message);
+            }
+
+            handleIncomingMessage(event) {
+                const msg = event.data;
+
+                // Only process messages from server or broadcasts
+                if (msg.source === 'server' && (msg.targetId === this.clientId || msg.targetId === 'broadcast')) {
+                    this.addLog(`Received server message (${msg.type}): ${JSON.stringify(msg.payload).substring(0, 50)}...`);
+
+                    switch (msg.type) {
+                        case 'SERVER_ACCEPTED_CONNECTION':
+                            this.isConnected = true;
+                            this.clientName = msg.payload.assignedName;
+                            this.addLog(`Connection successful! Assigned name: ${this.clientName}`);
+                            this.chatMessages.push({ sender: 'System', text: `You are connected as ${this.clientName}.` });
+                            this.chatListeners.forEach(listener => listener());
+                            // UI update handled by event listeners
+                            break;
+
+                        case 'SERVER_REJECTED_CONNECTION':
+                            this.isConnected = false;
+                            this.clientName = null;
+                            this.addLog(`Connection rejected: ${msg.payload.reason}`);
+                            this.chatMessages.push({ sender: 'System', text: `Connection rejected: ${msg.payload.reason}` });
+                            this.chatListeners.forEach(listener => listener());
+                            // UI update handled by event listeners
+                            break;
+
+                        case 'SERVER_BROADCAST_MESSAGE':
+                            this.chatMessages.push({ sender: msg.payload.senderName, text: msg.payload.text, timestamp: msg.timestamp });
+                            this.chatListeners.forEach(listener => listener());
+                            break;
+
+                        case 'SERVER_CLIENT_LIST_UPDATE':
+                            // Clients can also see the updated client list (optional)
+                            // For this demo, we'll just log it.
+                            // this.addLog(`Received updated client list: ${JSON.stringify(msg.payload.clients.map(c => c.name))}`);
+                            break;
+
+                        case 'SERVER_SHUTDOWN':
+                            if (this.isConnected) {
+                                this.isConnected = false;
+                                this.clientName = null;
+                                this.addLog(`Server disconnected: ${msg.payload.reason}`);
+                                this.chatMessages.push({ sender: 'System', text: `Server disconnected: ${msg.payload.reason}` });
+                                this.chatListeners.forEach(listener => listener());
+                                // UI update to show disconnected state
+                                updateUIForConnectionStatus();
+                            }
+                            break;
+
+                        default:
+                            this.addLog(`Unhandled server message type: ${msg.type}`);
+                            break;
+                    }
+                }
+            }
+
+            async connect(requestedName) {
+                if (this.isConnected) {
+                    this.addLog('Already connected.');
+                    return;
+                }
+                if (!requestedName) {
+                    this.addLog('Client name cannot be empty.');
+                    return;
+                }
+                this.addLog(`Attempting to connect as "${requestedName}"...`);
+                this.sendMessage('CLIENT_CONNECT', { requestedName });
+            }
+
+            async sendChatMessage(message) {
+                if (!this.isConnected) {
+                    this.addLog('Cannot send message: Not connected to server.');
+                    return;
+                }
+                if (!message.trim()) {
+                    this.addLog('Message cannot be empty.');
+                    return;
+                }
+                this.sendMessage('CLIENT_MESSAGE', { text: message });
+                this.addLog(`Sent message: "${message}"`);
+            }
+
+            onLog(listener) {
+                this.logListeners.push(listener);
+                return () => this.logListeners = this.logListeners.filter(l => l !== listener);
+            }
+
+            onChat(listener) {
+                this.chatListeners.push(listener);
+                return () => this.chatListeners = this.chatListeners.filter(l => l !== listener);
+            }
+
+            // Getters for UI
+            getLogs() { return this.logs; }
+            getChatMessages() { return this.chatMessages; }
+            getClientName() { return this.clientName; }
+            getIsConnected() { return this.isConnected; }
+        }
+
+        // --- DOM Elements and UI Logic ---
+
+        let client;
+
+        const clientTitle = document.getElementById('client-title');
+        const connectionSection = document.getElementById('connection-section');
+        const clientNameInput = document.getElementById('client-name-input');
+        const connectButton = document.getElementById('connect-button');
+
+        const chatSection = document.getElementById('chat-section');
+        const clientChatMessagesDiv = document.getElementById('client-chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendChatButton = document.getElementById('send-chat-button');
+
+        const clientLogsDiv = document.getElementById('client-logs');
+
+        function appendLog(element, message) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            element.appendChild(p);
+            element.scrollTop = element.scrollHeight; // Scroll to bottom
+        }
+
+        function appendChatMessage(element, message) {
+            const p = document.createElement('p');
+            p.classList.add('message');
+            if (message.sender === 'System') {
+                p.classList.add('system-message');
+                p.textContent = message.text;
+            } else {
+                p.innerHTML = `<span class="sender">${message.sender}:</span> ${message.text} <span style="color: gray; font-size: 0.8em; margin-left: 5px;">(${new Date(message.timestamp).toLocaleTimeString()})</span>`;
+            }
+            element.appendChild(p);
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function updateUIForConnectionStatus() {
+            if (client.getIsConnected()) {
+                clientTitle.textContent = `General Protocol Client (${client.getClientName()})`;
+                connectionSection.style.display = 'none';
+                chatSection.style.display = 'block';
+                chatInput.focus();
+            } else {
+                clientTitle.textContent = 'General Protocol Client (Not Connected)';
+                connectionSection.style.display = 'block';
+                chatSection.style.display = 'none';
+            }
+            clientNameInput.disabled = client.getIsConnected();
+            connectButton.disabled = client.getIsConnected() || !clientNameInput.value.trim();
+            sendChatButton.disabled = !client.getIsConnected() || !chatInput.value.trim();
+        }
+
+        async function handleConnect() {
+            const name = clientNameInput.value.trim();
+            if (name) {
+                await client.connect(name);
+                updateUIForConnectionStatus(); // Update UI after connection attempt
+            }
+        }
+
+        async function handleSendMessage() {
+            const message = chatInput.value.trim();
+            if (message) {
+                await client.sendChatMessage(message);
+                chatInput.value = ''; // Clear input after sending
+            }
+            sendChatButton.disabled = !chatInput.value.trim(); // Re-evaluate disabled state
+        }
+
+        // Initialize on window load
+        window.onload = function() {
+            client = new GeneralClient();
+
+            client.onLog((log) => {
+                appendLog(clientLogsDiv, log);
+            });
+
+            client.onChat(() => {
+                clientChatMessagesDiv.innerHTML = ''; // Clear and re-render all chat messages
+                client.getChatMessages().forEach(msg => appendChatMessage(clientChatMessagesDiv, msg));
+            });
+
+            connectButton.addEventListener('click', handleConnect);
+            clientNameInput.addEventListener('input', updateUIForConnectionStatus); // Enable/disable connect button
+            clientNameInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    handleConnect();
+                }
+            });
+
+            sendChatButton.addEventListener('click', handleSendMessage);
+            chatInput.addEventListener('input', updateUIForConnectionStatus); // Enable/disable send button
+            chatInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    handleSendMessage();
+                }
+            });
+
+            updateUIForConnectionStatus(); // Initial UI state
+        };
+    </script>
+</body>
+</html>
+
+
+
+
