@@ -1,0 +1,531 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+// --- Packet Definitions (Simplified as JSON objects) ---
+
+/**
+ * Base interface for all simulated packets.
+ * Real MCP packets are complex binary structures. Here we use JSON for simplicity.
+ */
+interface Packet {
+  type: string;
+  payload: any;
+}
+
+// Clientbound & Serverbound Handshake (0x00)
+interface HandshakePacket extends Packet {
+  type: 'Handshake';
+  payload: {
+    protocolVersion: number;
+    serverAddress: string;
+    serverPort: number;
+    nextState: 'status' | 'login';
+  };
+}
+
+// Serverbound Login Start (0x00 in Login state)
+interface LoginStartPacket extends Packet {
+  type: 'LoginStart';
+  payload: {
+    username: string;
+  };
+}
+
+// Clientbound Login Success (0x02 in Login state)
+interface LoginSuccessPacket extends Packet {
+  type: 'LoginSuccess';
+  payload: {
+    uuid: string;
+    username: string;
+  };
+}
+
+// Serverbound Chat Message (0x0F in Play state)
+interface ServerboundChatMessagePacket extends Packet {
+  type: 'ServerboundChatMessage';
+  payload: {
+    message: string;
+  };
+}
+
+// Clientbound Chat Message (0x0F in Play state)
+interface ClientboundChatMessagePacket extends Packet {
+  type: 'ClientboundChatMessage';
+  payload: {
+    sender: string;
+    message: string;
+    timestamp: string;
+  };
+}
+
+// --- Server-side Logic ---
+
+interface Player {
+  uuid: string;
+  username: string;
+  state: 'handshake' | 'login' | 'play';
+}
+
+/**
+ * Represents a simulated Minecraft server.
+ * It does not listen on network ports but simulates packet processing.
+ */
+class MinecraftServer {
+  private players: Map<string, Player> = new Map(); // uuid -> Player
+  private chatHistory: ClientboundChatMessagePacket[] = [];
+  private logs: string[] = [];
+  private logListeners: ((log: string) => void)[] = [];
+  private chatListeners: ((message: ClientboundChatMessagePacket) => void)[] = [];
+  private playerUpdateListeners: (() => void)[] = [];
+
+  constructor() {
+    this.addLog('Server started (simulated).');
+  }
+
+  /** Adds a log message and notifies listeners. */
+  private addLog(message: string) {
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = `[${timestamp}] SERVER: ${message}`;
+    this.logs.push(logEntry);
+    this.logListeners.forEach(listener => listener(logEntry));
+  }
+
+  /** Broadcasts a chat message to all connected players (and log). */
+  private broadcastChat(sender: string, message: string) {
+    const chatPacket: ClientboundChatMessagePacket = {
+      type: 'ClientboundChatMessage',
+      payload: {
+        sender,
+        message,
+        timestamp: new Date().toLocaleTimeString(),
+      },
+    };
+    this.chatHistory.push(chatPacket);
+    this.chatListeners.forEach(listener => listener(chatPacket));
+    this.addLog(`Chat broadcast from ${sender}: "${message}"`);
+  }
+
+  /**
+   * Simulates receiving a packet from a client.
+   * In a real server, this would come from a network connection.
+   */
+  public async receivePacket(packet: Packet, senderClientId: string): Promise<Packet | null> {
+    this.addLog(`Received packet from client ${senderClientId}: ${packet.type}`);
+
+    let currentPlayer = this.players.get(senderClientId);
+
+    switch (packet.type) {
+      case 'Handshake':
+        const handshakePacket = packet as HandshakePacket;
+        if (!currentPlayer) {
+          // New "connection"
+          currentPlayer = { uuid: senderClientId, username: 'unknown', state: 'handshake' };
+          this.players.set(senderClientId, currentPlayer);
+          this.addLog(`Client ${senderClientId} initiating handshake. Next state: ${handshakePacket.payload.nextState}`);
+        } else {
+          this.addLog(`Client ${senderClientId} (UUID: ${currentPlayer.uuid}) already exists, re-handshaking.`);
+        }
+        currentPlayer.state = handshakePacket.payload.nextState;
+        this.notifyPlayerUpdate();
+        // No explicit server-to-client handshake response in simplified protocol,
+        // but real MCP might send a status response if requested.
+        return null;
+
+      case 'LoginStart':
+        const loginStartPacket = packet as LoginStartPacket;
+        if (currentPlayer && currentPlayer.state === 'login') {
+          const username = loginStartPacket.payload.username;
+          // Simple validation: check if username is already taken
+          const isUsernameTaken = Array.from(this.players.values()).some(p => p.username === username && p.uuid !== currentPlayer?.uuid);
+
+          if (isUsernameTaken) {
+            this.addLog(`Login failed for client ${senderClientId}: Username "${username}" already taken.`);
+            // In a real scenario, send a Disconnect (Login) packet.
+            // For simplicity, we just return null and the client would not transition to play state.
+            return null;
+          }
+
+          currentPlayer.username = username;
+          currentPlayer.state = 'play'; // Transition to play state
+          this.addLog(`Client ${senderClientId} logged in as "${username}".`);
+          this.notifyPlayerUpdate();
+          this.broadcastChat('Server', `${username} joined the game.`);
+
+          // Send Login Success packet
+          const loginSuccess: LoginSuccessPacket = {
+            type: 'LoginSuccess',
+            payload: {
+              uuid: currentPlayer.uuid,
+              username: currentPlayer.username,
+            },
+          };
+          // Also send existing chat history to the newly joined player
+          // In a real server, this would be part of the initial Play state packets
+          this.chatHistory.forEach(msg => {
+              this.chatListeners.find(l => l === senderClientId)?.(msg); // Assuming client has a unique listener ID
+          });
+          return loginSuccess;
+        } else {
+          this.addLog(`LoginStart packet received for client ${senderClientId} in wrong state: ${currentPlayer?.state}`);
+          return null; // Error: unexpected packet
+        }
+
+      case 'ServerboundChatMessage':
+        const chatPacket = packet as ServerboundChatMessagePacket;
+        if (currentPlayer && currentPlayer.state === 'play') {
+          this.addLog(`Chat from ${currentPlayer.username}: "${chatPacket.payload.message}"`);
+          this.broadcastChat(currentPlayer.username, chatPacket.payload.message);
+          return null;
+        } else {
+          this.addLog(`Chat message from ${senderClientId} in wrong state or not logged in.`);
+          return null;
+        }
+
+      default:
+        this.addLog(`Unknown packet type received from client ${senderClientId}: ${packet.type}`);
+        return null;
+    }
+  }
+
+  /** Registers a listener for server log messages. */
+  public onLog(listener: (log: string) => void) {
+    this.logListeners.push(listener);
+    return () => this.logListeners = this.logListeners.filter(l => l !== listener);
+  }
+
+  /** Registers a listener for client-bound chat messages. */
+  public onChat(listener: (message: ClientboundChatMessagePacket) => void) {
+    this.chatListeners.push(listener);
+    return () => this.chatListeners = this.chatListeners.filter(l => l !== listener);
+  }
+
+  /** Registers a listener for player list updates. */
+  public onPlayerUpdate(listener: () => void) {
+    this.playerUpdateListeners.push(listener);
+    return () => this.playerUpdateListeners = this.playerUpdateListeners.filter(l => l !== listener);
+  }
+
+  /** Notifies player update listeners. */
+  private notifyPlayerUpdate() {
+    this.playerUpdateListeners.forEach(listener => listener());
+  }
+
+  /** Returns current connected players. */
+  public getPlayers(): Player[] {
+    return Array.from(this.players.values());
+  }
+}
+
+// --- Client-side Simulation ---
+
+/**
+ * Represents a simulated Minecraft client.
+ * It "sends" packets to the local server and "receives" responses.
+ */
+class MinecraftClient {
+  private server: MinecraftServer;
+  private clientId: string;
+  public username: string | null = null;
+  public uuid: string | null = null;
+  private chatListeners: ((message: ClientboundChatMessagePacket) => void)[] = [];
+  private clientLogListeners: ((log: string) => void)[] = [];
+
+  constructor(server: MinecraftServer) {
+    this.server = server;
+    // Generate a unique ID for this simulated client
+    this.clientId = `client-${Math.random().toString(36).substring(2, 9)}`;
+    this.addClientLog(`Client instance created with ID: ${this.clientId}`);
+    // Subscribe to server chat messages
+    this.server.onChat(this.handleServerChatMessage);
+  }
+
+  /** Adds a log message specific to this client and notifies listeners. */
+  private addClientLog(message: string) {
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = `[${timestamp}] CLIENT (${this.username || this.clientId}): ${message}`;
+    this.clientLogListeners.forEach(listener => listener(logEntry));
+  }
+
+  /** Handles incoming chat messages from the server. */
+  private handleServerChatMessage = (packet: ClientboundChatMessagePacket) => {
+    this.addClientLog(`Received chat from ${packet.payload.sender}: "${packet.payload.message}"`);
+    this.chatListeners.forEach(listener => listener(packet));
+  };
+
+  /** Simulates sending a packet to the server. */
+  private async sendPacket(packet: Packet): Promise<Packet | null> {
+    this.addClientLog(`Sending packet: ${packet.type}`);
+    const response = await this.server.receivePacket(packet, this.clientId);
+    if (response) {
+      this.addClientLog(`Received response: ${response.type}`);
+    }
+    return response;
+  }
+
+  /** Simulates a client handshake. */
+  public async handshake(protocolVersion: number, serverAddress: string, serverPort: number, nextState: 'status' | 'login') {
+    const handshakePacket: HandshakePacket = {
+      type: 'Handshake',
+      payload: { protocolVersion, serverAddress, serverPort, nextState },
+    };
+    await this.sendPacket(handshakePacket);
+  }
+
+  /** Simulates a client attempting to log in. */
+  public async login(username: string): Promise<boolean> {
+    await this.handshake(760, 'localhost', 25565, 'login'); // Example protocol version for 1.19.3
+    const loginStartPacket: LoginStartPacket = {
+      type: 'LoginStart',
+      payload: { username },
+    };
+    const response = await this.sendPacket(loginStartPacket);
+    if (response && response.type === 'LoginSuccess') {
+      const loginSuccess = response as LoginSuccessPacket;
+      this.uuid = loginSuccess.payload.uuid;
+      this.username = loginSuccess.payload.username;
+      this.addClientLog(`Login successful! UUID: ${this.uuid}, Username: ${this.username}`);
+      return true;
+    } else {
+      this.addClientLog('Login failed.');
+      this.username = null; // Clear username if login failed
+      this.uuid = null;
+      return false;
+    }
+  }
+
+  /** Simulates a client sending a chat message. */
+  public async sendChatMessage(message: string) {
+    if (!this.username || !this.uuid) {
+      this.addClientLog('Cannot send chat: Not logged in.');
+      return;
+    }
+    const chatPacket: ServerboundChatMessagePacket = {
+      type: 'ServerboundChatMessage',
+      payload: { message },
+    };
+    await this.sendPacket(chatPacket);
+  }
+
+  /** Registers a listener for client-side chat messages. */
+  public onChat(listener: (message: ClientboundChatMessagePacket) => void) {
+    this.chatListeners.push(listener);
+    return () => this.chatListeners = this.chatListeners.filter(l => l !== listener);
+  }
+
+  /** Registers a listener for client log messages. */
+  public onClientLog(listener: (log: string) => void) {
+    this.clientLogListeners.push(listener);
+    return () => this.clientLogListeners = this.clientLogListeners.filter(l => l !== listener);
+  }
+}
+
+// --- React Application ---
+
+const App: React.FC = () => {
+  const [serverLogs, setServerLogs] = useState<string[]>([]);
+  const [clientLogs, setClientLogs] = useState<string[]>([]);
+  const [clientChatMessages, setClientChatMessages] = useState<ClientboundChatMessagePacket[]>([]);
+  const [connectedPlayers, setConnectedPlayers] = useState<Player[]>([]);
+
+  const [usernameInput, setUsernameInput] = useState<string>('');
+  const [chatInput, setChatInput] = useState<string>('');
+
+  const serverRef = useRef<MinecraftServer | null>(null);
+  const clientRef = useRef<MinecraftClient | null>(null);
+  const serverLogsEndRef = useRef<HTMLDivElement>(null);
+  const clientLogsEndRef = useRef<HTMLDivElement>(null);
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+
+
+  // Initialize server and client only once
+  useEffect(() => {
+    serverRef.current = new MinecraftServer();
+    clientRef.current = new MinecraftClient(serverRef.current);
+
+    // Subscribe to server logs
+    const unsubscribeServerLogs = serverRef.current.onLog((log) => {
+      setServerLogs((prev) => [...prev, log]);
+    });
+
+    // Subscribe to server player updates
+    const unsubscribePlayerUpdates = serverRef.current.onPlayerUpdate(() => {
+      setConnectedPlayers(serverRef.current?.getPlayers() || []);
+    });
+
+    // Subscribe to client logs
+    const unsubscribeClientLogs = clientRef.current.onClientLog((log) => {
+      setClientLogs((prev) => [...prev, log]);
+    });
+
+    // Subscribe to client chat messages
+    const unsubscribeClientChat = clientRef.current.onChat((message) => {
+      setClientChatMessages((prev) => [...prev, message]);
+    });
+
+    return () => {
+      unsubscribeServerLogs();
+      unsubscribePlayerUpdates();
+      unsubscribeClientLogs();
+      unsubscribeClientChat();
+    };
+  }, []);
+
+  // Scroll to bottom of logs
+  useEffect(() => {
+    serverLogsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [serverLogs]);
+
+  useEffect(() => {
+    clientLogsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [clientLogs]);
+
+  useEffect(() => {
+    chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [clientChatMessages]);
+
+
+  const handleLogin = useCallback(async () => {
+    if (clientRef.current && usernameInput.trim()) {
+      const success = await clientRef.current.login(usernameInput.trim());
+      if (success) {
+        setUsernameInput(''); // Clear input on success
+      }
+    }
+  }, [usernameInput]);
+
+  const handleSendChat = useCallback(async () => {
+    if (clientRef.current && chatInput.trim()) {
+      await clientRef.current.sendChatMessage(chatInput.trim());
+      setChatInput(''); // Clear input after sending
+    }
+  }, [chatInput]);
+
+  const handleKeyPress = useCallback((event: React.KeyboardEvent<HTMLInputElement>, action: 'login' | 'chat') => {
+    if (event.key === 'Enter') {
+      if (action === 'login') {
+        handleLogin();
+      } else if (action === 'chat') {
+        handleSendChat();
+      }
+    }
+  }, [handleLogin, handleSendChat]);
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-4 font-sans text-gray-800 flex flex-col md:flex-row gap-4 rounded-lg shadow-lg">
+      <script src="https://cdn.tailwindcss.com"></script>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+
+      {/* Tailwind config for Inter font */}
+      <style>{`
+        body { font-family: 'Inter', sans-serif; }
+      `}</style>
+
+      {/* Server Panel */}
+      <div className="flex-1 bg-white p-6 rounded-lg shadow-md flex flex-col">
+        <h2 className="text-2xl font-semibold mb-4 text-blue-700">Simulated Minecraft Server</h2>
+        <div className="mb-4">
+          <h3 className="text-lg font-medium text-blue-600 mb-2">Connected Players ({connectedPlayers.length})</h3>
+          <div className="bg-blue-50 p-3 rounded-md max-h-40 overflow-y-auto border border-blue-200">
+            {connectedPlayers.length === 0 ? (
+              <p className="text-gray-500 italic">No players connected yet.</p>
+            ) : (
+              connectedPlayers.map((player) => (
+                <p key={player.uuid} className="text-blue-800 text-sm">
+                  <span className="font-semibold">{player.username}</span> (UUID: {player.uuid.substring(0, 8)}...) - State: {player.state}
+                </p>
+              ))
+            )}
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col">
+          <h3 className="text-lg font-medium text-blue-600 mb-2">Server Logs</h3>
+          <div className="bg-gray-50 p-3 rounded-md flex-1 overflow-y-auto text-sm border border-gray-200" style={{ minHeight: '150px' }}>
+            {serverLogs.map((log, index) => (
+              <p key={index} className="text-gray-700 break-words">{log}</p>
+            ))}
+            <div ref={serverLogsEndRef} />
+          </div>
+        </div>
+      </div>
+
+      {/* Client Panel */}
+      <div className="flex-1 bg-white p-6 rounded-lg shadow-md flex flex-col">
+        <h2 className="text-2xl font-semibold mb-4 text-green-700">Simulated Minecraft Client</h2>
+
+        {/* Login Section */}
+        <div className="mb-6 p-4 border border-green-200 rounded-md bg-green-50">
+          <h3 className="text-lg font-medium text-green-600 mb-3">Client Actions</h3>
+          {clientRef.current?.username ? (
+            <p className="text-green-800 font-semibold mb-2">Logged in as: {clientRef.current.username}</p>
+          ) : (
+            <>
+              <input
+                type="text"
+                placeholder="Enter Username"
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, 'login')}
+                className="w-full p-2 border border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 mb-2"
+              />
+              <button
+                onClick={handleLogin}
+                className="w-full bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 transition-colors shadow-md active:scale-98 focus:outline-none focus:ring-2 focus:ring-green-400"
+                disabled={!usernameInput.trim()}
+              >
+                Simulate Login
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Chat Section */}
+        {clientRef.current?.username && (
+          <div className="mb-6 p-4 border border-purple-200 rounded-md bg-purple-50">
+            <h3 className="text-lg font-medium text-purple-600 mb-3">Chat</h3>
+            <div className="bg-purple-100 p-3 rounded-md mb-3 max-h-40 overflow-y-auto border border-purple-200 text-sm">
+              {clientChatMessages.length === 0 ? (
+                <p className="text-gray-500 italic">No chat messages yet.</p>
+              ) : (
+                clientChatMessages.map((msg, index) => (
+                  <p key={index} className="mb-1">
+                    <span className="font-semibold text-purple-800">{msg.payload.sender}:</span> {msg.payload.message}
+                    <span className="text-gray-500 text-xs ml-2">({msg.payload.timestamp})</span>
+                  </p>
+                ))
+              )}
+              <div ref={chatMessagesEndRef} />
+            </div>
+            <input
+              type="text"
+              placeholder="Type your message"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyPress={(e) => handleKeyPress(e, 'chat')}
+              className="w-full p-2 border border-purple-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400 mb-2"
+              disabled={!clientRef.current?.username}
+            />
+            <button
+              onClick={handleSendChat}
+              className="w-full bg-purple-500 text-white py-2 px-4 rounded-md hover:bg-purple-600 transition-colors shadow-md active:scale-98 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              disabled={!chatInput.trim() || !clientRef.current?.username}
+            >
+              Send Chat Message
+            </button>
+          </div>
+        )}
+
+        {/* Client Logs */}
+        <div className="flex-1 flex flex-col">
+          <h3 className="text-lg font-medium text-gray-600 mb-2">Client Logs</h3>
+          <div className="bg-gray-50 p-3 rounded-md flex-1 overflow-y-auto text-sm border border-gray-200" style={{ minHeight: '150px' }}>
+            {clientLogs.map((log, index) => (
+              <p key={index} className="text-gray-700 break-words">{log}</p>
+            ))}
+            <div ref={clientLogsEndRef} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
