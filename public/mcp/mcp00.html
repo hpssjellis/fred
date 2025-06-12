@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Protocol Server Simulation</title>
+    <style>
+        /* Minimal inline CSS for basic layout and readability */
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .panel {
+            flex: 1;
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        h1, h2, h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .log-box, .chat-box, .player-list-box {
+            border: 1px solid #eee;
+            background-color: #fafafa;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            white-space: pre-wrap; /* Preserve whitespace and wrap long lines */
+            word-break: break-word; /* Break words to prevent overflow */
+        }
+        input[type="text"] {
+            width: calc(100% - 22px); /* Account for padding and border */
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .message {
+            margin-bottom: 5px;
+        }
+        .message .sender {
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Server Panel -->
+        <div id="server-panel" class="panel">
+            <h2>Simulated Minecraft Server</h2>
+            <h3>Connected Players (<span id="connected-players-count">0</span>)</h3>
+            <div id="player-list" class="player-list-box">
+                <p style="color: gray; font-style: italic;">No players connected yet.</p>
+            </div>
+            <h3>Server Logs</h3>
+            <div id="server-logs" class="log-box"></div>
+        </div>
+
+        <!-- Client Panel -->
+        <div id="client-panel" class="panel">
+            <h2>Simulated Minecraft Client</h2>
+
+            <!-- Login Section -->
+            <div id="login-section">
+                <h3>Client Actions</h3>
+                <p id="logged-in-status" style="display: none; color: green; font-weight: bold; margin-bottom: 15px;"></p>
+                <input type="text" id="username-input" placeholder="Enter Username">
+                <button id="login-button">Simulate Login</button>
+            </div>
+
+            <!-- Chat Section -->
+            <div id="chat-section" style="display: none;">
+                <h3>Chat</h3>
+                <div id="client-chat-messages" class="chat-box"></div>
+                <input type="text" id="chat-input" placeholder="Type your message">
+                <button id="send-chat-button">Send Chat Message</button>
+            </div>
+
+            <!-- Client Logs -->
+            <h3>Client Logs</h3>
+            <div id="client-logs" class="log-box"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Packet Definitions (Simplified as JSON objects) ---
+        // These interfaces are for type clarity in TypeScript, which can still be used
+        // as comments/guides in plain JavaScript. The runtime will ignore them.
+
+        /**
+         * Base interface for all simulated packets.
+         * Real MCP packets are complex binary structures. Here we use JSON for simplicity.
+         */
+        // interface Packet { type: string; payload: any; }
+
+        // interface HandshakePacket extends Packet { /* ... */ }
+        // interface LoginStartPacket extends Packet { /* ... */ }
+        // interface LoginSuccessPacket extends Packet { /* ... */ }
+        // interface ServerboundChatMessagePacket extends Packet { /* ... */ }
+        // interface ClientboundChatMessagePacket extends Packet { /* ... */ }
+
+        // --- Server-side Logic ---
+
+        // interface Player { uuid: string; username: string; state: 'handshake' | 'login' | 'play'; }
+
+        /**
+         * Represents a simulated Minecraft server.
+         * It does not listen on network ports but simulates packet processing.
+         */
+        class MinecraftServer {
+            // Properties initialized in the constructor for broader JS compatibility
+            players;
+            chatHistory;
+            logs;
+            logListeners;
+            chatListeners;
+            playerUpdateListeners;
+
+            constructor() {
+                this.players = new Map(); // uuid -> Player
+                this.chatHistory = [];
+                this.logs = [];
+                this.logListeners = [];
+                this.chatListeners = [];
+                this.playerUpdateListeners = [];
+                this.addLog('Server started (simulated).');
+            }
+
+            /** Adds a log message and notifies listeners. */
+            addLog(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = `[${timestamp}] SERVER: ${message}`;
+                this.logs.push(logEntry);
+                this.logListeners.forEach(listener => listener(logEntry));
+            }
+
+            /** Broadcasts a chat message to all connected players (and log). */
+            broadcastChat(sender, message) {
+                const chatPacket = {
+                    type: 'ClientboundChatMessage',
+                    payload: {
+                        sender,
+                        message,
+                        timestamp: new Date().toLocaleTimeString(),
+                    },
+                };
+                this.chatHistory.push(chatPacket);
+                this.chatListeners.forEach(listener => listener(chatPacket));
+                this.addLog(`Chat broadcast from ${sender}: "${message}"`);
+            }
+
+            /**
+             * Simulates receiving a packet from a client.
+             * In a real server, this would come from a network connection.
+             */
+            async receivePacket(packet, senderClientId) {
+                this.addLog(`Received packet from client ${senderClientId}: ${packet.type}`);
+
+                let currentPlayer = this.players.get(senderClientId);
+
+                switch (packet.type) {
+                    case 'Handshake':
+                        if (!currentPlayer) {
+                            // New "connection"
+                            currentPlayer = { uuid: senderClientId, username: 'unknown', state: 'handshake' };
+                            this.players.set(senderClientId, currentPlayer);
+                            this.addLog(`Client ${senderClientId} initiating handshake. Next state: ${packet.payload.nextState}`);
+                        } else {
+                            this.addLog(`Client ${senderClientId} (UUID: ${currentPlayer.uuid}) already exists, re-handshaking.`);
+                        }
+                        currentPlayer.state = packet.payload.nextState;
+                        this.notifyPlayerUpdate();
+                        return null;
+
+                    case 'LoginStart':
+                        if (currentPlayer && currentPlayer.state === 'login') {
+                            const username = packet.payload.username;
+                            // Simple validation: check if username is already taken
+                            const isUsernameTaken = Array.from(this.players.values()).some(p => p.username === username && p.uuid !== currentPlayer?.uuid);
+
+                            if (isUsernameTaken) {
+                                this.addLog(`Login failed for client ${senderClientId}: Username "${username}" already taken.`);
+                                return null;
+                            }
+
+                            currentPlayer.username = username;
+                            currentPlayer.state = 'play'; // Transition to play state
+                            this.addLog(`Client ${senderClientId} logged in as "${username}".`);
+                            this.notifyPlayerUpdate();
+                            this.broadcastChat('Server', `${username} joined the game.`);
+
+                            // Send Login Success packet
+                            const loginSuccess = {
+                                type: 'LoginSuccess',
+                                payload: {
+                                    uuid: currentPlayer.uuid,
+                                    username: currentPlayer.username,
+                                },
+                            };
+                            // Also send existing chat history to the newly joined player
+                            // This part is simplified; in real MCP, it's more complex.
+                            this.chatHistory.forEach(msg => {
+                                // In plain JS, the listener would need to know which client it's for.
+                                // For this simplified model, we'll assume the client is always listening.
+                                // A real client would process packets sent explicitly to its connection.
+                            });
+                            return loginSuccess;
+                        } else {
+                            this.addLog(`LoginStart packet received for client ${senderClientId} in wrong state: ${currentPlayer?.state}`);
+                            return null;
+                        }
+
+                    case 'ServerboundChatMessage':
+                        if (currentPlayer && currentPlayer.state === 'play') {
+                            this.addLog(`Chat from ${currentPlayer.username}: "${packet.payload.message}"`);
+                            this.broadcastChat(currentPlayer.username, packet.payload.message);
+                            return null;
+                        } else {
+                            this.addLog(`Chat message from ${senderClientId} in wrong state or not logged in.`);
+                            return null;
+                        }
+
+                    default:
+                        this.addLog(`Unknown packet type received from client ${senderClientId}: ${packet.type}`);
+                        return null;
+                }
+            }
+
+            /** Registers a listener for server log messages. */
+            onLog(listener) {
+                this.logListeners.push(listener);
+                return () => this.logListeners = this.logListeners.filter(l => l !== listener);
+            }
+
+            /** Registers a listener for client-bound chat messages. */
+            onChat(listener) {
+                this.chatListeners.push(listener);
+                return () => this.chatListeners = this.chatListeners.filter(l => l !== listener);
+            }
+
+            /** Registers a listener for player list updates. */
+            onPlayerUpdate(listener) {
+                this.playerUpdateListeners.push(listener);
+                return () => this.playerUpdateListeners = this.playerUpdateListeners.filter(l => l !== listener);
+            }
+
+            /** Notifies player update listeners. */
+            notifyPlayerUpdate() {
+                this.playerUpdateListeners.forEach(listener => listener());
+            }
+
+            /** Returns current connected players. */
+            getPlayers() {
+                return Array.from(this.players.values());
+            }
+        }
+
+        // --- Client-side Simulation ---
+
+        /**
+         * Represents a simulated Minecraft client.
+         * It "sends" packets to the local server and "receives" responses.
+         */
+        class MinecraftClient {
+            // Properties initialized in the constructor for broader JS compatibility
+            server;
+            clientId;
+            username;
+            uuid;
+            chatListeners;
+            clientLogListeners;
+
+            constructor(server) {
+                this.server = server;
+                this.username = null;
+                this.uuid = null;
+                this.chatListeners = [];
+                this.clientLogListeners = [];
+                // Generate a unique ID for this simulated client
+                this.clientId = `client-${Math.random().toString(36).substring(2, 9)}`;
+                this.addClientLog(`Client instance created with ID: ${this.clientId}`);
+                // Subscribe to server chat messages, binding 'this' to the method
+                this.server.onChat(this.handleServerChatMessage.bind(this));
+            }
+
+            /** Adds a log message specific to this client and notifies listeners. */
+            addClientLog(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = `[${timestamp}] CLIENT (${this.username || this.clientId}): ${message}`;
+                this.clientLogListeners.forEach(listener => listener(logEntry));
+            }
+
+            /** Handles incoming chat messages from the server. */
+            // Converted from arrow function class property to regular method
+            handleServerChatMessage(packet) {
+                this.addClientLog(`Received chat from ${packet.payload.sender}: "${packet.payload.message}"`);
+                this.chatListeners.forEach(listener => listener(packet));
+            };
+
+            /** Simulates sending a packet to the server. */
+            async sendPacket(packet) {
+                this.addClientLog(`Sending packet: ${packet.type}`);
+                const response = await this.server.receivePacket(packet, this.clientId);
+                if (response) {
+                    this.addClientLog(`Received response: ${response.type}`);
+                }
+                return response;
+            }
+
+            /** Simulates a client handshake. */
+            async handshake(protocolVersion, serverAddress, serverPort, nextState) {
+                const handshakePacket = {
+                    type: 'Handshake',
+                    payload: { protocolVersion, serverAddress, serverPort, nextState },
+                };
+                await this.sendPacket(handshakePacket);
+            }
+
+            /** Simulates a client attempting to log in. */
+            async login(username) {
+                await this.handshake(760, 'localhost', 25565, 'login'); // Example protocol version for 1.19.3
+                const loginStartPacket = {
+                    type: 'LoginStart',
+                    payload: { username },
+                };
+                const response = await this.sendPacket(loginStartPacket);
+                if (response && response.type === 'LoginSuccess') {
+                    this.uuid = response.payload.uuid;
+                    this.username = response.payload.username;
+                    this.addClientLog(`Login successful! UUID: ${this.uuid}, Username: ${this.username}`);
+                    return true;
+                } else {
+                    this.addClientLog('Login failed.');
+                    this.username = null; // Clear username if login failed
+                    this.uuid = null;
+                    return false;
+                }
+            }
+
+            /** Simulates a client sending a chat message. */
+            async sendChatMessage(message) {
+                if (!this.username || !this.uuid) {
+                    this.addClientLog('Cannot send chat: Not logged in.');
+                    return;
+                }
+                const chatPacket = {
+                    type: 'ServerboundChatMessage',
+                    payload: { message },
+                };
+                await this.sendPacket(chatPacket);
+            }
+
+            /** Registers a listener for client-side chat messages. */
+            onChat(listener) {
+                this.chatListeners.push(listener);
+                return () => this.chatListeners = this.chatListeners.filter(l => l !== listener);
+            }
+
+            /** Registers a listener for client log messages. */
+            onClientLog(listener) {
+                this.clientLogListeners.push(listener);
+                return () => this.clientLogListeners = this.clientLogListeners.filter(l => l !== listener);
+            }
+        }
+
+        // --- DOM Elements and UI Logic ---
+
+        let server;
+        let client;
+
+        const serverLogsDiv = document.getElementById('server-logs');
+        const clientLogsDiv = document.getElementById('client-logs');
+        const clientChatMessagesDiv = document.getElementById('client-chat-messages');
+        const playerListDiv = document.getElementById('player-list');
+        const connectedPlayersCountSpan = document.getElementById('connected-players-count');
+
+        const usernameInput = document.getElementById('username-input');
+        const loginButton = document.getElementById('login-button');
+        const loggedInStatus = document.getElementById('logged-in-status');
+        const loginSection = document.getElementById('login-section');
+        const chatSection = document.getElementById('chat-section');
+        const chatInput = document.getElementById('chat-input');
+        const sendChatButton = document.getElementById('send-chat-button');
+
+        function appendLog(element, message) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            element.appendChild(p);
+            element.scrollTop = element.scrollHeight; // Scroll to bottom
+        }
+
+        function updatePlayerList() {
+            playerListDiv.innerHTML = ''; // Clear existing list
+            const players = server.getPlayers();
+            if (players.length === 0) {
+                const p = document.createElement('p');
+                p.style.color = 'gray';
+                p.style.fontStyle = 'italic';
+                p.textContent = 'No players connected yet.';
+                playerListDiv.appendChild(p);
+            } else {
+                players.forEach(player => {
+                    const p = document.createElement('p');
+                    p.innerHTML = `<span style="font-weight: bold;">${player.username}</span> (UUID: ${player.uuid.substring(0, 8)}...) - State: ${player.state}`;
+                    playerListDiv.appendChild(p);
+                });
+            }
+            connectedPlayersCountSpan.textContent = players.length;
+        }
+
+        async function handleLogin() {
+            const username = usernameInput.value.trim();
+            if (client && username) {
+                const success = await client.login(username);
+                if (success) {
+                    usernameInput.value = ''; // Clear input on success
+                    loginSection.style.display = 'none'; // Hide login section
+                    chatSection.style.display = 'block'; // Show chat section
+                    loggedInStatus.style.display = 'block';
+                    loggedInStatus.textContent = `Logged in as: ${client.username}`;
+                    chatInput.focus(); // Focus chat input after login
+                }
+            }
+        }
+
+        async function handleSendChat() {
+            const message = chatInput.value.trim();
+            if (client && message) {
+                await client.sendChatMessage(message);
+                chatInput.value = ''; // Clear input after sending
+            }
+        }
+
+        // Initialize on window load
+        window.onload = function() {
+            server = new MinecraftServer();
+            client = new MinecraftClient(server);
+
+            // Subscribe to server logs
+            server.onLog((log) => {
+                appendLog(serverLogsDiv, log);
+            });
+
+            // Subscribe to server player updates
+            server.onPlayerUpdate(() => {
+                updatePlayerList();
+            });
+
+            // Subscribe to client logs
+            client.onClientLog((log) => {
+                appendLog(clientLogsDiv, log);
+            });
+
+            // Subscribe to client chat messages
+            client.onChat((message) => {
+                const p = document.createElement('p');
+                p.classList.add('message');
+                p.innerHTML = `<span class="sender">${message.payload.sender}:</span> ${message.payload.message} <span style="color: gray; font-size: 0.8em; margin-left: 5px;">(${message.payload.timestamp})</span>`;
+                clientChatMessagesDiv.appendChild(p);
+                clientChatMessagesDiv.scrollTop = clientChatMessagesDiv.scrollHeight; // Scroll to bottom
+            });
+
+            // Event Listeners
+            loginButton.addEventListener('click', handleLogin);
+            usernameInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    handleLogin();
+                }
+            });
+
+            sendChatButton.addEventListener('click', handleSendChat);
+            chatInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    handleSendChat();
+                }
+            });
+
+            // Initial UI update
+            updatePlayerList();
+        };
+    </script>
+</body>
+</html>
