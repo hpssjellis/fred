@@ -71,7 +71,13 @@
         button:active {
             transform: translateY(0); /* Press effect */
         }
-        input[type="number"] {
+        button.stop {
+            background-color: #f44336; /* Red for stop/reset */
+        }
+        button.stop:hover {
+            background-color: #da190b;
+        }
+        input[type="number"], select {
             padding: 10px 15px;
             border: 1px solid #ccc;
             border-radius: 8px;
@@ -95,6 +101,11 @@
             font-size: 1.1em;
             width: 100%;
             box-sizing: border-box;
+        }
+        #countdownDisplay {
+            font-weight: bold;
+            color: #00796b;
+            margin-top: 5px;
         }
         h1 {
             color: #333;
@@ -126,12 +137,21 @@
 
         <div class="controls">
             <div class="input-group">
+                <label for="cameraSelect">Camera:</label>
+                <select id="cameraSelect" onchange="changeCamera()"></select>
+            </div>
+            <div class="input-group">
                 <label for="circleRadius">Circle Radius (meters):</label>
                 <input type="number" id="circleRadius" value="1.0" step="0.1">
             </div>
-            <button onclick="startMapping()">Start Mapping</button>
-            <button onclick="stopMapping()">Stop Mapping</button>
-            <button onclick="resetMapping()">Reset Map</button>
+            <div class="input-group">
+                <label for="circleDuration">Circle Duration (seconds):</label>
+                <input type="number" id="circleDuration" value="10" step="1">
+                <span id="countdownDisplay"></span> <!-- New span for countdown -->
+            </div>
+            <button id="toggleMappingBtn" onclick="toggleMapping()">Start Mapping</button>
+            <button onclick="drawRoomOutline()">Draw Room Outline</button>
+            <button class="stop" onclick="resetMapping()">Reset Map</button>
         </div>
 
         <div id="messageBox" class="message-box">
@@ -147,8 +167,13 @@
         let mapCtx = mapCanvas.getContext('2d');
         let messageBox = document.getElementById('messageBox');
         let circleRadiusInput = document.getElementById('circleRadius');
+        let circleDurationInput = document.getElementById('circleDuration');
+        let countdownDisplay = document.getElementById('countdownDisplay'); // Reference to the new countdown span
+        let cameraSelect = document.getElementById('cameraSelect');
+        let toggleMappingBtn = document.getElementById('toggleMappingBtn');
 
         let videoElement; // HTML video element to hold the webcam stream
+        let currentStream; // To hold the active media stream for stopping
         let animationFrameId; // ID for the requestAnimationFrame loop
         let isMapping = false; // Flag to control if mapping logic is active
 
@@ -166,44 +191,103 @@
         const SEARCH_WINDOW_SIZE = 15; // Size of search window for block matching (e.g., 15x15 pixels)
         const BLOCK_SIZE = 7; // Size of the square block to compare (e.g., 7x7 pixels)
 
+        // Variables for periodic feature re-detection and countdown
+        let frameCounter = 0;
+        const FEATURE_REDETECTION_INTERVAL_FRAMES = 60; // Re-detect features every 60 frames (approx 1 second at 60fps)
+        const MIN_TRACKED_POINTS_THRESHOLD = 50; // If fewer than this many points are tracked, re-detect immediately
+        let circleStartTime = 0; // Timestamp when the circle mapping started
+        let circleDirection = ''; // To store 'clockwise' or 'counter-clockwise'
+
         /**
          * Initializes the webcam stream and sets up the video element.
-         * This function is called automatically when the window loads.
+         * Populates the camera selection dropdown.
+         * @param {string} [deviceId] - Optional device ID to start with a specific camera.
          */
-        function initWebcam() {
+        async function initWebcam(deviceId) {
+            // Stop any existing stream before starting a new one
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+
             // Check if the browser supports media devices (webcam access)
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                // Request access to the user's video stream
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(function(stream) {
-                        // Create a video element to play the stream
-                        videoElement = document.createElement('video');
-                        videoElement.srcObject = stream; // Set the stream as the video source
-                        videoElement.play(); // Start playing the video
+                try {
+                    // Get available video input devices and populate the dropdown
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
 
-                        // Once video metadata is loaded (e.g., dimensions known)
-                        videoElement.onloadedmetadata = function() {
-                            // Set canvas dimensions to match the video feed
-                            videoCanvas.width = videoElement.videoWidth;
-                            videoCanvas.height = videoElement.videoHeight;
-                            mapCanvas.width = videoElement.videoWidth; // Match map canvas size to video for consistency
-                            mapCanvas.height = videoElement.videoHeight;
+                    // Clear previous options and add new ones
+                    cameraSelect.innerHTML = '';
+                    if (videoDevices.length === 0) {
+                        cameraSelect.add(new Option('No cameras found', ''));
+                        cameraSelect.disabled = true;
+                        updateMessage("No cameras found. Please ensure one is connected.");
+                        return;
+                    }
 
-                            // Center the origin of the map canvas for easier drawing
-                            mapCtx.translate(mapCanvas.width / 2, mapCanvas.height / 2);
-                            drawMap(); // Initial map draw (just the origin)
-                            updateMessage("Webcam ready. Click 'Start Mapping' to begin.");
-                        };
-                    })
-                    .catch(function(err) {
-                        // Handle errors if webcam access is denied or fails
-                        console.error("Error accessing webcam: ", err);
-                        updateMessage("Failed to access webcam. Please ensure it's connected and permissions are granted.");
+                    videoDevices.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${cameraSelect.options.length + 1}`;
+                        cameraSelect.add(option);
                     });
+
+                    // Select the provided deviceId or the first one
+                    if (deviceId) {
+                        cameraSelect.value = deviceId;
+                    } else if (videoDevices.length > 0) {
+                        cameraSelect.value = videoDevices[0].deviceId;
+                    }
+                    cameraSelect.disabled = false;
+
+                    // Request access to the user's video stream
+                    const constraints = {
+                        video: deviceId ? { deviceId: { exact: deviceId } } : true
+                    };
+                    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+                    // Create or reuse video element
+                    if (!videoElement) {
+                        videoElement = document.createElement('video');
+                    }
+                    videoElement.srcObject = currentStream; // Set the stream as the video source
+                    await videoElement.play(); // Start playing the video
+
+                    // Once video metadata is loaded (e.g., dimensions known)
+                    videoElement.onloadedmetadata = function() {
+                        // Set canvas dimensions to match the video feed
+                        videoCanvas.width = videoElement.videoWidth;
+                        videoCanvas.height = videoElement.videoHeight;
+                        mapCanvas.width = videoElement.videoWidth; // Match map canvas size to video for consistency
+                        mapCanvas.height = videoElement.videoHeight;
+
+                        // Reset map context translation to re-center it correctly if canvas size changed
+                        mapCtx.setTransform(1, 0, 0, 1, 0, 0); // Reset transformation
+                        mapCtx.translate(mapCanvas.width / 2, mapCanvas.height / 2); // Apply new translation
+                        drawMap(); // Initial map draw (just the origin)
+                        updateMessage("Webcam ready. Click 'Start Mapping' to begin.");
+                    };
+                } catch (err) {
+                    // Handle errors if webcam access is denied or fails
+                    console.error("Error accessing webcam: ", err);
+                    updateMessage("Failed to access webcam. Please ensure it's connected and permissions are granted.");
+                    cameraSelect.disabled = true;
+                }
             } else {
                 // Inform the user if their browser doesn't support getUserMedia
                 updateMessage("getUserMedia is not supported by your browser. Please use a modern browser.");
+                cameraSelect.disabled = true;
             }
+        }
+
+        /**
+         * Called when the camera selection dropdown changes.
+         * Restarts the webcam with the newly selected camera.
+         */
+        function changeCamera() {
+            stopMapping(); // Stop mapping before changing camera
+            const selectedDeviceId = cameraSelect.value;
+            initWebcam(selectedDeviceId);
         }
 
         /**
@@ -364,6 +448,22 @@
             const currentFrameData = videoCtx.getImageData(0, 0, videoCanvas.width, videoCanvas.height);
 
             if (isMapping) {
+                frameCounter++; // Increment frame counter for re-detection logic
+
+                // Calculate countdown values
+                const expectedDuration = parseFloat(circleDurationInput.value);
+                const elapsedTime = (Date.now() - circleStartTime) / 1000;
+                const remainingTime = Math.max(0, expectedDuration - elapsedTime);
+                const countdownText = `Time left: ${remainingTime.toFixed(1)}s`;
+                countdownDisplay.textContent = countdownText; // Update the dedicated countdown span
+
+                // Re-detect features periodically or if too few points are being tracked
+                if (frameCounter % FEATURE_REDETECTION_INTERVAL_FRAMES === 0 || trackedPoints.length < MIN_TRACKED_POINTS_THRESHOLD) {
+                    initializeTrackedPoints(currentFrameData);
+                    prevFrameData = null; // Reset prevFrameData to ensure a fresh start for tracking with new points
+                    updateMessage(`Re-detecting features... Please move ${circleDirection}.`);
+                }
+
                 if (prevFrameData) {
                     // If we have a previous frame, track features and estimate motion
                     const newTrackedPoints = trackFeatures(currentFrameData, prevFrameData, trackedPoints);
@@ -384,15 +484,26 @@
 
                     // Redraw the map with the updated path
                     drawMap();
-                    updateMessage(`Mapping... Current Position: X=${currentCameraX.toFixed(2)}m, Y=${currentCameraY.toFixed(2)}m`);
+
+                    updateMessage(`Mapping... Current Position: X=${currentCameraX.toFixed(2)}m, Y=${currentCameraY.toFixed(2)}m. Tracked points: ${trackedPoints.length}. Please move ${circleDirection}.`);
 
                 } else {
-                    // This is the first frame when mapping starts: initialize points to track
+                    // This is the first frame when mapping starts or after re-detection: initialize points to track
                     initializeTrackedPoints(currentFrameData);
                     mapPoints.push({ x: currentCameraX, y: currentCameraY }); // Add initial position to map
-                    updateMessage("Mapping started. Please walk in a small circle around the room.");
+                    updateMessage(`Mapping started. Please walk in a small circle around the room, moving ${circleDirection}.`);
+                }
+
+                // Automatically stop mapping if countdown finishes
+                if (remainingTime <= 0) {
+                    stopMapping();
+                    drawRoomOutline(); // Draw room outline automatically when mapping stops
+                    updateMessage("Mapping complete! Room outline drawn.");
                 }
                 prevFrameData = currentFrameData; // Store current frame data for the next cycle
+            } else {
+                // If not mapping, ensure countdown display is cleared
+                countdownDisplay.textContent = '';
             }
 
             // Draw the currently tracked points on the video canvas for visual feedback
@@ -462,7 +573,7 @@
                 mapCtx.fill();
             }
 
-            // Draw the user-defined circle for reference
+            // Draw the user-defined circle for reference (target circle)
             const radius = parseFloat(circleRadiusInput.value);
             if (!isNaN(radius) && radius > 0) {
                 mapCtx.strokeStyle = 'rgba(0, 0, 255, 0.5)'; // Semi-transparent blue
@@ -470,12 +581,24 @@
                 mapCtx.beginPath();
                 mapCtx.arc(0, 0, radius * mapScale, 0, Math.PI * 2); // Draw a circle centered at origin
                 mapCtx.stroke();
-                mapCtx.fillText(`User Circle (${radius}m)`, radius * mapScale + 5, 0); // Label the circle
+                mapCtx.fillText(`Target Circle (${radius}m)`, radius * mapScale + 5, 0); // Label the circle
             }
         }
 
         /**
-         * Starts the mapping process. Called by the "Start Mapping" button's onclick.
+         * Toggles the mapping process (starts or stops it).
+         * Called by the "Toggle Mapping" button's onclick.
+         */
+        function toggleMapping() {
+            if (isMapping) {
+                stopMapping();
+            } else {
+                startMapping();
+            }
+        }
+
+        /**
+         * Starts the mapping process.
          */
         function startMapping() {
             if (!videoElement) {
@@ -486,6 +609,13 @@
                 updateMessage("Mapping is already running.");
                 return;
             }
+
+            const duration = parseFloat(circleDurationInput.value);
+            if (isNaN(duration) || duration <= 0) {
+                updateMessage("Please enter a valid positive number for 'Circle Duration (seconds)'.");
+                return;
+            }
+
             isMapping = true;
             prevFrameData = null; // Clear previous frame data to re-initialize tracking on first frame
             trackedPoints = []; // Clear any old tracked points
@@ -493,7 +623,13 @@
             currentCameraX = 0; // Reset camera position
             currentCameraY = 0;
             currentCameraAngle = 0;
-            updateMessage("Mapping started. Move your webcam around, ideally in a small circle.");
+            frameCounter = 0; // Reset frame counter for new session
+            circleStartTime = Date.now(); // Record start time for countdown
+            circleDirection = Math.random() < 0.5 ? 'clockwise' : 'counter-clockwise'; // Randomly choose direction
+
+            toggleMappingBtn.textContent = "Stop Mapping";
+            toggleMappingBtn.classList.add('stop'); // Add red styling for stop state
+            updateMessage(`Mapping started. Please walk in a small circle around the room, moving ${circleDirection}.`);
             // Ensure processFrame loop is running. It might already be from window.onload.
             if (!animationFrameId) {
                 animationFrameId = requestAnimationFrame(processFrame);
@@ -501,7 +637,7 @@
         }
 
         /**
-         * Stops the mapping process. Called by the "Stop Mapping" button's onclick.
+         * Stops the mapping process.
          */
         function stopMapping() {
             if (!isMapping) {
@@ -509,6 +645,9 @@
                 return;
             }
             isMapping = false; // Simply set the flag to false; processFrame will stop mapping logic
+            toggleMappingBtn.textContent = "Start Mapping";
+            toggleMappingBtn.classList.remove('stop'); // Remove red styling
+            countdownDisplay.textContent = ''; // Clear countdown when stopped
             updateMessage("Mapping stopped. Review the estimated path on the right.");
         }
 
@@ -524,8 +663,47 @@
             currentCameraX = 0;
             currentCameraY = 0;
             currentCameraAngle = 0;
+            frameCounter = 0; // Reset frame counter
+            circleStartTime = 0; // Reset circle start time
+            circleDirection = ''; // Clear direction
             drawMap(); // Clear the map canvas by redrawing an empty map
+            countdownDisplay.textContent = ''; // Clear countdown on reset
             updateMessage("Map reset. Ready to start new mapping.");
+        }
+
+        /**
+         * Attempts to draw a simple bounding box outline of the explored area.
+         * This is a very rough approximation of "drawing the room".
+         */
+        function drawRoomOutline() {
+            if (mapPoints.length < 2) {
+                updateMessage("Not enough movement data to draw a room outline. Start mapping first.");
+                return;
+            }
+
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            // Find the min/max coordinates from the estimated path
+            for (const point of mapPoints) {
+                minX = Math.min(minX, point.x);
+                maxX = Math.max(maxX, point.x);
+                minY = Math.min(minY, point.y);
+                maxY = Math.max(maxY, point.y);
+            }
+
+            // Redraw the map to ensure the outline is on top of the path
+            drawMap();
+
+            // Draw the bounding box
+            mapCtx.strokeStyle = 'purple';
+            mapCtx.lineWidth = 3;
+            mapCtx.setLineDash([5, 5]); // Dashed line for outline
+            mapCtx.strokeRect(minX * mapScale, minY * mapScale,
+                               (maxX - minX) * mapScale, (maxY - minY) * mapScale);
+            mapCtx.setLineDash([]); // Reset line dash
+
+            updateMessage("Room outline drawn based on estimated camera path.");
         }
 
         // Initialize webcam and start the animation loop when the window finishes loading.
