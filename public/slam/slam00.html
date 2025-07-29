@@ -544,6 +544,16 @@
             // Clear the entire map canvas. We use translate, so clear from negative half-width/height.
             mapCtx.clearRect(-mapCanvas.width / 2, -mapCanvas.height / 2, mapCanvas.width, mapCanvas.height);
 
+            // Draw a crosshair at the center (origin)
+            mapCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)'; // Light gray for crosshair
+            mapCtx.lineWidth = 1;
+            mapCtx.beginPath();
+            mapCtx.moveTo(-10, 0);
+            mapCtx.lineTo(10, 0);
+            mapCtx.moveTo(0, -10);
+            mapCtx.lineTo(0, 10);
+            mapCtx.stroke();
+
             // Draw the origin (start point)
             mapCtx.fillStyle = 'blue';
             mapCtx.beginPath();
