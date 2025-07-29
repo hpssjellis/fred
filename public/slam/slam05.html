@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Visual Odometry</title>
+    <style>
+        /* Basic styling for layout and appearance */
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .video-map-section {
+            display: flex;
+            flex-wrap: wrap; /* Allows wrapping on smaller screens */
+            gap: 20px;
+            justify-content: center;
+            width: 100%;
+        }
+        canvas {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #fdfdfd;
+            width: 100%; /* Make canvases responsive */
+            max-width: 400px; /* Max width for individual canvas */
+            height: auto; /* Maintain aspect ratio */
+        }
+        video {
+            display: none; /* Hide the video element, as its content is drawn on the canvas */
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap; /* Allows controls to wrap */
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            background-color: #4CAF50; /* Green button */
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px); /* Slight lift on hover */
+        }
+        button:active {
+            transform: translateY(0); /* Press effect */
+        }
+        button.stop {
+            background-color: #f44336; /* Red for stop/reset */
+        }
+        button.stop:hover {
+            background-color: #da190b;
+        }
+        input[type="number"], select {
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 150px; /* Fixed width for input */
+            box-sizing: border-box;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .message-box {
+            background-color: #e0f7fa; /* Light blue for messages */
+            color: #00796b; /* Darker blue-green text */
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 1.1em;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        p {
+            color: #555;
+            text-align: center;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Visual Odometry Demo</h1>
+        <p>This is a highly simplified demonstration of visual odometry, not a full SLAM system. It estimates your 2D camera motion by tracking features and draws a path. Accuracy will be low due to the simplified approach and lack of 3D reconstruction or loop closure.</p>
+
+        <div class="video-map-section">
+            <div>
+                <h2>Webcam Feed</h2>
+                <canvas id="videoCanvas"></canvas>
+            </div>
+            <div>
+                <h2>Estimated Path (2D)</h2>
+                <canvas id="mapCanvas"></canvas>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="input-group">
+                <label for="cameraSelect">Camera:</label>
+                <select id="cameraSelect" onchange="changeCamera()"></select>
+            </div>
+            <div class="input-group">
+                <label for="circleRadius">Circle Radius (meters):</label>
+                <input type="number" id="circleRadius" value="1.0" step="0.1">
+            </div>
+            <div class="input-group">
+                <label for="circleDuration">Circle Duration (seconds):</label>
+                <input type="number" id="circleDuration" value="10" step="1">
+            </div>
+            <button id="toggleMappingBtn" onclick="toggleMapping()">Start Mapping</button>
+            <button onclick="drawRoomOutline()">Draw Room Outline</button>
+            <button class="stop" onclick="resetMapping()">Reset Map</button>
+        </div>
+
+        <div id="messageBox" class="message-box">
+            Please allow webcam access and click 'Start Mapping'.
+        </div>
+    </div>
+
+    <script>
+        // Global variables for canvases and their 2D rendering contexts
+        let videoCanvas = document.getElementById('videoCanvas');
+        let videoCtx = videoCanvas.getContext('2d');
+        let mapCanvas = document.getElementById('mapCanvas');
+        let mapCtx = mapCanvas.getContext('2d');
+        let messageBox = document.getElementById('messageBox');
+        let circleRadiusInput = document.getElementById('circleRadius');
+        let circleDurationInput = document.getElementById('circleDuration'); // New input for circle duration
+        let cameraSelect = document.getElementById('cameraSelect');
+        let toggleMappingBtn = document.getElementById('toggleMappingBtn');
+
+        let videoElement; // HTML video element to hold the webcam stream
+        let currentStream; // To hold the active media stream for stopping
+        let animationFrameId; // ID for the requestAnimationFrame loop
+        let isMapping = false; // Flag to control if mapping logic is active
+
+        // Visual Odometry state variables
+        let prevFrameData = null; // Stores the ImageData of the previous frame for comparison
+        let trackedPoints = []; // Array of {x, y} objects representing features being tracked
+        let mapPoints = []; // Stores the estimated camera positions for drawing the path
+        let currentCameraX = 0; // Current estimated camera X position on the map (in meters)
+        let currentCameraY = 0; // Current estimated camera Y position on the map (in meters)
+        let currentCameraAngle = 0; // Current estimated camera angle (radians), not heavily used in this 2D demo
+        let mapScale = 50; // Pixels per meter on the map canvas (adjust for map size)
+
+        // Configuration for simplified feature tracking
+        const FEATURE_GRID_SIZE = 20; // Number of points in grid (e.g., 20x20 grid = 400 points)
+        const SEARCH_WINDOW_SIZE = 15; // Size of search window for block matching (e.g., 15x15 pixels)
+        const BLOCK_SIZE = 7; // Size of the square block to compare (e.g., 7x7 pixels)
+
+        // Variables for periodic feature re-detection and countdown
+        let frameCounter = 0;
+        const FEATURE_REDETECTION_INTERVAL_FRAMES = 60; // Re-detect features every 60 frames (approx 1 second at 60fps)
+        const MIN_TRACKED_POINTS_THRESHOLD = 50; // If fewer than this many points are tracked, re-detect immediately
+        let circleStartTime = 0; // Timestamp when the circle mapping started
+        let circleDirection = ''; // To store 'clockwise' or 'counter-clockwise'
+
+        /**
+         * Initializes the webcam stream and sets up the video element.
+         * Populates the camera selection dropdown.
+         * @param {string} [deviceId] - Optional device ID to start with a specific camera.
+         */
+        async function initWebcam(deviceId) {
+            // Stop any existing stream before starting a new one
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+
+            // Check if the browser supports media devices (webcam access)
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    // Get available video input devices and populate the dropdown
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+                    // Clear previous options and add new ones
+                    cameraSelect.innerHTML = '';
+                    if (videoDevices.length === 0) {
+                        cameraSelect.add(new Option('No cameras found', ''));
+                        cameraSelect.disabled = true;
+                        updateMessage("No cameras found. Please ensure one is connected.");
+                        return;
+                    }
+
+                    videoDevices.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${cameraSelect.options.length + 1}`;
+                        cameraSelect.add(option);
+                    });
+
+                    // Select the provided deviceId or the first one
+                    if (deviceId) {
+                        cameraSelect.value = deviceId;
+                    } else if (videoDevices.length > 0) {
+                        cameraSelect.value = videoDevices[0].deviceId;
+                    }
+                    cameraSelect.disabled = false;
+
+                    // Request access to the user's video stream
+                    const constraints = {
+                        video: deviceId ? { deviceId: { exact: deviceId } } : true
+                    };
+                    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+                    // Create or reuse video element
+                    if (!videoElement) {
+                        videoElement = document.createElement('video');
+                    }
+                    videoElement.srcObject = currentStream; // Set the stream as the video source
+                    await videoElement.play(); // Start playing the video
+
+                    // Once video metadata is loaded (e.g., dimensions known)
+                    videoElement.onloadedmetadata = function() {
+                        // Set canvas dimensions to match the video feed
+                        videoCanvas.width = videoElement.videoWidth;
+                        videoCanvas.height = videoElement.videoHeight;
+                        mapCanvas.width = videoElement.videoWidth; // Match map canvas size to video for consistency
+                        mapCanvas.height = videoElement.videoHeight;
+
+                        // Reset map context translation to re-center it correctly if canvas size changed
+                        mapCtx.setTransform(1, 0, 0, 1, 0, 0); // Reset transformation
+                        mapCtx.translate(mapCanvas.width / 2, mapCanvas.height / 2); // Apply new translation
+                        drawMap(); // Initial map draw (just the origin)
+                        updateMessage("Webcam ready. Click 'Start Mapping' to begin.");
+                    };
+                } catch (err) {
+                    // Handle errors if webcam access is denied or fails
+                    console.error("Error accessing webcam: ", err);
+                    updateMessage("Failed to access webcam. Please ensure it's connected and permissions are granted.");
+                    cameraSelect.disabled = true;
+                }
+            } else {
+                // Inform the user if their browser doesn't support getUserMedia
+                updateMessage("getUserMedia is not supported by your browser. Please use a modern browser.");
+                cameraSelect.disabled = true;
+            }
+        }
+
+        /**
+         * Called when the camera selection dropdown changes.
+         * Restarts the webcam with the newly selected camera.
+         */
+        function changeCamera() {
+            stopMapping(); // Stop mapping before changing camera
+            const selectedDeviceId = cameraSelect.value;
+            initWebcam(selectedDeviceId);
+        }
+
+        /**
+         * Updates the message box with the given text.
+         * @param {string} message - The message to display.
+         */
+        function updateMessage(message) {
+            messageBox.textContent = message;
+        }
+
+        /**
+         * Calculates the Sum of Squared Differences (SSD) between two image blocks.
+         * This is a simple measure of similarity: lower SSD means more similar.
+         * @param {ImageData} imageData1 - The full image data of the first block's source.
+         * @param {number} x1 - X coordinate of the center of the first block.
+         * @param {number} y1 - Y coordinate of the center of the first block.
+         * @param {ImageData} imageData2 - The full image data of the second block's source.
+         * @param {number} x2 - X coordinate of the center of the second block.
+         * @param {number} y2 - Y coordinate of the center of the second block.
+         * @param {number} blockSize - The side length of the square block.
+         * @returns {number} The SSD value.
+         */
+        function calculateSSD(imageData1, x1, y1, imageData2, x2, y2, blockSize) {
+            let ssd = 0;
+            const halfBlock = Math.floor(blockSize / 2);
+            const width1 = imageData1.width;
+            const height1 = imageData1.height;
+            const data1 = imageData1.data;
+            const width2 = imageData2.width;
+            const height2 = imageData2.height;
+            const data2 = imageData2.data;
+
+            for (let dy = -halfBlock; dy <= halfBlock; dy++) {
+                for (let dx = -halfBlock; dx <= halfBlock; dx++) {
+                    const px1 = x1 + dx;
+                    const py1 = y1 + dy;
+                    const px2 = x2 + dx;
+                    const py2 = y2 + dy;
+
+                    // Ensure coordinates are within bounds for both images
+                    if (px1 >= 0 && px1 < width1 && py1 >= 0 && py1 < height1 &&
+                        px2 >= 0 && px2 < width2 && py2 >= 0 && py2 < height2) {
+
+                        const index1 = (py1 * width1 + px1) * 4; // *4 for RGBA (red, green, blue, alpha)
+                        const index2 = (py2 * width2 + px2) * 4;
+
+                        // Using the green channel for simplicity as a grayscale approximation
+                        const val1 = data1[index1 + 1];
+                        const val2 = data2[index2 + 1];
+
+                        ssd += (val1 - val2) * (val1 - val2);
+                    } else {
+                        // If a block goes out of bounds, assign a very high SSD to discourage it
+                        ssd += 1000000;
+                    }
+                }
+            }
+            return ssd;
+        }
+
+        /**
+         * Tracks features from the previous frame to the current frame using a simple block matching.
+         * For each point in pointsToTrack (from prevFrame), it searches for the best matching
+         * block in the currentFrame within a defined search window.
+         * @param {ImageData} currentFrame - The image data of the current frame.
+         * @param {ImageData} prevFrame - The image data of the previous frame.
+         * @param {Array<Object>} pointsToTrack - Array of {x, y} objects (feature positions in prevFrame).
+         * @returns {Array<Object>} Array of {x, y} objects for the new positions of tracked points in currentFrame.
+         */
+        function trackFeatures(currentFrame, prevFrame, pointsToTrack) {
+            const newTrackedPoints = [];
+            const halfSearchWindow = Math.floor(SEARCH_WINDOW_SIZE / 2);
+            const width = currentFrame.width;
+            const height = currentFrame.height;
+
+            for (const point of pointsToTrack) {
+                let bestMatchX = point.x;
+                let bestMatchY = point.y;
+                let minSSD = Infinity; // Initialize with a very high value
+
+                // Iterate through the search window around the previous point's position
+                for (let sy = -halfSearchWindow; sy <= halfSearchWindow; sy++) {
+                    for (let sx = -halfSearchWindow; sx <= halfSearchWindow; sx++) {
+                        const candidateX = point.x + sx;
+                        const candidateY = point.y + sy;
+
+                        // Ensure the candidate block is entirely within the current frame bounds
+                        if (candidateX >= BLOCK_SIZE / 2 && candidateX < width - BLOCK_SIZE / 2 &&
+                            candidateY >= BLOCK_SIZE / 2 && candidateY < height - BLOCK_SIZE / 2) {
+
+                            // Calculate SSD between the block at 'point' in prevFrame and 'candidate' in currentFrame
+                            const ssd = calculateSSD(prevFrame, point.x, point.y, currentFrame, candidateX, candidateY, BLOCK_SIZE);
+                            if (ssd < minSSD) {
+                                minSSD = ssd;
+                                bestMatchX = candidateX;
+                                bestMatchY = candidateY;
+                            }
+                        }
+                    }
+                }
+                newTrackedPoints.push({ x: bestMatchX, y: bestMatchY });
+            }
+            return newTrackedPoints;
+        }
+
+        /**
+         * Estimates 2D camera motion (translation) from feature displacements.
+         * This is a very simplified method, averaging the displacements of all tracked points.
+         * A more robust system would use RANSAC or a least-squares approach to handle outliers.
+         * @param {Array<Object>} prevPoints - Points from the previous frame.
+         * @param {Array<Object>} currentPoints - Points from the current frame.
+         * @returns {{dx: number, dy: number, dAngle: number}} Estimated motion (dx, dy in meters, dAngle in radians).
+         */
+        function estimateMotion(prevPoints, currentPoints) {
+            let totalDx = 0;
+            let totalDy = 0;
+            let count = 0;
+
+            // Calculate the sum of displacements for all tracked points
+            for (let i = 0; i < prevPoints.length; i++) {
+                if (prevPoints[i] && currentPoints[i]) {
+                    totalDx += (currentPoints[i].x - prevPoints[i].x);
+                    totalDy += (currentPoints[i].y - prevPoints[i].y);
+                    count++;
+                }
+            }
+
+            // Calculate the average displacement in pixels
+            let avgDx_pixels = count > 0 ? totalDx / count : 0;
+            let avgDy_pixels = count > 0 ? totalDy / count : 0;
+
+            // Convert pixel displacement to meters using the mapScale.
+            // The camera moves in the opposite direction of the features on the image.
+            const motionX_meters = -avgDx_pixels / mapScale;
+            const motionY_meters = -avgDy_pixels / mapScale;
+
+            // For this simplified 2D demo, we assume no rotation (dAngle = 0).
+            // Estimating rotation accurately from 2D points requires more complex geometry.
+            let dAngle = 0;
+
+            return { dx: motionX_meters, dy: motionY_meters, dAngle: dAngle };
+        }
+
+        /**
+         * Draws the current video frame on the video canvas and processes it for odometry.
+         * This function is called repeatedly via requestAnimationFrame.
+         */
+        function processFrame() {
+            // Ensure video element is ready and playing
+            if (!videoElement || videoElement.paused || videoElement.ended) {
+                animationFrameId = requestAnimationFrame(processFrame); // Keep requesting frames even if not mapping
+                return;
+            }
+
+            // Draw the current video frame onto the video canvas
+            videoCtx.drawImage(videoElement, 0, 0, videoCanvas.width, videoCanvas.height);
+            // Get the image data of the current frame for processing
+            const currentFrameData = videoCtx.getImageData(0, 0, videoCanvas.width, videoCanvas.height);
+
+            if (isMapping) {
+                frameCounter++; // Increment frame counter for re-detection logic
+
+                // Calculate countdown values
+                const expectedDuration = parseFloat(circleDurationInput.value);
+                const elapsedTime = (Date.now() - circleStartTime) / 1000;
+                const remainingTime = Math.max(0, expectedDuration - elapsedTime);
+                const countdownText = `Time left: ${remainingTime.toFixed(1)}s`;
+
+                // Re-detect features periodically or if too few points are being tracked
+                if (frameCounter % FEATURE_REDETECTION_INTERVAL_FRAMES === 0 || trackedPoints.length < MIN_TRACKED_POINTS_THRESHOLD) {
+                    initializeTrackedPoints(currentFrameData);
+                    prevFrameData = null; // Reset prevFrameData to ensure a fresh start for tracking with new points
+                    updateMessage(`Re-detecting features... ${countdownText}. Please move ${circleDirection}.`);
+                }
+
+                if (prevFrameData) {
+                    // If we have a previous frame, track features and estimate motion
+                    const newTrackedPoints = trackFeatures(currentFrameData, prevFrameData, trackedPoints);
+
+                    // Estimate camera motion based on feature movement
+                    const motion = estimateMotion(trackedPoints, newTrackedPoints);
+
+                    // Update the camera's estimated position
+                    currentCameraX += motion.dx;
+                    currentCameraY += motion.dy;
+                    currentCameraAngle += motion.dAngle;
+
+                    // Add the current camera position to the path for drawing
+                    mapPoints.push({ x: currentCameraX, y: currentCameraY });
+
+                    // Update the tracked points for the next iteration
+                    trackedPoints = newTrackedPoints;
+
+                    // Redraw the map with the updated path
+                    drawMap();
+
+                    updateMessage(`Mapping... Current Position: X=${currentCameraX.toFixed(2)}m, Y=${currentCameraY.toFixed(2)}m. Tracked points: ${trackedPoints.length}. ${countdownText}. Please move ${circleDirection}.`);
+
+                } else {
+                    // This is the first frame when mapping starts or after re-detection: initialize points to track
+                    initializeTrackedPoints(currentFrameData);
+                    mapPoints.push({ x: currentCameraX, y: currentCameraY }); // Add initial position to map
+                    updateMessage(`Mapping started. Please walk in a small circle around the room, moving ${circleDirection}. ${countdownText}.`);
+                }
+
+                // Automatically stop mapping if countdown finishes
+                if (remainingTime <= 0) {
+                    stopMapping();
+                    drawRoomOutline(); // Draw room outline automatically when mapping stops
+                    updateMessage("Mapping complete! Room outline drawn.");
+                }
+                prevFrameData = currentFrameData; // Store current frame data for the next cycle
+            }
+
+            // Draw the currently tracked points on the video canvas for visual feedback
+            videoCtx.fillStyle = 'red';
+            for (const point of trackedPoints) {
+                videoCtx.beginPath();
+                videoCtx.arc(point.x, point.y, 3, 0, Math.PI * 2); // Draw a small red circle
+                videoCtx.fill();
+            }
+
+            // Request the next animation frame to continue the loop
+            animationFrameId = requestAnimationFrame(processFrame);
+        }
+
+        /**
+         * Initializes a grid of points to track across the video frame.
+         * These points serve as our "features" for this simplified system.
+         * @param {ImageData} frameData - The image data of the current frame.
+         */
+        function initializeTrackedPoints(frameData) {
+            trackedPoints = [];
+            // Calculate step size to create a grid of points
+            const stepX = Math.floor(frameData.width / (FEATURE_GRID_SIZE + 1));
+            const stepY = Math.floor(frameData.height / (FEATURE_GRID_SIZE + 1));
+
+            // Populate the trackedPoints array with points on a grid
+            for (let i = 1; i <= FEATURE_GRID_SIZE; i++) {
+                for (let j = 1; j <= FEATURE_GRID_SIZE; j++) {
+                    trackedPoints.push({ x: i * stepX, y: j * stepY });
+                }
+            }
+        }
+
+        /**
+         * Draws the estimated camera path and other map elements on the map canvas.
+         */
+        function drawMap() {
+            // Clear the entire map canvas. We use translate, so clear from negative half-width/height.
+            mapCtx.clearRect(-mapCanvas.width / 2, -mapCanvas.height / 2, mapCanvas.width, mapCanvas.height);
+
+            // Draw the origin (start point)
+            mapCtx.fillStyle = 'blue';
+            mapCtx.beginPath();
+            mapCtx.arc(0, 0, 5, 0, Math.PI * 2); // Draw a blue circle at the origin
+            mapCtx.fill();
+            mapCtx.fillText("Start", 10, -5); // Label the origin
+
+            // Draw the estimated camera path if there are enough points
+            if (mapPoints.length > 1) {
+                mapCtx.strokeStyle = 'green';
+                mapCtx.lineWidth = 2;
+                mapCtx.beginPath();
+                // Move to the first point, scaled by mapScale
+                mapCtx.moveTo(mapPoints[0].x * mapScale, mapPoints[0].y * mapScale);
+                // Draw lines to subsequent points
+                for (let i = 1; i < mapPoints.length; i++) {
+                    mapCtx.lineTo(mapPoints[i].x * mapScale, mapPoints[i].y * mapScale);
+                }
+                mapCtx.stroke();
+            }
+
+            // Draw the current camera position (end of the path)
+            if (mapPoints.length > 0) {
+                mapCtx.fillStyle = 'red';
+                mapCtx.beginPath();
+                mapCtx.arc(currentCameraX * mapScale, currentCameraY * mapScale, 7, 0, Math.PI * 2);
+                mapCtx.fill();
+            }
+
+            // Draw the user-defined circle for reference (target circle)
+            const radius = parseFloat(circleRadiusInput.value);
+            if (!isNaN(radius) && radius > 0) {
+                mapCtx.strokeStyle = 'rgba(0, 0, 255, 0.5)'; // Semi-transparent blue
+                mapCtx.lineWidth = 1;
+                mapCtx.beginPath();
+                mapCtx.arc(0, 0, radius * mapScale, 0, Math.PI * 2); // Draw a circle centered at origin
+                mapCtx.stroke();
+                mapCtx.fillText(`Target Circle (${radius}m)`, radius * mapScale + 5, 0); // Label the circle
+            }
+        }
+
+        /**
+         * Toggles the mapping process (starts or stops it).
+         * Called by the "Toggle Mapping" button's onclick.
+         */
+        function toggleMapping() {
+            if (isMapping) {
+                stopMapping();
+            } else {
+                startMapping();
+            }
+        }
+
+        /**
+         * Starts the mapping process.
+         */
+        function startMapping() {
+            if (!videoElement) {
+                updateMessage("Webcam not initialized. Please wait or refresh the page.");
+                return;
+            }
+            if (isMapping) {
+                updateMessage("Mapping is already running.");
+                return;
+            }
+
+            const duration = parseFloat(circleDurationInput.value);
+            if (isNaN(duration) || duration <= 0) {
+                updateMessage("Please enter a valid positive number for 'Circle Duration (seconds)'.");
+                return;
+            }
+
+            isMapping = true;
+            prevFrameData = null; // Clear previous frame data to re-initialize tracking on first frame
+            trackedPoints = []; // Clear any old tracked points
+            mapPoints = []; // Clear the map path
+            currentCameraX = 0; // Reset camera position
+            currentCameraY = 0;
+            currentCameraAngle = 0;
+            frameCounter = 0; // Reset frame counter for new session
+            circleStartTime = Date.now(); // Record start time for countdown
+            circleDirection = Math.random() < 0.5 ? 'clockwise' : 'counter-clockwise'; // Randomly choose direction
+
+            toggleMappingBtn.textContent = "Stop Mapping";
+            toggleMappingBtn.classList.add('stop'); // Add red styling for stop state
+            updateMessage(`Mapping started. Please walk in a small circle around the room, moving ${circleDirection}. You have ${duration} seconds.`);
+            // Ensure processFrame loop is running. It might already be from window.onload.
+            if (!animationFrameId) {
+                animationFrameId = requestAnimationFrame(processFrame);
+            }
+        }
+
+        /**
+         * Stops the mapping process.
+         */
+        function stopMapping() {
+            if (!isMapping) {
+                updateMessage("Mapping is not currently running.");
+                return;
+            }
+            isMapping = false; // Simply set the flag to false; processFrame will stop mapping logic
+            toggleMappingBtn.textContent = "Start Mapping";
+            toggleMappingBtn.classList.remove('stop'); // Remove red styling
+            updateMessage("Mapping stopped. Review the estimated path on the right.");
+        }
+
+        /**
+         * Resets the map and all mapping-related state variables.
+         * Called by the "Reset Map" button's onclick.
+         */
+        function resetMapping() {
+            stopMapping(); // Stop mapping if it's active
+            prevFrameData = null;
+            trackedPoints = [];
+            mapPoints = [];
+            currentCameraX = 0;
+            currentCameraY = 0;
+            currentCameraAngle = 0;
+            frameCounter = 0; // Reset frame counter
+            circleStartTime = 0; // Reset circle start time
+            circleDirection = ''; // Clear direction
+            drawMap(); // Clear the map canvas by redrawing an empty map
+            updateMessage("Map reset. Ready to start new mapping.");
+        }
+
+        /**
+         * Attempts to draw a simple bounding box outline of the explored area.
+         * This is a very rough approximation of "drawing the room".
+         */
+        function drawRoomOutline() {
+            if (mapPoints.length < 2) {
+                updateMessage("Not enough movement data to draw a room outline. Start mapping first.");
+                return;
+            }
+
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            // Find the min/max coordinates from the estimated path
+            for (const point of mapPoints) {
+                minX = Math.min(minX, point.x);
+                maxX = Math.max(maxX, point.x);
+                minY = Math.min(minY, point.y);
+                maxY = Math.max(maxY, point.y);
+            }
+
+            // Redraw the map to ensure the outline is on top of the path
+            drawMap();
+
+            // Draw the bounding box
+            mapCtx.strokeStyle = 'purple';
+            mapCtx.lineWidth = 3;
+            mapCtx.setLineDash([5, 5]); // Dashed line for outline
+            mapCtx.strokeRect(minX * mapScale, minY * mapScale,
+                               (maxX - minX) * mapScale, (maxY - minY) * mapScale);
+            mapCtx.setLineDash([]); // Reset line dash
+
+            updateMessage("Room outline drawn based on estimated camera path.");
+        }
+
+        // Initialize webcam and start the animation loop when the window finishes loading.
+        window.onload = function() {
+            initWebcam();
+            // Start the animation loop to continuously draw the video feed,
+            // even if mapping is not active. This also prepares for mapping.
+            animationFrameId = requestAnimationFrame(processFrame);
+        };
+    </script>
+</body>
+</html>
