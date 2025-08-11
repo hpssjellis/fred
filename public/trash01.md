@@ -18,8 +18,8 @@ We’re raising funds to provide students with the **XIAOML Kit** — a palm-siz
 ---
 
 
-<img width="369" height="245" alt="image" src="https://github.com/user-attachments/assets/4caaf0af-8b6c-49f1-abed-cec3f7f08b3a" />
-<br>
+<img width="369" height="245" alt="image" src="https://github-production-user-asset-6210df.s3.amazonaws.com/5605614/476429917-4caaf0af-8b6c-49f1-abed-cec3f7f08b3a.png" />
+
 
 ## 🛠️ What You Get
 If you support our collective, I’ll **personally mentor** a small group of your students (3–7) through the **first 4 TinyML labs**:  
