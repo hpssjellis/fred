@@ -1,0 +1,202 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>VibeCode Estimator — functionalFuturist</title>
+</head>
+<body style="font-family:system-ui, -apple-system, Roboto, 'Segoe UI', Arial; padding:18px; max-width:900px;">
+
+  <h1 style="margin:0 0 8px 0;">VibeCode Estimator</h1>
+  <p style="margin:0 0 14px 0; color:#444;">
+    Paste code below, pick the language and desired deliverable. This will produce an estimated number of hours and a fixed price.
+  </p>
+
+  <label style="font-weight:600;">Language</label><br>
+  <select id="myLang" style="margin:6px 0 12px 0; padding:6px;">
+    <option value="javascript">JavaScript</option>
+    <option value="python">Python</option>
+    <option value="c">C / C++</option>
+    <option value="java">Java</option>
+    <option value="other">Other</option>
+  </select>
+
+  <br>
+
+  <label style="font-weight:600;">Deliverable</label><br>
+  <select id="myDeliverable" style="margin:6px 0 12px 0; padding:6px;">
+    <option value="base">Base working code (remove fluff)</option>
+    <option value="polish">Polish (clean names, style, comments)</option>
+    <option value="polish_tests">Polish + basic tests + docs</option>
+  </select>
+
+  <br>
+
+  <label style="font-weight:600;">Paste code</label><br>
+  <textarea id="myCode" rows="18" style="width:100%; padding:8px; font-family:monospace; margin:6px 0 12px 0;" placeholder="// paste code here"></textarea>
+
+  <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+    <label style="display:inline-flex; align-items:center;">
+      <input type="checkbox" id="myIncludeTests" style="margin-right:6px;"> Add basic tests if missing
+    </label>
+    <label style="display:inline-flex; align-items:center;">
+      <input type="checkbox" id="myRunAudit" style="margin-right:6px;"> Include quick static audit (lint) in estimate
+    </label>
+  </div>
+
+  <input type="button" value="Estimate hours & price" onclick="myHandleEstimate()" style="padding:10px 12px; font-weight:600; cursor:pointer;">
+
+  <div id="myResult" style="margin-top:16px; padding:12px; border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,0.06); background:#fbfbfe;"></div>
+
+<script>
+  // Pricing settings you can change
+  const myHourlyRateCAD = 90; // change to desired hourly rate
+  const myMinimumHours = 0.5;
+
+  // small language productivity factors (hours per LOC)
+  const myLangFactor = {
+    javascript: 0.005, // 200 LOC -> 1 hr baseline
+    python: 0.006,
+    c: 0.008,
+    java: 0.007,
+    other: 0.0065
+  };
+
+  // main click handler
+  async function myHandleEstimate() {
+    const myCode = document.getElementById('myCode').value || '';
+    const myLang = document.getElementById('myLang').value;
+    const myDeliverable = document.getElementById('myDeliverable').value;
+    const myIncludeTests = document.getElementById('myIncludeTests').checked;
+    const myRunAudit = document.getElementById('myRunAudit').checked;
+
+    const myDisplay = document.getElementById('myResult');
+    myDisplay.innerHTML = '<em>Estimating…</em>';
+
+    try {
+      const myEstimateObj = await myEstimate({ code: myCode, lang: myLang, deliverable: myDeliverable, includeTests: myIncludeTests, runAudit: myRunAudit });
+      myDisplay.innerHTML = myRenderEstimate(myEstimateObj);
+    } catch (err) {
+      myDisplay.innerHTML = '<b>Error:</b> ' + String(err);
+    }
+  }
+
+  // estimator function (async to match your preference for async/await)
+  async function myEstimate({ code, lang, deliverable, includeTests, runAudit }) {
+    // sanitize input
+    const myText = (code || '').replace(/\r\n/g, '\n');
+    const myLines = myText.split('\n');
+    const myLOC = myText.trim() ? myLines.length : 0;
+
+    // simple heuristics
+    const myCommentMatches = myText.match(/(^|\s)\/\/|\/\*|\#|<!--/g) || [];
+    const myCommentRatio = myLOC ? myCommentMatches.length / myLOC : 0;
+
+    const myTodoMatches = myText.match(/TODO|FIXME|XXX|HACK/gi) || [];
+    const myTodoCount = myTodoMatches.length;
+
+    // long function heuristic: count 'function' keywords or 'def' or '{' blocks > 40 lines
+    let myLongFuncCount = 0;
+    try {
+      if (lang === 'javascript' || lang === 'other' || lang === 'c' || lang === 'java') {
+        const myFuncBlocks = myText.split(/function\b|=>|def\b/);
+        for (let i = 1; i < myFuncBlocks.length; i++) {
+          const myBlock = myFuncBlocks[i];
+          const myBlockLines = myBlock.split('\n').length;
+          if (myBlockLines > 40) myLongFuncCount++;
+        }
+      } else if (lang === 'python') {
+        const myFuncBlocks = myText.split(/\ndef\b/);
+        for (let i = 1; i < myFuncBlocks.length; i++) {
+          const myBlock = myFuncBlocks[i];
+          const myBlockLines = myBlock.split('\n').length;
+          if (myBlockLines > 40) myLongFuncCount++;
+        }
+      }
+    } catch (e) {
+      myLongFuncCount = 0;
+    }
+
+    // approx nested depth by counting sequences of "{" or indentation patterns
+    const myBraceCount = (myText.match(/{/g) || []).length;
+    const myNestedApprox = Math.min(5, Math.floor(myBraceCount / 10)); // rough
+
+    // language factor
+    const myFactor = myLangFactor[lang] || myLangFactor['other'];
+
+    // base hours
+    let myBaseHours = myLOC * myFactor;
+
+    // complexity multiplier
+    let myComplexityMultiplier = 1 + (myLongFuncCount * 0.06) + (myTodoCount * 0.12) + (myNestedApprox * 0.05);
+
+    // comment penalty if very low
+    if (myCommentRatio < 0.03 && myLOC > 50) myComplexityMultiplier += 0.12;
+
+    // deliverable multipliers
+    const myDeliverableMultipliers = {
+      base: 1.0,
+      polish: 1.45,
+      polish_tests: 1.95
+    };
+    let myDeliverMultiplier = myDeliverableMultipliers[deliverable] || 1.0;
+
+    // include tests adds time
+    if (includeTests) myDeliverMultiplier += 0.4;
+
+    // optional quick lint audit add-on
+    let myAuditHours = 0;
+    if (runAudit) myAuditHours = Math.max(0.25, myLOC * 0.0008); // tiny add
+
+    // final hours
+    let myEstimatedHours = (myBaseHours * myComplexityMultiplier * myDeliverMultiplier) + myAuditHours;
+
+    // enforce minimum and round to 0.25 or 0.5
+    myEstimatedHours = Math.max(myEstimatedHours, myMinimumHours);
+    myEstimatedHours = Math.ceil(myEstimatedHours * 4) / 4; // quarter-hour increments
+
+    // price
+    const myPriceCAD = Math.round(myEstimatedHours * myHourlyRateCAD);
+
+    // reasons summary
+    const myReasons = [
+      'LOC: ' + myLOC,
+      'Language factor: ' + myFactor.toFixed(4) + ' hrs/LOC',
+      'Long functions: ' + myLongFuncCount,
+      'TODO/FIXME count: ' + myTodoCount,
+      'Comment ratio: ' + (myCommentRatio*100).toFixed(1) + '%',
+      'Nested approx: ' + myNestedApprox,
+      'Deliverable multiplier: ' + myDeliverMultiplier.toFixed(2),
+      'Complexity multiplier: ' + myComplexityMultiplier.toFixed(2)
+    ];
+
+    return {
+      hours: myEstimatedHours,
+      priceCAD: myPriceCAD,
+      details: {
+        LOC: myLOC,
+        commentRatio: myCommentRatio,
+        todoCount: myTodoCount,
+        longFuncCount: myLongFuncCount,
+        nestedApprox: myNestedApprox,
+        auditHours: myAuditHours
+      },
+      reasons: myReasons
+    };
+  }
+
+  function myRenderEstimate(obj) {
+    if (!obj) return 'No estimate.';
+    const myLines = obj.reasons.map(r => '<div style="margin:4px 0;">' + r + '</div>').join('');
+    return `
+      <div style="font-weight:700; font-size:1.1rem;">Estimated hours: ${obj.hours} hrs</div>
+      <div style="font-weight:700; color:#0b6; margin-bottom:8px;">Estimated price: CAD $${obj.priceCAD}</div>
+      <div style="color:#333; margin-top:6px;"><b>Breakdown</b>${myLines}</div>
+      <div style="margin-top:10px; font-size:0.9rem; color:#555;">
+        <b>Notes:</b> This is an automated heuristic estimate. Teachers in the marketplace may perform a quick audit and adjust the final price. You can choose to pay for their manual audit to lock price.
+      </div>
+    `;
+  }
+</script>
+
+</body>
+</html>
