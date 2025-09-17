@@ -3,7 +3,7 @@
 <button onclick="myRun()">View iFrame Source</button>
 <table border=1 style="width:100%;">
   <tr>
-    <th id="myWid1" width="48%"> Vibe Page </th>
+    <th id="myWid1" width="48%">Vibe Page</th>
     <th id="myWid2" width="48%">Vibe Source</th>
   </tr>
   <tr>
@@ -28,8 +28,8 @@
 <script>
 
   function myRun(){
-   alert(document.getElementById('myWid1').value)
-    document.getElementById('myWid1').value = '73%'
+   alert(document.getElementById('myWid1').style.width)
+    document.getElementById('myWid1').style.width = '73%'
     viewSource('myIframe','sourceTextarea'); 
     viewSource('myIframe2','sourceTextarea2');
   }
