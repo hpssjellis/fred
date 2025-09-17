@@ -1,35 +1,38 @@
 <h1>VibeCode and Clean</h1>
 
-  <button onclick="viewSource('myIframe','sourceTextarea'); viewSource('myIframe2','sourceTextarea2');">View iFrame Source</button>
-<table border=1>
-  <tr><th width="48%"> Vibe Page </th><th width="48%">Vibe Source</th></tr>
-  <tr><td><iframe id="myIframe" src="vibe01.html" width="100%" height="400px"></iframe></td>
-  <td><textarea id="sourceTextarea" cols="100%" rows="10">></textarea></td></tr>
-  <tr><td><iframe id="myIframe2" src="vibe01.html" width="100%" height="400px"></iframe></td>
-  <td><textarea id="sourceTextarea2" cols="100%" rows="10">></textarea></td></tr>
+<button onclick="viewSource('myIframe','sourceTextarea'); viewSource('myIframe2','sourceTextarea2');">View iFrame Source</button>
+<table border=1 style="width:100%;">
+  <tr>
+    <th width="48%"> Vibe Page </th>
+    <th width="48%">Vibe Source</th>
+  </tr>
+  <tr>
+    <td><iframe id="myIframe" src="vibe01.html" width="100%" height="400px"></iframe></td>
+    <td style="padding:0; margin:0; position:relative; vertical-align:top;">
+      <textarea id="sourceTextarea" style="width:100%; height:100%; box-sizing:border-box; resize:both; border:none; margin:0; padding:0;" rows="10"></textarea>
+    </td>
+  </tr>
+  <tr>
+    <td><iframe id="myIframe2" src="vibe01.html" width="100%" height="400px"></iframe></td>
+    <td style="padding:0; margin:0; position:relative; vertical-align:top;">
+      <textarea id="sourceTextarea2" style="width:100%; height:100%; box-sizing:border-box; resize:both; border:none; margin:0; padding:0;" rows="10"></textarea>
+    </td>
+  </tr>
 </table>
 
-  <script>
-    function viewSource(myFrameHTML ,myFrameSource) {
-      const iframe = document.getElementById(myFrameHTML);
-      const textarea = document.getElementById(myFrameSource);
+<script>
+  function viewSource(myFrameHTML ,myFrameSource) {
+    const iframe = document.getElementById(myFrameHTML);
+    const textarea = document.getElementById(myFrameSource);
 
-      // Check if the iframe content is available (Same-Origin Policy check)
-      try {
-        // Get the full HTML document content, including the doctype, <html>, <head>, etc.
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        const source = iframeDoc.documentElement.outerHTML;
-
-        // Display the source in the textarea
-        textarea.value = source;
-      } catch (e) {
-        console.error("Access to iframe content blocked by Same-Origin Policy:", e);
-        textarea.value = "Error: Cannot access content from this iframe due to the Same-Origin Policy. " +
-                         "The content must be from the same domain as the parent page.";
-      }
+    try {
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+      const source = iframeDoc.documentElement.outerHTML;
+      textarea.value = source;
+    } catch (e) {
+      console.error("Access to iframe content blocked by Same-Origin Policy:", e);
+      textarea.value = "Error: Cannot access content from this iframe due to the Same-Origin Policy. " +
+                       "The content must be from the same domain as the parent page.";
     }
-
-  </script>
-
-</body>
-</html>
+  }
+</script>
