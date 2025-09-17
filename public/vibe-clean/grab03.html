@@ -1,17 +1,16 @@
 <h1>Live iFrame and its Source Code</h1>
 
   <button onclick="viewSource('myIframe','sourceTextarea')">View iFrame Source</button>
-
-  <div style="display: flex; gap: 20px;">
-    <div style="flex: 1;">
-      <h2>Vibe Page</h2>
-      <iframe id="myIframe" src="vibe01.html" width="100%" height="400px"></iframe>
-    </div>
-    <div style="flex: 1;">
-      <h2>Vibe Source</h2>
+<table border=1>
+  <tr><th> Vibe Page </th><th>Vibe Source</th></tr>tr>
+    <tr><td>  <iframe id="myIframe" src="vibe01.html" width="100%" height="400px"></iframe>
+    </td><td>
       <textarea id="sourceTextarea" width="100%" height="400px">></textarea>
-    </div>
-  </div>
+    </td>
+    </tr>
+
+
+</table>
 
   <script>
     function viewSource(myFrameHTML ,myFrameSource) {
