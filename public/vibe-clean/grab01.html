@@ -1,0 +1,39 @@
+<h1>Live iFrame and its Source Code</h1>
+
+  <button onclick="viewSource()">View iFrame Source</button>
+
+  <div style="display: flex; gap: 20px;">
+    <div style="flex: 1;">
+      <h2>Rendered Page</h2>
+      <iframe id="myIframe" src="vibe01.html" width="100%" height="400px"></iframe>
+    </div>
+    <div style="flex: 1;">
+      <h2>Source Code</h2>
+      <textarea id="sourceTextarea"></textarea>
+    </div>
+  </div>
+
+  <script>
+    function viewSource() {
+      const iframe = document.getElementById('myIframe');
+      const textarea = document.getElementById('sourceTextarea');
+
+      // Check if the iframe content is available (Same-Origin Policy check)
+      try {
+        // Get the full HTML document content, including the doctype, <html>, <head>, etc.
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        const source = iframeDoc.documentElement.outerHTML;
+
+        // Display the source in the textarea
+        textarea.value = source;
+      } catch (e) {
+        console.error("Access to iframe content blocked by Same-Origin Policy:", e);
+        textarea.value = "Error: Cannot access content from this iframe due to the Same-Origin Policy. " +
+                         "The content must be from the same domain as the parent page.";
+      }
+    }
+
+  </script>
+
+</body>
+</html>
