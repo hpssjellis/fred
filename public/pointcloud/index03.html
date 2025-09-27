@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JSON Point Cloud to 3D Viewer</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; background-color: #f0f0f0; }
+    #myContainer { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+    #myControls {
+      width: 320px; padding: 12px; background: #fff; box-sizing: border-box;
+      border-right: 1px solid #ddd; overflow-y: auto;
+    }
+    #myViewer { flex:1; background: #222; position: relative; }
+    textarea {
+      width: 100%; height: 360px; margin-bottom: 10px; box-sizing: border-box;
+      font-family: monospace; border: 1px solid #ccc; resize: vertical; padding:8px;
+    }
+    input[type="button"] {
+      padding: 9px 12px; margin-right:8px; margin-bottom:8px;
+      background:#4CAF50; color:white; border:none; cursor:pointer;
+    }
+    input[type="button"]:hover { background:#45a049; }
+    #myStatus { margin-top:8px; font-size:13px; color:#333; min-height:18px; }
+  </style>
+</head>
+<body>
+  <div id="myContainer">
+    <div id="myControls">
+      <h2 style="margin:6px 0 8px 0;padding:0;">Point Cloud Data</h2>
+      <p style="margin:0 0 8px 0;font-size:13px;color:#444;">Paste the JSON point cloud below (200 points pre-loaded).</p>
+
+      <textarea id="myJsonInput" spellcheck="false"></textarea>
+
+      <!-- use input buttons (per your preference) -->
+      <input type="button" value="Load Points" onclick="myLoadAndRenderPoints()">
+      <input type="button" value="Export as GLB" onclick="myExportCurrentPoints()">
+
+      <div id="myStatus"></div>
+    </div>
+
+    <div id="myViewer"></div>
+  </div>
+
+  <script type="module">
+    // --- imports (fixed CDN paths) ---
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/controls/OrbitControls.js';
+    import { GLTFExporter } from 'https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/exporters/GLTFExporter.js';
+
+    // --- Globals (elements assigned after DOMContentLoaded) ---
+    let myScene, myCamera, myRenderer, myControls;
+    let myCurrentPointCloud = null;
+    let myViewerElement, myJsonInputElement, myStatusElement;
+
+    // --- Default JSON (200 points) ---
+    const myDefaultJson = {
+      "pointCloudData": {
+        "points": [
+          {"x": 4.50, "y": 4.10, "z": 0.05},
+          {"x": 4.40, "y": 4.00, "z": -0.10},
+          {"x": 4.30, "y": 4.20, "z": 0.20},
+          {"x": 4.20, "y": 4.30, "z": 0.00},
+          {"x": 4.10, "y": 4.40, "z": 1.50},
+          {"x": 4.10, "y": 4.40, "z": -1.50},
+          {"x": 3.90, "y": 4.80, "z": 0.00},
+          {"x": 3.80, "y": 4.70, "z": 0.30},
+          {"x": 3.70, "y": 4.90, "z": -0.20},
+          {"x": 3.60, "y": 5.00, "z": 0.10},
+          {"x": 3.50, "y": 4.80, "z": 0.00},
+          {"x": 3.40, "y": 4.70, "z": 0.20},
+          {"x": 3.30, "y": 4.60, "z": -0.10},
+          {"x": 3.20, "y": 4.50, "z": 0.30},
+          {"x": 3.10, "y": 4.40, "z": 0.00},
+          {"x": 3.00, "y": 4.30, "z": -0.40},
+          {"x": 2.90, "y": 4.20, "z": 0.10},
+          {"x": 2.80, "y": 4.10, "z": 0.40},
+          {"x": 2.70, "y": 4.00, "z": 0.00},
+          {"x": 2.60, "y": 3.90, "z": -0.30},
+          {"x": 2.50, "y": 3.80, "z": 0.20},
+          {"x": 2.40, "y": 3.70, "z": 0.10},
+          {"x": 2.30, "y": 3.60, "z": -0.20},
+          {"x": 2.20, "y": 3.50, "z": 0.00},
+          {"x": 2.10, "y": 3.40, "z": 0.30},
+          {"x": 2.00, "y": 3.30, "z": -0.10},
+          {"x": 1.90, "y": 3.20, "z": 0.20},
+          {"x": 1.80, "y": 3.10, "z": 0.00},
+          {"x": 1.70, "y": 3.00, "z": -0.30},
+          {"x": 1.60, "y": 2.90, "z": 0.10},
+          {"x": 1.50, "y": 2.80, "z": 0.40},
+          {"x": 1.40, "y": 2.70, "z": 0.00},
+          {"x": 1.30, "y": 2.60, "z": -0.20},
+          {"x": 1.20, "y": 2.50, "z": 0.30},
+          {"x": 1.10, "y": 2.40, "z": 0.10},
+          {"x": 1.00, "y": 2.30, "z": -0.40},
+          {"x": 0.90, "y": 2.20, "z": 0.00},
+          {"x": 0.80, "y": 2.10, "z": 0.20},
+          {"x": 0.70, "y": 2.00, "z": -0.10},
+          {"x": 0.60, "y": 1.90, "z": 0.30},
+          {"x": 0.50, "y": 3.50, "z": 0.00},
+          {"x": 0.40, "y": 3.60, "z": 0.20},
+          {"x": 0.30, "y": 3.70, "z": -0.10},
+          {"x": 0.20, "y": 3.80, "z": 0.30},
+          {"x": 0.10, "y": 3.90, "z": 0.00},
+          {"x": 0.00, "y": 4.00, "z": -0.40},
+          {"x": -0.10, "y": 4.10, "z": 0.10},
+          {"x": -0.20, "y": 4.20, "z": 0.40},
+          {"x": -0.30, "y": 4.30, "z": 0.00},
+          {"x": -0.40, "y": 4.40, "z": -0.20},
+          {"x": -0.50, "y": 4.50, "z": 0.30},
+          {"x": -0.60, "y": 4.60, "z": 0.10},
+          {"x": -0.70, "y": 4.70, "z": -0.40},
+          {"x": -0.80, "y": 4.80, "z": 0.00},
+          {"x": -0.90, "y": 4.90, "z": 0.20},
+          {"x": -1.00, "y": 4.80, "z": -0.10},
+          {"x": -1.10, "y": 4.70, "z": 0.30},
+          {"x": -1.20, "y": 4.60, "z": 0.00},
+          {"x": -1.30, "y": 4.50, "z": -0.40},
+          {"x": -1.40, "y": 4.40, "z": 0.10},
+          {"x": -1.50, "y": 4.30, "z": 0.40},
+          {"x": -1.60, "y": 4.20, "z": 0.00},
+          {"x": -1.70, "y": 4.10, "z": -0.20},
+          {"x": -1.80, "y": 4.00, "z": 0.30},
+          {"x": -1.90, "y": 3.90, "z": 0.10},
+          {"x": -2.00, "y": 3.80, "z": -0.40},
+          {"x": -2.10, "y": 3.70, "z": 0.00},
+          {"x": -2.20, "y": 3.60, "z": 0.20},
+          {"x": -2.30, "y": 3.50, "z": -0.10},
+          {"x": -2.40, "y": 3.40, "z": 0.30},
+          {"x": -2.50, "y": 3.30, "z": 0.00},
+          {"x": -2.60, "y": 3.20, "z": -0.40},
+          {"x": -2.70, "y": 3.10, "z": 0.10},
+          {"x": -2.80, "y": 3.00, "z": 0.40},
+          {"x": -2.90, "y": 2.90, "z": 0.00},
+          {"x": -3.00, "y": 2.80, "z": -0.20},
+          {"x": -3.10, "y": 2.70, "z": 0.30},
+          {"x": -3.20, "y": 2.60, "z": 0.10},
+          {"x": -3.30, "y": 2.50, "z": -0.40},
+          {"x": -3.40, "y": 2.40, "z": 0.00},
+          {"x": -3.50, "y": 2.30, "z": 0.20},
+          {"x": -3.60, "y": 2.20, "z": -0.10},
+          {"x": -3.70, "y": 2.10, "z": 0.30},
+          {"x": -3.80, "y": 2.00, "z": 0.00},
+          {"x": -3.90, "y": 1.90, "z": -0.40},
+          {"x": -4.00, "y": 1.80, "z": 0.10},
+          {"x": -4.10, "y": 1.70, "z": 0.40},
+          {"x": -4.20, "y": 1.60, "z": 0.00},
+          {"x": -4.30, "y": 1.50, "z": -0.20},
+          {"x": -4.40, "y": 1.40, "z": 0.30},
+          {"x": -4.50, "y": 1.30, "z": 0.10},
+          {"x": -4.60, "y": 1.20, "z": -0.40},
+          {"x": -4.70, "y": 1.10, "z": 0.00},
+          {"x": -4.80, "y": 1.00, "z": 0.20},
+          {"x": -4.90, "y": 0.90, "z": -0.10},
+          {"x": -5.00, "y": 0.80, "z": 0.30},
+          {"x": -4.95, "y": 0.70, "z": 0.00},
+          {"x": -4.85, "y": 0.60, "z": -0.40},
+          {"x": 3.00, "y": 1.50, "z": 1.80},
+          {"x": 3.00, "y": 1.50, "z": -1.80},
+          {"x": 3.20, "y": 0.50, "z": 1.80},
+          {"x": 3.20, "y": 0.50, "z": -1.80},
+          {"x": 3.40, "y": -0.50, "z": 1.50},
+          {"x": 3.40, "y": -0.50, "z": -1.50},
+          {"x": 3.60, "y": -0.80, "z": 1.20},
+          {"x": 3.60, "y": -0.80, "z": -1.20},
+          {"x": 3.80, "y": -0.90, "z": 1.00},
+          {"x": 3.80, "y": -0.90, "z": -1.00},
+          {"x": 4.00, "y": -1.00, "z": 0.80},
+          {"x": 4.00, "y": -1.00, "z": -0.80},
+          {"x": 4.20, "y": -1.10, "z": 0.60},
+          {"x": 4.20, "y": -1.10, "z": -0.60},
+          {"x": 4.40, "y": -1.20, "z": 0.40},
+          {"x": 4.40, "y": -1.20, "z": -0.40},
+          {"x": 4.60, "y": -1.30, "z": 0.20},
+          {"x": 4.60, "y": -1.30, "z": -0.20},
+          {"x": 4.80, "y": -1.40, "z": 0.00},
+          {"x": 4.80, "y": -1.40, "z": 0.00},
+          {"x": 3.00, "y": 1.30, "z": 1.90},
+          {"x": 3.00, "y": 1.30, "z": -1.90},
+          {"x": 3.20, "y": 0.30, "z": 1.90},
+          {"x": 3.20, "y": 0.30, "z": -1.90},
+          {"x": 3.40, "y": -0.30, "z": 1.60},
+          {"x": 3.40, "y": -0.30, "z": -1.60},
+          {"x": 3.60, "y": -0.60, "z": 1.30},
+          {"x": 3.60, "y": -0.60, "z": -1.30},
+          {"x": 3.80, "y": -0.70, "z": 1.10},
+          {"x": 3.80, "y": -0.70, "z": -1.10},
+          {"x": 4.00, "y": -0.80, "z": 0.90},
+          {"x": 4.00, "y": -0.80, "z": -0.90},
+          {"x": 4.20, "y": -0.90, "z": 0.70},
+          {"x": 4.20, "y": -0.90, "z": -0.70},
+          {"x": 4.40, "y": -1.00, "z": 0.50},
+          {"x": 4.40, "y": -1.00, "z": -0.50},
+          {"x": 4.60, "y": -1.10, "z": 0.30},
+          {"x": 4.60, "y": -1.10, "z": -0.30},
+          {"x": 4.80, "y": -1.20, "z": 0.10},
+          {"x": 4.80, "y": -1.20, "z": -0.10},
+          {"x": -1.50, "y": 2.50, "z": 2.20},
+          {"x": -1.50, "y": 2.50, "z": -2.20},
+          {"x": -2.00, "y": 1.50, "z": 2.50},
+          {"x": -2.00, "y": 1.50, "z": -2.50},
+          {"x": -2.50, "y": 0.50, "z": 2.00},
+          {"x": -2.50, "y": 0.50, "z": -2.00},
+          {"x": -3.00, "y": -0.50, "z": 1.50},
+          {"x": -3.00, "y": -0.50, "z": -1.50},
+          {"x": -3.50, "y": -1.00, "z": 1.00},
+          {"x": -3.50, "y": -1.00, "z": -1.00},
+          {"x": -4.00, "y": -1.20, "z": 0.50},
+          {"x": -4.00, "y": -1.20, "z": -0.50},
+          {"x": -4.50, "y": -1.30, "z": 0.20},
+          {"x": -4.50, "y": -1.30, "z": -0.20},
+          {"x": -4.80, "y": -1.40, "z": 0.00},
+          {"x": -4.80, "y": -1.40, "z": 0.00},
+          {"x": -1.60, "y": 2.60, "z": 2.10},
+          {"x": -1.60, "y": 2.60, "z": -2.10},
+          {"x": -2.10, "y": 1.60, "z": 2.40},
+          {"x": -2.10, "y": 1.60, "z": -2.40},
+          {"x": -2.60, "y": 0.60, "z": 1.90},
+          {"x": -2.60, "y": 0.60, "z": -1.90},
+          {"x": -3.10, "y": -0.40, "z": 1.40},
+          {"x": -3.10, "y": -0.40, "z": -1.40},
+          {"x": -3.60, "y": -0.90, "z": 0.90},
+          {"x": -3.60, "y": -0.90, "z": -0.90},
+          {"x": -4.10, "y": -1.10, "z": 0.40},
+          {"x": -4.10, "y": -1.10, "z": -0.40},
+          {"x": -4.60, "y": -1.20, "z": 0.10},
+          {"x": -4.60, "y": -1.20, "z": -0.10},
+          {"x": -2.80, "y": 3.00, "z": 0.00},
+          {"x": -3.50, "y": 2.50, "z": 0.80},
+          {"x": -4.00, "y": 2.00, "z": 1.00},
+          {"x": -4.50, "y": 1.50, "z": 0.90},
+          {"x": -4.80, "y": 1.00, "z": 0.60},
+          {"x": -4.90, "y": 0.50, "z": 0.20},
+          {"x": -4.50, "y": 0.00, "z": -0.10},
+          {"x": -3.80, "y": -0.50, "z": -0.30},
+          {"x": -3.00, "y": -0.80, "z": -0.10},
+          {"x": -2.50, "y": -0.50, "z": 0.20},
+          {"x": -2.00, "y": 0.00, "z": 0.40},
+          {"x": -1.50, "y": 0.50, "z": 0.30},
+          {"x": -1.00, "y": 1.00, "z": 0.10},
+          {"x": -0.50, "y": 1.50, "z": -0.10},
+          {"x": 0.00, "y": 2.00, "z": 0.00},
+          {"x": 0.50, "y": 2.50, "z": 0.10},
+          {"x": 1.00, "y": 3.00, "z": 0.00},
+          {"x": 1.50, "y": 3.50, "z": -0.10},
+          {"x": 2.00, "y": 3.80, "z": 0.00},
+          {"x": 2.50, "y": 4.10, "z": 0.10},
+          {"x": 5.0, "y": -1.5, "z": 5.0},
+          {"x": 5.0, "y": -1.5, "z": -5.0},
+          {"x": -5.0, "y": -1.5, "z": 5.0},
+          {"x": -5.0, "y": -1.5, "z": -5.0},
+          {"x": 0.0, "y": -1.5, "z": 0.0},
+          {"x": 2.5, "y": -1.5, "z": 2.5},
+          {"x": -2.5, "y": -1.5, "z": -2.5},
+          {"x": 4.0, "y": -1.5, "z": 0.0},
+          {"x": -4.0, "y": -1.5, "z": 0.0},
+          {"x": 0.0, "y": -1.5, "z": 4.0},
+          {"x": 2.00, "y": 2.50, "z": 0.00},
+          {"x": 1.90, "y": 2.40, "z": 0.50},
+          {"x": 1.80, "y": 2.30, "z": -0.50},
+          {"x": 1.70, "y": 2.20, "z": 0.00},
+          {"x": 1.60, "y": 2.10, "z": 0.20},
+          {"x": 1.50, "y": 2.00, "z": -0.20},
+          {"x": 1.40, "y": 1.90, "z": 0.40},
+          {"x": 1.30, "y": 1.80, "z": -0.40},
+          {"x": 1.20, "y": 1.70, "z": 0.00},
+          {"x": 1.10, "y": 1.60, "z": 0.10},
+          {"x": 1.00, "y": 1.50, "z": -0.10},
+          {"x": 0.90, "y": 1.40, "z": 0.30},
+          {"x": 0.80, "y": 1.30, "z": -0.30},
+          {"x": 0.70, "y": 1.20, "z": 0.00},
+          {"x": 0.60, "y": 1.10, "z": 0.50},
+          {"x": 0.50, "y": 1.00, "z": -0.50},
+          {"x": 0.40, "y": 0.90, "z": 0.00},
+          {"x": 0.30, "y": 0.80, "z": 0.20},
+          {"x": 0.20, "y": 0.70, "z": -0.20},
+          {"x": 0.10, "y": 0.60, "z": 0.40},
+          {"x": 0.00, "y": 0.50, "z": -0.40},
+          {"x": -0.10, "y": 0.40, "z": 0.00},
+          {"x": -0.20, "y": 0.30, "z": 0.10},
+          {"x": -0.30, "y": 0.20, "z": -0.10},
+          {"x": -0.40, "y": 0.10, "z": 0.30},
+          {"x": -0.50, "y": 0.00, "z": -0.30},
+          {"x": -0.60, "y": -0.10, "z": 0.00},
+          {"x": -0.70, "y": -0.20, "z": 0.50},
+          {"x": -0.80, "y": -0.30, "z": -0.50},
+          {"x": -0.90, "y": -0.40, "z": 0.00},
+          {"x": -1.00, "y": -0.50, "z": 0.20},
+          {"x": -1.10, "y": -0.60, "z": -0.20},
+          {"x": -1.20, "y": -0.70, "z": 0.40},
+          {"x": -1.30, "y": -0.80, "z": -0.40},
+          {"x": -1.40, "y": -0.90, "z": 0.00},
+          {"x": -1.50, "y": -1.00, "z": 0.10},
+          {"x": -1.60, "y": -1.10, "z": -0.10},
+          {"x": -1.70, "y": -1.20, "z": 0.30},
+          {"x": -1.80, "y": -1.30, "z": -0.30},
+          {"x": -1.90, "y": -1.40, "z": 0.00},
+          {"x": -2.00, "y": -1.50, "z": 0.50},
+          {"x": -2.10, "y": -1.60, "z": -0.50},
+          {"x": -2.20, "y": -1.70, "z": 0.00},
+          {"x": -2.30, "y": -1.80, "z": 0.20},
+          {"x": -2.40, "y": -1.90, "z": -0.20},
+          {"x": -2.50, "y": -2.00, "z": 0.40},
+          {"x": -2.60, "y": -2.10, "z": -0.40},
+          {"x": -2.70, "y": -2.20, "z": 0.00},
+          {"x": -2.80, "y": -2.30, "z": 0.10},
+          {"x": -2.90, "y": -2.40, "z": -0.10},
+          {"x": -3.00, "y": -2.50, "z": 0.30},
+          {"x": -3.10, "y": -2.60, "z": -0.30},
+          {"x": -3.20, "y": -2.70, "z": 0.00},
+          {"x": -3.30, "y": -2.80, "z": 0.50},
+          {"x": -3.40, "y": -2.90, "z": -0.50},
+          {"x": -3.50, "y": -3.00, "z": 0.00},
+          {"x": -3.60, "y": -3.10, "z": 0.20},
+          {"x": -3.70, "y": -3.20, "z": -0.20},
+          {"x": -3.80, "y": -3.30, "z": 0.40},
+          {"x": -3.90, "y": -3.40, "z": -0.40},
+          {"x": -4.00, "y": -3.50, "z": 0.00},
+          {"x": -4.10, "y": -3.60, "z": 0.10},
+          {"x": -4.20, "y": -3.70, "z": -0.10},
+          {"x": -4.30, "y": -3.80, "z": 0.30},
+          {"x": -4.40, "y": -3.90, "z": -0.30},
+          {"x": -4.50, "y": -4.00, "z": 0.00},
+          {"x": -4.60, "y": -4.10, "z": 0.50},
+          {"x": -4.70, "y": -4.20, "z": -0.50},
+          {"x": -4.80, "y": -4.30, "z": 0.00},
+          {"x": -4.90, "y": -4.40, "z": 0.20},
+          {"x": -5.00, "y": -4.50, "z": -0.20}
+        ]
+      }
+    };
+
+    // --- Scene init ---
+    function myInitScene() {
+      myScene = new THREE.Scene();
+
+      const aspectRatio = myViewerElement.clientWidth / Math.max(1, myViewerElement.clientHeight);
+      myCamera = new THREE.PerspectiveCamera(60, aspectRatio, 0.01, 1000);
+      myCamera.position.set(8, 6, 8);
+      myCamera.lookAt(myScene.position);
+
+      myRenderer = new THREE.WebGLRenderer({ antialias: true });
+      myRenderer.setPixelRatio(window.devicePixelRatio || 1);
+      myRenderer.setSize(myViewerElement.clientWidth, myViewerElement.clientHeight);
+      myRenderer.domElement.style.display = 'block';
+      // remove previous canvas if any (safety for re-init)
+      while (myViewerElement.firstChild) myViewerElement.removeChild(myViewerElement.firstChild);
+      myViewerElement.appendChild(myRenderer.domElement);
+
+      myControls = new OrbitControls(myCamera, myRenderer.domElement);
+      myControls.enableDamping = true;
+      myControls.dampingFactor = 0.06;
+
+      const myAmbientLight = new THREE.AmbientLight(0xffffff, 0.9);
+      myScene.add(myAmbientLight);
+
+      // small grid + axes helper for reference
+      const grid = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
+      myScene.add(grid);
+
+      window.addEventListener('resize', myOnWindowResize);
+    }
+
+    function myOnWindowResize() {
+      if (!myCamera || !myRenderer) return;
+      myCamera.aspect = myViewerElement.clientWidth / Math.max(1, myViewerElement.clientHeight);
+      myCamera.updateProjectionMatrix();
+      myRenderer.setSize(myViewerElement.clientWidth, myViewerElement.clientHeight);
+    }
+
+    function myAnimate() {
+      requestAnimationFrame(myAnimate);
+      if (myControls) myControls.update();
+      if (myRenderer && myScene && myCamera) myRenderer.render(myScene, myCamera);
+    }
+
+    // --- point cloud creation ---
+    function myCreatePointCloudFromData(myPointsArray) {
+      myStatusElement.textContent = `Processing ${myPointsArray.length} points...`;
+
+      const myVertices = [];
+      for (const myPoint of myPointsArray) {
+        myVertices.push(myPoint.x, myPoint.y, myPoint.z);
+      }
+
+      const myGeometry = new THREE.BufferGeometry();
+      myGeometry.setAttribute('position', new THREE.Float32BufferAttribute(myVertices, 3));
+
+      const myMaterial = new THREE.PointsMaterial({
+        color: 0xffa500,
+        size: 0.12,
+        sizeAttenuation: true
+      });
+
+      const myNewPointCloud = new THREE.Points(myGeometry, myMaterial);
+      // center cloud around origin approximately (optional)
+      myGeometry.computeBoundingBox();
+      if (myGeometry.boundingBox) {
+        const box = myGeometry.boundingBox;
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        myNewPointCloud.position.sub(center);
+      }
+
+      return myNewPointCloud;
+    }
+
+    // --- load from textarea ---
+    window.myLoadAndRenderPoints = function() {
+      try {
+        const myJsonText = myJsonInputElement.value;
+        const myParsedObject = JSON.parse(myJsonText);
+
+        const myPointsArray = myParsedObject.pointCloudData && myParsedObject.pointCloudData.points;
+        if (!Array.isArray(myPointsArray) || myPointsArray.length === 0) {
+          throw new Error("JSON structure invalid or point array empty. Expect { pointCloudData: { points: [ {x,y,z}, ... ] } }");
+        }
+
+        if (myCurrentPointCloud) {
+          myScene.remove(myCurrentPointCloud);
+          if (myCurrentPointCloud.geometry) myCurrentPointCloud.geometry.dispose();
+          if (myCurrentPointCloud.material) myCurrentPointCloud.material.dispose();
+          myCurrentPointCloud = null;
+        }
+
+        myCurrentPointCloud = myCreatePointCloudFromData(myPointsArray);
+        myScene.add(myCurrentPointCloud);
+
+        myStatusElement.textContent = `Successfully loaded ${myPointsArray.length} points.`;
+        if (myControls) {
+          myControls.target.set(0, 0, 0);
+          myControls.update();
+        }
+      } catch (myError) {
+        myStatusElement.textContent = `ERROR: ${myError.message}`;
+        console.error("Error loading point cloud:", myError);
+      }
+    };
+
+    // --- GLB export ---
+    function myDownloadBlob(myBlob, myFileName) {
+      const myLink = document.createElement('a');
+      myLink.style.display = 'none';
+      document.body.appendChild(myLink);
+      myLink.href = URL.createObjectURL(myBlob);
+      myLink.download = myFileName;
+      myLink.click();
+      document.body.removeChild(myLink);
+    }
+
+    window.myExportCurrentPoints = async function() {
+      if (!myCurrentPointCloud) {
+        myStatusElement.textContent = "Error: Load a point cloud first.";
+        return;
+      }
+
+      const myExporter = new GLTFExporter();
+      const myTempScene = new THREE.Scene();
+      // clone to avoid accidental scene references (export expects tree)
+      myTempScene.add(myCurrentPointCloud.clone());
+
+      myStatusElement.textContent = "Exporting to GLB...";
+
+      try {
+        const myResult = await new Promise((resolve, reject) => {
+          myExporter.parse(myTempScene, (result) => resolve(result), (error) => reject(error), { binary: true });
+        });
+
+        // myResult is an ArrayBuffer when binary:true
+        const myBlob = new Blob([myResult], { type: 'application/octet-stream' });
+        myDownloadBlob(myBlob, 'exported_point_cloud.glb');
+        myStatusElement.textContent = "Successfully exported exported_point_cloud.glb";
+      } catch (myError) {
+        myStatusElement.textContent = `GLB Export Error: ${myError.message}`;
+        console.error('Error during GLB export:', myError);
+      }
+    };
+
+    // --- setup after DOM ready ---
+    function mySetupInitialState() {
+      myViewerElement = document.getElementById('myViewer');
+      myJsonInputElement = document.getElementById('myJsonInput');
+      myStatusElement = document.getElementById('myStatus');
+
+      myJsonInputElement.value = JSON.stringify(myDefaultJson, null, 2);
+
+      myInitScene();
+      myLoadAndRenderPoints();
+      myAnimate();
+    }
+
+    document.addEventListener('DOMContentLoaded', mySetupInitialState);
+  </script>
+</body>
+</html>
