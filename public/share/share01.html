@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Simple Offline Chat</title>
+    
+    <!-- Minimal CSS for essential layout and chat bubbles -->
+    <style>
+        /* General Reset and Font */
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            background-color: #f3f4f6; /* Light gray background */
+        }
+
+        /* Main Content Container - Simple Centering */
+        #myContainer {
+            width: 95%;
+            max-width: 500px;
+            margin: 0 auto;
+            padding-top: 10px;
+            padding-bottom: 90px; /* Space for the fixed input bar */
+        }
+        
+        /* Header Styling */
+        h1 {
+            font-size: 24px; 
+            font-weight: bold; 
+            margin-bottom: 8px; 
+            text-align: center; 
+            color: #4f46e5; /* Indigo color */
+        }
+        .status-text {
+            text-align: center; 
+            margin-bottom: 15px; 
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Chat Log Area */
+        #myChatLog {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            /* Essential fix for scrollable height */
+            height: calc(100vh - 120px); 
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        /* Input Area - Fixed at the bottom */
+        .my-input-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            padding: 10px;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 8px; /* Spacing between input and button */
+            width: 100%;
+        }
+
+        /* Adjust input area width for centering on larger screens */
+        .my-input-area > * {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        #myMessageInput {
+            flex-grow: 1; 
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        #mySendButton {
+            background-color: #4f46e5;
+            color: white;
+            font-weight: 600;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #mySendButton:hover:not(:disabled) {
+            background-color: #4338ca;
+        }
+        #mySendButton:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Message Bubble Styles */
+        .my-message-bubble {
+            margin-bottom: 12px;
+            display: flex;
+            max-width: 80%;
+        }
+        .message-content {
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .message-time {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-top: 4px;
+            display: block;
+        }
+
+        /* User Message (Right-aligned) */
+        .my-message-user {
+            justify-content: flex-end;
+            margin-left: auto;
+        }
+        .my-message-user .message-content {
+            background-color: #6366f1; /* Indigo-500 */
+            color: white;
+            border-bottom-right-radius: 0; /* Flat edge */
+        }
+        .my-message-user .message-time {
+            text-align: right;
+        }
+
+        /* Other Message (Left-aligned) */
+        .my-message-other {
+            justify-content: flex-start;
+        }
+        .my-message-other .message-content {
+            background-color: #e5e7eb; /* Gray-200 */
+            color: #1f2937; /* Dark text */
+            border-bottom-left-radius: 0; /* Flat edge */
+        }
+        .my-message-other .message-time {
+            text-align: left;
+        }
+
+        /* System Messages */
+        .my-message-system {
+            text-align: center;
+            font-size: 12px;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+        .my-message-system.error {
+            color: #ef4444; /* Red */
+        }
+        .my-message-system.system {
+            color: #6b7280; /* Gray */
+        }
+
+        /* Status Colors */
+        .status-green { color: #10b981; }
+        .status-red { color: #ef4444; }
+        .status-yellow { color: #f59e0b; }
+
+    </style>
+</head>
+<body>
+
+    <div id="myContainer">
+        <!-- Header and Status -->
+        <h1>Local Chat</h1>
+        <p id="myConnectionStatus" class="status-text">
+            Connecting...
+        </p>
+
+        <!-- Chat Log Area -->
+        <div id="myChatLog">
+            <!-- Messages will be appended here -->
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="my-input-area">
+        <div style="display:flex; width: 100%; max-width: 500px; margin: 0 auto; gap: 8px;">
+            <input 
+                type="text" 
+                id="myMessageInput" 
+                placeholder="Type your message..."
+                onkeypress="if(event.key === 'Enter') mySendMessage();"
+            />
+            <button 
+                id="mySendButton"
+                onclick="mySendMessage()"
+                disabled
+            >
+                Send
+            </button>
+        </div>
+    </div>
+
+    <!-- The JavaScript for the WebSocket Client -->
+    <script>
+        // --- My Core Variables ---
+        // IMPORTANT: REPLACE THIS IP ADDRESS with the actual local IP address of the host computer
+        // running the Node.js server. Use the format: ws://[IP_ADDRESS]:8080
+        const myServerUrl = "ws://192.168.4.1:8080"; 
+        
+        let myWebSocket;
+        const myChatLog = document.getElementById('myChatLog');
+        const myMessageInput = document.getElementById('myMessageInput');
+        const mySendButton = document.getElementById('mySendButton');
+        const myConnectionStatus = document.getElementById('myConnectionStatus');
+        
+        const myMaxRetries = 5;
+        let myRetryCount = 0;
+
+        // --- Core Functions ---
+
+        /**
+         * @function myInitWebSocket
+         * Attempts to connect to the WebSocket server with exponential backoff for retries.
+         */
+        async function myInitWebSocket() {
+            try {
+                // 1. Establish the connection
+                myWebSocket = new WebSocket(myServerUrl);
+
+                // 2. Handle successful connection
+                myWebSocket.onopen = async () => {
+                    console.log("WebSocket connected successfully.");
+                    myConnectionStatus.textContent = "Status: Connected and ready to chat!";
+                    // Use simple class lists for status color
+                    myConnectionStatus.classList.remove('status-red', 'status-yellow');
+                    myConnectionStatus.classList.add('status-green');
+                    mySendButton.disabled = false;
+                    myRetryCount = 0; // Reset retry count
+                    myDisplaySystemMessage("Welcome to the local chat!", 'system');
+                };
+
+                // 3. Handle incoming messages
+                myWebSocket.onmessage = async (myEvent) => {
+                    myDisplayMessage(myEvent.data, 'other');
+                };
+
+                // 4. Handle errors
+                myWebSocket.onerror = async (myError) => {
+                    console.error("WebSocket Error:", myError);
+                    myConnectionStatus.textContent = "Status: Connection error.";
+                    myConnectionStatus.classList.add('status-red');
+                    mySendButton.disabled = true;
+                };
+
+                // 5. Handle unexpected closure
+                myWebSocket.onclose = async (myEvent) => {
+                    mySendButton.disabled = true;
+                    if (myEvent.wasClean) {
+                        myConnectionStatus.textContent = `Status: Disconnected (Code: ${myEvent.code})`;
+                    } else {
+                        myConnectionStatus.textContent = "Status: Connection lost! Trying to reconnect...";
+                        myConnectionStatus.classList.add('status-yellow');
+                        await myHandleReconnect();
+                    }
+                };
+
+            } catch (myError) {
+                console.error("Failed to create WebSocket instance:", myError);
+                myConnectionStatus.textContent = "Status: Failed to initialize. Check console.";
+                mySendButton.disabled = true;
+            }
+        }
+
+        /**
+         * @function myHandleReconnect
+         * Implements exponential backoff for connection retries.
+         */
+        async function myHandleReconnect() {
+            if (myRetryCount < myMaxRetries) {
+                myRetryCount++;
+                const myDelay = Math.pow(2, myRetryCount) * 1000; // 2s, 4s, 8s, 16s, 32s...
+                console.log(`Attempting reconnection in ${myDelay / 1000} seconds. (Attempt ${myRetryCount}/${myMaxRetries})`);
+                myConnectionStatus.textContent = `Status: Reconnecting in ${myDelay / 1000}s...`;
+                
+                await new Promise(myResolve => setTimeout(myResolve, myDelay));
+                myInitWebSocket();
+            } else {
+                myConnectionStatus.textContent = "Status: Reconnection failed after multiple attempts.";
+                myConnectionStatus.classList.remove('status-yellow');
+                myConnectionStatus.classList.add('status-red');
+            }
+        }
+
+
+        /**
+         * @function mySendMessage
+         * Gathers the message text and sends it to the server.
+         */
+        async function mySendMessage() {
+            const myMessage = myMessageInput.value.trim();
+
+            if (myMessage === "") {
+                return; // Don't send empty messages
+            }
+
+            if (myWebSocket && myWebSocket.readyState === WebSocket.OPEN) {
+                // Send the message to the server
+                myWebSocket.send(myMessage);
+                
+                // Display the message locally immediately (as 'user' type)
+                myDisplayMessage(myMessage, 'user');
+                
+                // Clear the input box
+                myMessageInput.value = '';
+            } else {
+                myDisplaySystemMessage("Cannot send. Not connected to server.", 'error');
+                console.warn("WebSocket is not open. ReadyState:", myWebSocket ? myWebSocket.readyState : 'Undefined');
+            }
+        }
+
+        /**
+         * @function myDisplayMessage
+         * Creates a new message bubble and appends it to the chat log.
+         * @param {string} myText - The message content.
+         * @param {string} myType - 'user' for self, 'other' for incoming.
+         */
+        function myDisplayMessage(myText, myType) {
+            const myNewMessageDiv = document.createElement('div');
+            // Use the CSS classes defined in the <style> block
+            myNewMessageDiv.classList.add('my-message-bubble', `my-message-${myType}`);
+
+            const myTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            myNewMessageDiv.innerHTML = `
+                <div class="message-content">
+                    <span class="block">${myText}</span>
+                    <span class="message-time">${myTime}</span>
+                </div>
+            `;
+            
+            myChatLog.appendChild(myNewMessageDiv);
+            
+            // Scroll to the bottom of the chat log
+            myChatLog.scrollTop = myChatLog.scrollHeight;
+        }
+
+        /**
+         * @function myDisplaySystemMessage
+         * Displays a system or error message in the chat log.
+         * @param {string} myText - The system message content.
+         * @param {string} myType - 'system' or 'error'.
+         */
+        function myDisplaySystemMessage(myText, myType) {
+            const mySystemDiv = document.createElement('div');
+            mySystemDiv.classList.add('my-message-system', myType);
+
+            mySystemDiv.textContent = `--- ${myText} ---`;
+            myChatLog.appendChild(mySystemDiv);
+            myChatLog.scrollTop = myChatLog.scrollHeight;
+        }
+
+
+        // --- Initialization ---
+        // Start the connection process when the page loads
+        myInitWebSocket();
+
+    </script>
+</body>
+</html>
