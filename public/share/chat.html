@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Peer-to-Peer WebSocket Chat</title>
+</head>
+<body>
+<h2>Peer-to-Peer WebSocket Chat</h2>
+
+<h3>1. Hotspot Instructions</h3>
+<p>Use these commands to create a hotspot if there is no internet:</p>
+<ul>
+<li><b>Windows:</b><br>
+Start: <code>netsh wlan set hostednetwork mode=allow ssid MyHotspot key MyPassword123</code><br>
+Start: <code>netsh wlan start hostednetwork</code><br>
+Stop: <code>netsh wlan stop hostednetwork</code></li>
+<li><b>macOS:</b><br>
+Use GUI: System Settings → Network → Wi-Fi → Internet Sharing (toggle on/off)</li>
+<li><b>Linux:</b><br>
+Start: <code>nmcli dev wifi hotspot ifname wlan0 ssid MyHotspot password MyPassword123</code><br>
+Stop: <code>nmcli connection down Hotspot</code></li>
+</ul>
+
+<h3>2. Connect to the WebSocket Server</h3>
+<label for="myServerSelect">Choose Server:</label>
+<select id="myServerSelect" onchange="myChangeServer()">
+<option value="ws://localhost:3000">Localhost</option>
+<option value="ws://192.168.137.1:3000">Hotspot Host (192.168.137.1)</option>
+<option value="custom">Custom...</option>
+</select>
+<input type="text" id="myCustomServer" placeholder="Enter ws:// URL"
+style="width:250px; display:none" onblur="myChangeServer()">
+<br><br>
+
+<h3>3. Set Your Nickname</h3>
+<input type="text" id="myNickname" placeholder="Enter your name" style="width:200px">
+<input type="button" value="Set" onclick="mySetNickname()">
+<br><br>
+
+<h3>4. Chat</h3>
+<input type="text" id="myMessage" style="width:200px">
+<input type="button" value="Send" onclick="mySendMessage()"><br><br>
+
+<div id="myChatLog" style="border:1px solid black; width:400px; height:250px; overflow:auto"></div>
+
+<script>
+let mySocket;
+let myCurrentUrl = "ws://localhost:3000";
+let myNickname = "Anonymous";
+
+// Set nickname
+function mySetNickname() {
+    const name = document.getElementById("myNickname").value.trim();
+    if (name !== "") {
+        myNickname = name;
+        if (mySocket && mySocket.readyState === WebSocket.OPEN) {
+            mySocket.send("NICKNAME:" + myNickname);
+        }
+        logMessage("✅ Nickname set to " + myNickname);
+    }
+}
+
+// Change server
+function myChangeServer() {
+    const sel = document.getElementById("myServerSelect").value;
+    const customInput = document.getElementById("myCustomServer");
+
+    if (sel === "custom") {
+        customInput.style.display = "inline";
+        if (customInput.value.trim() !== "") {
+            myCurrentUrl = customInput.value.trim();
+        }
+    } else {
+        customInput.style.display = "none";
+        myCurrentUrl = sel;
+    }
+    myConnect();
+}
+
+// Connect to WebSocket
+function myConnect() {
+    if (mySocket) mySocket.close();
+    mySocket = new WebSocket(myCurrentUrl);
+
+    mySocket.onopen = () => {
+        logMessage("Connected to " + myCurrentUrl);
+        if (myNickname !== "Anonymous") {
+            mySocket.send("NICKNAME:" + myNickname);
+        }
+    };
+
+    mySocket.onmessage = (event) => {
+        logMessage(event.data);
+    };
+
+    mySocket.onclose = () => {
+        logMessage("Disconnected from " + myCurrentUrl);
+    };
+}
+
+// Send message
+function mySendMessage() {
+    const msg = document.getElementById("myMessage").value.trim();
+    if (msg !== "" && mySocket && mySocket.readyState === WebSocket.OPEN) {
+        mySocket.send(msg);
+    }
+    document.getElementById("myMessage").value = "";
+}
+
+// Append message to chat log
+function logMessage(msg) {
+    const log = document.getElementById("myChatLog");
+    log.innerHTML += "<div>" + msg + "</div>";
+    log.scrollTop = log.scrollHeight;
+}
+
+// Auto-connect on page load
+window.onload = myConnect;
+</script>
+</body>
+</html>
