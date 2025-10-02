@@ -50,82 +50,64 @@
     <select id="myFeedSelect" onchange="myProcessFeedChange()">
         <option value="">-- Choose a Feed --</option>
       
-      <optgroup label="🇨🇦 Canadian General News">
-          <option value="https://globalnews.ca/feed/">Global News - National</option>
-          <option value="https://www.cbc.ca/webfeed/rss/rss-business">CBC News - Business</option>
-          <option value="https://globalnews.ca/feed/">Global News - National</option>
-      </optgroup>
-      
-      <optgroup label="🔬 Science & Technology">
-          <option value="https://www.wired.com/feed/rss">WIRED - Latest Stories</option>
-      </optgroup>
-      
-      <optgroup label="💸 Stock Market & Finance">
-          <option value="https://cnbc.com/id/10000664/device/rss/rss.html">CNBC - Business News</option>
-          <option value="https://seekingalpha.com/market_currents.xml">Seeking Alpha - Market News</option>
-      </optgroup>
-      
-      <optgroup label="₿ Cryptocurrency">
-          <option value="https://www.coindesk.com/arc/outboundfeeds/rss/?outputType=xml">CoinDesk - All News</option>
-          <option value="https://cointelegraph.com/rss">Cointelegraph - Latest News</option>
-      </optgroup>
-    </select>
 
-<optgroup label="🇨🇦 Canadian General News">
-    <option value="https://globalnews.ca/feed/">Global News - National</option>
-    <option value="https://www.cbc.ca/webfeed/rss/rss-business">CBC News - Business</option>
-    <option value="https://www.cbc.ca/webfeed/rss/rss-topstories">CBC News - Top Stories</option>
-    <option value="https://www.theglobeandmail.com/rss/news/national/">The Globe and Mail - National</option>
-    <option value="https://www.ctvnews.ca/rss/ctvnews-ca-politics-public-rss-1.822302">CTV News - Politics</option>
-</optgroup>
+        <optgroup label="🇨🇦 Canadian General News">
+            <option value="https://globalnews.ca/feed/">Global News - National</option>
+            <option value="https://www.cbc.ca/webfeed/rss/rss-business">CBC News - Business</option>
+            <option value="https://www.cbc.ca/webfeed/rss/rss-topstories">CBC News - Top Stories</option>
+            <option value="https://www.theglobeandmail.com/rss/news/national/">The Globe and Mail - National</option>
+            <option value="https://www.ctvnews.ca/rss/ctvnews-ca-politics-public-rss-1.822302">CTV News - Politics</option>
+        </optgroup>
+        
+        <optgroup label="🌍 World News & Politics">
+            <option value="http://feeds.bbci.co.uk/news/world/rss.xml">BBC News - World</option>
+            <option value="https://www.cbc.ca/webfeed/rss/rss-world">CBC News - World</option>
+            <option value="https://www.theguardian.com/world/rss">The Guardian - World</option>
+        </optgroup>
+        
+        <optgroup label="🔬 Science & Technology">
+            <option value="https://www.wired.com/feed/rss">WIRED - Latest Stories</option>
+            <option value="https://rss.sciam.com/ScientificAmerican-News">Scientific American - News</option>
+            <option value="https://www.nasa.gov/news-releases/feed/">NASA - Latest News</option>
+            <option value="https://www.cbc.ca/webfeed/rss/rss-technology">CBC News - Technology</option>
+        </optgroup>
+        
+        <optgroup label="💻 Web Development">
+            <option value="https://smashingmagazine.com/feed">Smashing Magazine</option>
+            <option value="https://css-tricks.com/feed">CSS-Tricks</option>
+            <option value="https://tympanus.net/codrops/feed">Codrops - Web Design/Dev</option>
+        </optgroup>
+        
+        <optgroup label="💸 Stock Market & Finance">
+            <option value="https://cnbc.com/id/10000664/device/rss/rss.html">CNBC - Business News</option>
+            <option value="https://seekingalpha.com/market_currents.xml">Seeking Alpha - Market News</option>
+            <option value="http://feeds.content.dowjones.io/public/rss/mw_markets_rss.xml">MarketWatch - Markets</option>
+        </optgroup>
+        
+        <optgroup label="🎮 Gaming">
+            <option value="https://kotaku.com/rss">Kotaku - Gaming News</option>
+            <option value="https://www.ign.com/rss/articles/all">IGN - All Articles</option>
+            <option value="https://www.polygon.com/rss/index.xml">Polygon - Gaming & Culture</option>
+        </optgroup>
+        
+        <optgroup label="₿ Cryptocurrency">
+            <option value="https://www.coindesk.com/arc/outboundfeeds/rss/?outputType=xml">CoinDesk - All News</option>
+            <option value="https://cointelegraph.com/rss">Cointelegraph - Latest News</option>
+        </optgroup>
+        
+          <optgroup label="🤖 Artificial Intelligence & ML">
+            <option value="https://openai.com/blog/rss/">OpenAI Blog</option>
+            <option value="https://ai.googleblog.com/feeds/posts/default">Google AI Blog</option>
+            <option value="https://www.technologyreview.com/feed/">MIT Technology Review - AI</option>
+            <option value="https://blogs.nvidia.com/blog/category/ai/feed/">NVIDIA AI Blog</option>
+            <option value="https://machinelearningmastery.com/blog/feed/">Machine Learning Mastery</option>
+            <option value="https://towardsdatascience.com/feed">Towards Data Science</option>
+        </optgroup>
+            <label for="myOutputArea">Raw JSON Output:</label>
+            <textarea id="myOutputArea" readonly placeholder="Select a feed to display the JSON data here."></textarea>
+        </div>
 
-<optgroup label="🌍 World News & Politics">
-    <option value="http://feeds.bbci.co.uk/news/world/rss.xml">BBC News - World</option>
-    <option value="https://www.cbc.ca/webfeed/rss/rss-world">CBC News - World</option>
-    <option value="https://www.theguardian.com/world/rss">The Guardian - World</option>
-</optgroup>
-
-<optgroup label="🔬 Science & Technology">
-    <option value="https://www.wired.com/feed/rss">WIRED - Latest Stories</option>
-    <option value="https://rss.sciam.com/ScientificAmerican-News">Scientific American - News</option>
-    <option value="https://www.nasa.gov/news-releases/feed/">NASA - Latest News</option>
-    <option value="https://www.cbc.ca/webfeed/rss/rss-technology">CBC News - Technology</option>
-</optgroup>
-
-<optgroup label="💻 Web Development">
-    <option value="https://smashingmagazine.com/feed">Smashing Magazine</option>
-    <option value="https://css-tricks.com/feed">CSS-Tricks</option>
-    <option value="https://tympanus.net/codrops/feed">Codrops - Web Design/Dev</option>
-</optgroup>
-
-<optgroup label="💸 Stock Market & Finance">
-    <option value="https://cnbc.com/id/10000664/device/rss/rss.html">CNBC - Business News</option>
-    <option value="https://seekingalpha.com/market_currents.xml">Seeking Alpha - Market News</option>
-    <option value="http://feeds.content.dowjones.io/public/rss/mw_markets_rss.xml">MarketWatch - Markets</option>
-</optgroup>
-
-<optgroup label="🎮 Gaming">
-    <option value="https://kotaku.com/rss">Kotaku - Gaming News</option>
-    <option value="https://www.ign.com/rss/articles/all">IGN - All Articles</option>
-    <option value="https://www.polygon.com/rss/index.xml">Polygon - Gaming & Culture</option>
-</optgroup>
-
-<optgroup label="₿ Cryptocurrency">
-    <option value="https://www.coindesk.com/arc/outboundfeeds/rss/?outputType=xml">CoinDesk - All News</option>
-    <option value="https://cointelegraph.com/rss">Cointelegraph - Latest News</option>
-</optgroup>
-
-  <optgroup label="🤖 Artificial Intelligence & ML">
-    <option value="https://openai.com/blog/rss/">OpenAI Blog</option>
-    <option value="https://ai.googleblog.com/feeds/posts/default">Google AI Blog</option>
-    <option value="https://www.technologyreview.com/feed/">MIT Technology Review - AI</option>
-    <option value="https://blogs.nvidia.com/blog/category/ai/feed/">NVIDIA AI Blog</option>
-    <option value="https://machinelearningmastery.com/blog/feed/">Machine Learning Mastery</option>
-    <option value="https://towardsdatascience.com/feed">Towards Data Science</option>
-</optgroup>
-    <label for="myOutputArea">Raw JSON Output:</label>
-    <textarea id="myOutputArea" readonly placeholder="Select a feed to display the JSON data here."></textarea>
-</div>
+</select>
 
 <script>
     // RSS-to-JSON converter service base URL
