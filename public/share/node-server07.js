@@ -2,6 +2,52 @@
 // Run with: node server.js
 // Requires: npm install ws
 
+// ===============================================================
+// WebSocket + HTTP Chat Server
+// - Runs WebSocket server on port 3000
+// - Runs HTTP static server on port 8080 (serves chat.html)
+// - Prints host IP addresses for clients
+// - Handles client nicknames
+// ===============================================================
+
+// ===========================
+// HOTSPOT COMMANDS REFERENCE
+// ===========================
+
+// --- Windows ---
+// Start hotspot:
+// netsh wlan set hostednetwork mode=allow ssid MyHotspot key MyPassword123
+// netsh wlan start hostednetwork
+//
+// Stop hotspot:
+// netsh wlan stop hostednetwork
+//
+// Check hotspot status:
+// netsh wlan show hostednetwork
+
+// --- macOS ---
+// Start hotspot:
+// System Settings > Network > Wi-Fi > Internet Sharing (GUI)
+//
+// Stop hotspot:
+// System Settings > Network > Wi-Fi > Internet Sharing (toggle off)
+//
+// Command-line partial stop (turn off Wi-Fi, effectively stopping sharing):
+// sudo networksetup -setairportpower en0 off
+
+// --- Linux (NetworkManager / nmcli) ---
+// Start hotspot:
+// nmcli dev wifi hotspot ifname wlan0 ssid MyHotspot password MyPassword123
+//
+// Stop hotspot:
+// nmcli connection down Hotspot
+//
+// List connections:
+// nmcli connection show
+
+// ===============================================================
+
+
 const WebSocket = require('ws');
 const http = require('http');
 const fs = require('fs');
