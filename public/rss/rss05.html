@@ -1,0 +1,162 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple News Reader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        /* Minimal CSS as requested, primarily for layout and readability */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .myContainer {
+            max-width: 800px;
+            margin: auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        select, button {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #myOutputArea {
+            width: 100%;
+            height: 400px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-family: monospace;
+            white-space: pre-wrap; /* Ensures the JSON wraps nicely */
+        }
+        h2 {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="myContainer">
+    <h2>Canadian News Reader</h2>
+
+    <label for="myFeedSelect">Select a Canadian News Feed:</label>
+    <select id="myFeedSelect" onchange="myProcessFeedChange()">
+        <option value="">-- Choose a Feed --</option>
+      
+
+        <optgroup label="🇨🇦 Canadian General News">
+            <option value="https://globalnews.ca/feed/">Global News - National</option>
+            <option value="https://www.cbc.ca/webfeed/rss/rss-business">CBC News - Business</option>
+            <option value="https://www.cbc.ca/webfeed/rss/rss-topstories">CBC News - Top Stories</option>
+        </optgroup>
+        
+        <optgroup label="🌍 World News & Politics">
+            <option value="http://feeds.bbci.co.uk/news/world/rss.xml">BBC News - World</option>
+            <option value="https://www.cbc.ca/webfeed/rss/rss-world">CBC News - World</option>
+            <option value="https://www.theguardian.com/world/rss">The Guardian - World</option>
+        </optgroup>
+        
+        <optgroup label="🔬 Science & Technology">
+            <option value="https://www.wired.com/feed/rss">WIRED - Latest Stories</option>
+            <option value="https://www.cbc.ca/webfeed/rss/rss-technology">CBC News - Technology</option>
+        </optgroup>
+        
+        <optgroup label="💻 Web Development">
+            <option value="https://css-tricks.com/feed">CSS-Tricks</option>
+        </optgroup>
+        
+        <optgroup label="💸 Stock Market & Finance">
+            <option value="https://cnbc.com/id/10000664/device/rss/rss.html">CNBC - Business News</option>
+            <option value="https://seekingalpha.com/market_currents.xml">Seeking Alpha - Market News</option>
+        </optgroup>
+        
+        <optgroup label="🎮 Gaming">
+            <option value="https://kotaku.com/rss">Kotaku - Gaming News</option>
+            <option value="https://www.polygon.com/rss/index.xml">Polygon - Gaming & Culture</option>
+        </optgroup>
+        
+        <optgroup label="₿ Cryptocurrency">
+            <option value="https://www.coindesk.com/arc/outboundfeeds/rss/?outputType=xml">CoinDesk - All News</option>
+            <option value="https://cointelegraph.com/rss">Cointelegraph - Latest News</option>
+        </optgroup>
+        
+          <optgroup label="🤖 Artificial Intelligence & ML">
+            <option value="https://www.technologyreview.com/feed/">MIT Technology Review - AI</option>
+            <option value="https://machinelearningmastery.com/blog/feed/">Machine Learning Mastery</option>
+            <option value="https://towardsdatascience.com/feed">Towards Data Science</option>
+        </optgroup>
+        </select>
+    
+        <label for="myOutputArea">Raw JSON Output:</label>
+        <textarea id="myOutputArea" readonly placeholder="Select a feed to display the JSON data here."></textarea>
+    </div>
+
+
+
+<script>
+    // RSS-to-JSON converter service base URL
+    const myConverterUrl = 'https://api.rss2json.com/v1/api.json?rss_url=';
+
+    /**
+     * Handles the 'onchange' event of the select box.
+     * @returns {void}
+     */
+    function myProcessFeedChange() {
+        const mySelectElement = document.getElementById('myFeedSelect');
+        const myRssUrl = mySelectElement.value;
+        const myOutputArea = document.getElementById('myOutputArea');
+        
+        myOutputArea.value = 'Loading...';
+
+        if (myRssUrl) {
+            myFetchFeed(myRssUrl);
+        } else {
+            myOutputArea.value = 'Select a feed to display the JSON data here.';
+        }
+    }
+
+    /**
+     * Fetches the RSS feed URL, converts it to JSON, and displays the result.
+     * @param {string} rssUrl The URL of the RSS feed to fetch.
+     * @returns {void}
+     */
+    async function myFetchFeed(rssUrl) {
+        const myOutputArea = document.getElementById('myOutputArea');
+        const myApiUrl = myConverterUrl + encodeURIComponent(rssUrl);
+
+        try {
+            // Use the fetch API with async/await as preferred
+            const myResponse = await fetch(myApiUrl);
+            
+            // Check for HTTP errors
+            if (!myResponse.ok) {
+                throw new Error(`HTTP error! Status: ${myResponse.status}`);
+            }
+
+            const myJsonData = await myResponse.json();
+            
+            // Check if the converter returned an error (e.g., if the RSS URL was invalid)
+            if (myJsonData.status === 'error') {
+                 throw new Error(myJsonData.message || 'Error processing the feed.');
+            }
+
+            // Convert the JSON object to a nicely formatted string for display
+            myOutputArea.value = JSON.stringify(myJsonData, null, 2);
+
+        } catch (myError) {
+            console.error('Fetch error:', myError);
+            myOutputArea.value = `Error loading feed: ${myError.message}. Please check the console for details.`;
+        }
+    }
+</script>
+
+</body>
+</html>
