@@ -1,172 +1,154 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Simple News Reader</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        /* Minimal CSS as requested, primarily for layout and readability */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
-        }
-        .myContainer {
-            max-width: 800px;
-            margin: auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        select, button {
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            margin-bottom: 20px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        #myOutputArea {
-            width: 100%;
-            height: 400px;
-            padding: 15px;
-            border: 1px solid #ccc;
-            box-sizing: border-box;
-            font-family: monospace;
-            white-space: pre-wrap; /* Ensures the JSON wraps nicely */
-        }
-        h2 {
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome AI: Simple Summarizer Example</title>
 </head>
-<body>
 
-<div class="myContainer">
-    <h2>Canadian News Reader</h2>
+<body style="font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px;">
+    <h1 style="color: #4CAF50;">Chrome Built-in AI: Simple Summarizer</h1>
+    <p>This example now correctly uses the two-step **<code>Summarizer.create()</code>** and **<code>summarizer.summarize()</code>** method as described in the Chrome developer documentation. The initial click will create and download the necessary AI model.</p>
 
-    <label for="myFeedSelect">Select a Canadian News Feed:</label>
-    <select id="myFeedSelect" onchange="myProcessFeedChange()">
-        <option value="">-- Choose a Feed --</option>
-      
-
-        <optgroup label="🇨🇦 Canadian General News">
-            <option value="https://globalnews.ca/feed/">Global News - National</option>
-            <option value="https://www.cbc.ca/webfeed/rss/rss-business">CBC News - Business</option>
-            <option value="https://www.cbc.ca/webfeed/rss/rss-topstories">CBC News - Top Stories</option>
-            <option value="https://www.theglobeandmail.com/rss/news/national/">The Globe and Mail - National</option>
-            <option value="https://www.ctvnews.ca/rss/ctvnews-ca-politics-public-rss-1.822302">CTV News - Politics</option>
-        </optgroup>
-        
-        <optgroup label="🌍 World News & Politics">
-            <option value="http://feeds.bbci.co.uk/news/world/rss.xml">BBC News - World</option>
-            <option value="https://www.cbc.ca/webfeed/rss/rss-world">CBC News - World</option>
-            <option value="https://www.theguardian.com/world/rss">The Guardian - World</option>
-        </optgroup>
-        
-        <optgroup label="🔬 Science & Technology">
-            <option value="https://www.wired.com/feed/rss">WIRED - Latest Stories</option>
-            <option value="https://rss.sciam.com/ScientificAmerican-News">Scientific American - News</option>
-            <option value="https://www.nasa.gov/news-releases/feed/">NASA - Latest News</option>
-            <option value="https://www.cbc.ca/webfeed/rss/rss-technology">CBC News - Technology</option>
-        </optgroup>
-        
-        <optgroup label="💻 Web Development">
-            <option value="https://smashingmagazine.com/feed">Smashing Magazine</option>
-            <option value="https://css-tricks.com/feed">CSS-Tricks</option>
-            <option value="https://tympanus.net/codrops/feed">Codrops - Web Design/Dev</option>
-        </optgroup>
-        
-        <optgroup label="💸 Stock Market & Finance">
-            <option value="https://cnbc.com/id/10000664/device/rss/rss.html">CNBC - Business News</option>
-            <option value="https://seekingalpha.com/market_currents.xml">Seeking Alpha - Market News</option>
-            <option value="http://feeds.content.dowjones.io/public/rss/mw_markets_rss.xml">MarketWatch - Markets</option>
-        </optgroup>
-        
-        <optgroup label="🎮 Gaming">
-            <option value="https://kotaku.com/rss">Kotaku - Gaming News</option>
-            <option value="https://www.ign.com/rss/articles/all">IGN - All Articles</option>
-            <option value="https://www.polygon.com/rss/index.xml">Polygon - Gaming & Culture</option>
-        </optgroup>
-        
-        <optgroup label="₿ Cryptocurrency">
-            <option value="https://www.coindesk.com/arc/outboundfeeds/rss/?outputType=xml">CoinDesk - All News</option>
-            <option value="https://cointelegraph.com/rss">Cointelegraph - Latest News</option>
-        </optgroup>
-        
-          <optgroup label="🤖 Artificial Intelligence & ML">
-            <option value="https://openai.com/blog/rss/">OpenAI Blog</option>
-            <option value="https://ai.googleblog.com/feeds/posts/default">Google AI Blog</option>
-            <option value="https://www.technologyreview.com/feed/">MIT Technology Review - AI</option>
-            <option value="https://blogs.nvidia.com/blog/category/ai/feed/">NVIDIA AI Blog</option>
-            <option value="https://machinelearningmastery.com/blog/feed/">Machine Learning Mastery</option>
-            <option value="https://towardsdatascience.com/feed">Towards Data Science</option>
-        </optgroup>
-        </select>
-    
-        <label for="myOutputArea">Raw JSON Output:</label>
-        <textarea id="myOutputArea" readonly placeholder="Select a feed to display the JSON data here."></textarea>
+    <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background-color: #f9f9f9;">
+        <h2 style="margin-top: 0;">Text to Summarize</h2>
+        <textarea id="myTextInput" rows="10" placeholder="Paste a long text here..."
+            style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+Artificial Intelligence (AI) is a wide-ranging branch of computer science concerned with building smart machines capable of performing tasks that typically require human intelligence. This encompasses everything from learning, reasoning, problem-solving, perception, and language understanding. The field of AI has undergone several boom and bust cycles, but recent advancements, particularly in machine learning and deep learning, have led to unprecedented progress. Machine learning is a subset of AI that uses algorithms to allow systems to automatically learn and improve from experience without being explicitly programmed. Deep learning, in turn, is a subset of machine learning that utilizes neural networks with many layers (hence 'deep') to analyze complex data, such as images, sound, and text, with remarkable accuracy. These developments are rapidly transforming industries like healthcare, finance, and transportation, raising both excitement about new possibilities and ethical questions about job displacement and algorithmic bias. The goal is to create AI that can not only augment human capabilities but also address some of of the world's most challenging problems.
+</textarea>
+        <button id="myExecuteButton" onclick="myExecuteSummarizer()"
+            style="display: block; width: 100%; padding: 10px; margin-top: 10px; font-size: 16px; color: white; background-color: #4CAF50; border: none; border-radius: 5px; cursor: pointer;">Initialize AI and Summarize</button>
     </div>
 
+    <div style="margin-top: 20px;">
+        <h2 style="margin-top: 0;">Status and Output</h2>
+        <p id="myStatus" style="font-style: italic; color: #555;">Ready. Click the button to initialize the AI and summarize.</p>
+        <textarea id="myOutput" rows="5" readonly
+            style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #eee; box-sizing: border-box; margin-top: 10px;"></textarea>
+    </div>
 
+    <hr style="margin: 40px 0;">
 
-<script>
-    // RSS-to-JSON converter service base URL
-    const myConverterUrl = 'https://api.rss2json.com/v1/api.json?rss_url=';
+    <div>
+        <h2>A Note on Chrome Flags</h2>
+        <p>To use this feature, you must have the **"Enable built-in AI"** flag enabled in Chrome. Open a new tab, paste the link below, press Enter, enable the flag, and then restart Chrome.</p>
+        <input type="text" id="myFlagsLink" value="chrome://flags/#enable-built-in-ai" readonly
+            style="width: 100%; padding: 8px; border: 1px solid #ccc; background-color: #f0f0f0; cursor: pointer;"
+            onclick="myCopyFlagsLink()">
+        <br>
+        <button onclick="myCopyFlagsLink()" style="margin-top: 10px; padding: 8px 16px; border-radius: 5px; cursor: pointer;">Copy Link & Open New Tab</button>
+    </div>
 
-    /**
-     * Handles the 'onchange' event of the select box.
-     * @returns {void}
-     */
-    function myProcessFeedChange() {
-        const mySelectElement = document.getElementById('myFeedSelect');
-        const myRssUrl = mySelectElement.value;
-        const myOutputArea = document.getElementById('myOutputArea');
-        
-        myOutputArea.value = 'Loading...';
+    <hr style="margin: 40px 0;">
 
-        if (myRssUrl) {
-            myFetchFeed(myRssUrl);
-        } else {
-            myOutputArea.value = 'Select a feed to display the JSON data here.';
+    <div>
+        <h2>My GitHub</h2>
+        <p>You can find more of my work on my <a href="https://github.com/hpssjellis"> hpssjellis </a> GitHub page:</p>
+        <p> By Jeremy Ellis <a href="https://ca.linkedin.com/in/jeremy-ellis-4237a9bb"> LinkedIn </a><br></p>
+    </div>
+
+    <script>
+        // Use my descriptive names and camelCase
+        let myTimerInterval = null;
+        let mySummarizer = null; // Global variable to store the Summarizer object
+
+        // Function to start a simple timer to show activity
+        function myStartTimer() {
+            let mySeconds = 0;
+            const myStatus = document.getElementById('myStatus');
+            myStatus.textContent = "Working... 0s";
+            myTimerInterval = setInterval(() => {
+                mySeconds++;
+                myStatus.textContent = `Working... ${mySeconds}s`;
+            }, 1000);
         }
-    }
 
-    /**
-     * Fetches the RSS feed URL, converts it to JSON, and displays the result.
-     * @param {string} rssUrl The URL of the RSS feed to fetch.
-     * @returns {void}
-     */
-    async function myFetchFeed(rssUrl) {
-        const myOutputArea = document.getElementById('myOutputArea');
-        const myApiUrl = myConverterUrl + encodeURIComponent(rssUrl);
-
-        try {
-            // Use the fetch API with async/await as preferred
-            const myResponse = await fetch(myApiUrl);
-            
-            // Check for HTTP errors
-            if (!myResponse.ok) {
-                throw new Error(`HTTP error! Status: ${myResponse.status}`);
+        // Function to stop the timer and set the final status
+        function myStopTimer(myMessage) {
+            if (myTimerInterval) {
+                clearInterval(myTimerInterval);
+                myTimerInterval = null;
             }
-
-            const myJsonData = await myResponse.json();
-            
-            // Check if the converter returned an error (e.g., if the RSS URL was invalid)
-            if (myJsonData.status === 'error') {
-                 throw new Error(myJsonData.message || 'Error processing the feed.');
-            }
-
-            // Convert the JSON object to a nicely formatted string for display
-            myOutputArea.value = JSON.stringify(myJsonData, null, 2);
-
-        } catch (myError) {
-            console.error('Fetch error:', myError);
-            myOutputArea.value = `Error loading feed: ${myError.message}. Please check the console for details.`;
+            const myStatus = document.getElementById('myStatus');
+            myStatus.textContent = myMessage;
         }
-    }
-</script>
 
+        // Main function to execute the summarizer (FIXED)
+        async function myExecuteSummarizer() {
+            const myTextInput = document.getElementById('myTextInput');
+            const myOutput = document.getElementById('myOutput');
+            const myStatus = document.getElementById('myStatus');
+            const myExecuteButton = document.getElementById('myExecuteButton');
+
+            // Disable button and change color while working
+            myExecuteButton.disabled = true;
+            myExecuteButton.style.backgroundColor = '#ccc';
+
+            try {
+                // Check if the Summarizer API is available
+                if (!('Summarizer' in window)) {
+                    myStopTimer("Error: Summarizer API (window.Summarizer) not found. Check Chrome version/flags.");
+                    return;
+                }
+
+                myStartTimer();
+                myOutput.value = "";
+
+                const myTextValue = myTextInput.value;
+                if (!myTextValue.trim()) {
+                    myStopTimer('Please enter text to summarize.');
+                    return;
+                }
+                
+                // STEP 1: Create the summarizer object if it hasn't been created yet.
+                if (mySummarizer === null) {
+                    myStatus.textContent = "Initializing AI model (first time setup/download)...";
+                    
+                    // The create call can take time and may require user activation.
+                    // Simplified options for the example: key-points, medium length.
+                    const myOptions = {
+                        type: 'key-points',
+                        length: 'medium',
+                    };
+                    
+                    mySummarizer = await Summarizer.create(myOptions);
+                }
+
+                // STEP 2: Use the created object to perform the summarization
+                myStatus.textContent = "Requesting summary from Chrome AI...";
+                
+                // The summarize() call takes the text and an optional context object.
+                const mySummary = await mySummarizer.summarize(myTextValue);
+                
+                myOutput.value = mySummary;
+                myStopTimer("Summarization complete! (Click to run again)");
+
+            } catch (myError) {
+                // Log and inform the user of the error
+                mySummarizer = null; // Reset object on failure to try creation again
+                if (myError.message.includes('not supported') || myError.message.includes('permission')) {
+                    myStopTimer("Error: Feature not enabled or supported. Check Chrome's built-in AI settings.");
+                } else {
+                    myStopTimer("An error occurred. Check the console for details.");
+                }
+                console.error("Chrome Summarizer API Error:", myError);
+            } finally {
+                // Re-enable button and restore color
+                myExecuteButton.disabled = false;
+                myExecuteButton.style.backgroundColor = '#4CAF50';
+            }
+        }
+
+        // Helper function to copy the flags link and open a new tab
+        function myCopyFlagsLink() {
+            const myFlagsInput = document.getElementById('myFlagsLink');
+            myFlagsInput.select();
+            myFlagsInput.setSelectionRange(0, 99999);
+            document.execCommand('copy'); 
+            window.open('about:blank', '_blank');
+        }
+    </script>
 </body>
+
 </html>
