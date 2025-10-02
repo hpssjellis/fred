@@ -51,4 +51,42 @@ myWsServer.on('connection', (socket) => {
 // HTTP Static File Server
 // -------------------------------
 const myHttpServer = http.createServer((req, res) => {
-    let filePath = '.' + r
+    let filePath = '.' + req.url;
+    if (filePath === './') filePath = './chat.html';
+
+    fs.readFile(filePath, (err, data) => {
+        if (err) {
+            res.writeHead(404);
+            res.end('404 Not Found');
+        } else {
+            let ext = path.extname(filePath).toLowerCase();
+            let type = 'text/html';
+            if (ext === '.js') type = 'application/javascript';
+            if (ext === '.css') type = 'text/css';
+            res.writeHead(200, { 'Content-Type': type });
+            res.end(data, 'utf-8');
+        }
+    });
+});
+
+myHttpServer.listen(myHttpPort, () => {
+    console.log(`HTTP server running on http://0.0.0.0:${myHttpPort}`);
+});
+
+
+// -------------------------------
+// Print Local IPs for User
+// -------------------------------
+function myPrintNetworkAddresses() {
+    const nets = os.networkInterfaces();
+    console.log("WebSocket server available at:");
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            if (net.family === 'IPv4' && !net.internal) {
+                console.log(`  ws://${net.address}:${myWsPort}`);
+                console.log(`  http://${net.address}:${myHttpPort}`);
+            }
+        }
+    }
+}
+myPrintNetworkAddresses();
