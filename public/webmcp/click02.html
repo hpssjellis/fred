@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Assistant: Transcribe and Process with LLM</title>
+    <!-- Load Tailwind CSS for modern aesthetics and responsiveness, as required by platform guidelines -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Existing user-provided styles, adjusted for Tailwind class use where possible */
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+        }
+
+        h1 {
+            color: #4CAF50;
+        }
+
+        .my-container {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 16px;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Combined styles for both output areas */
+        .output-box {
+            min-height: 100px;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+
+        #myOutput {
+            border: 1px solid #ccc;
+            background-color: #eee;
+        }
+        
+        #mySummaryOutput {
+            border: 1px solid #4CAF50; /* A nice green border for the AI output */
+            background-color: #e8f5e9; /* A light green background */
+        }
+        
+        #myStatus {
+            font-style: italic;
+            color: #555;
+        }
+        
+        #mySummaryStatus {
+            font-style: italic;
+            color: #1e88e5;
+        }
+
+    </style>
+</head>
+
+<body class="p-4 md:p-8 bg-gray-50">
+
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-4">Voice Assistant: Transcribe and Process with LLM</h1>
+        <p class="mb-6 text-gray-600">This application uses the Web Speech API to transcribe your voice, and then sends the final text to the **webMCP** (Gemini API) to be summarized or answered.</p>
+
+        <div class="my-container shadow-lg">
+            <h2 class="text-xl font-semibold mb-3">Live Transcription</h2>
+            <button onclick="myToggleRecording()" id="myRecordButton">Start Recording</button>
+        </div>
+
+        <!-- Transcribed Text Output -->
+        <div class="mt-8">
+            <h2 class="text-xl font-semibold mb-2">Speech-to-Text Output</h2>
+            <p id="myStatus">Ready.</p>
+            <div id="myOutput" class="output-box"></div>
+        </div>
+        
+        <!-- LLM / webMCP Output -->
+        <div class="mt-8">
+            <h2 class="text-xl font-semibold mb-2">webMCP Assistant Output (Summary/Answer)</h2>
+            <p id="mySummaryStatus">Awaiting transcription.</p>
+            <div id="mySummaryOutput" class="output-box">
+                The summary or answer from the AI will appear here after you stop recording.
+            </div>
+        </div>
+
+        <hr class="my-10 border-gray-300">
+
+        <div class="text-center text-sm text-gray-500">
+            <h2>My GitHub</h2>
+            <p>You can find more of my work on my <a href="https://github.com/hpssjellis" class="text-blue-500 hover:underline"> hpssjellis </a> GitHub page:</p>
+            <p> By Jeremy Ellis <a href="https://ca.linkedin.com/in/jeremy-ellis-4237a9bb" class="text-blue-500 hover:underline"> LinkedIn </a><br></p>
+        </div>
+    </div>
+
+    <script>
+        // Global variables for Web Speech API
+        let mySpeechRecognition = null;
+        let myIsRecording = false;
+        let myFinalTranscriptGlobal = ''; // Holds the complete transcript to send to LLM
+
+        const myRecordButton = document.getElementById('myRecordButton');
+        const myStatus = document.getElementById('myStatus');
+        const myOutput = document.getElementById('myOutput');
+        
+        // New elements for LLM output
+        const mySummaryStatus = document.getElementById('mySummaryStatus');
+        const mySummaryOutput = document.getElementById('mySummaryOutput');
+
+        // Global variables for Gemini API (webMCP)
+        const myApiKey = ""; // This variable will be automatically populated in the canvas environment
+        const myApiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent';
+
+
+        // Function to create and configure the speech recognition object
+        function myCreateSpeechRecognition() {
+            if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                const myRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                myRecognition.interimResults = true; // Get results as they are being spoken
+                myRecognition.lang = 'en-US';
+                return myRecognition;
+            } else {
+                myStatus.textContent = "Error: Web Speech API is not supported in this browser.";
+                return null;
+            }
+        }
+
+        // --- webMCP (LLM) Processing Function ---
+        async function myProcessTranscript(myText) {
+            if (!myText.trim()) {
+                mySummaryOutput.textContent = "No spoken words were captured to summarize.";
+                mySummaryStatus.textContent = "Awaiting transcription.";
+                return;
+            }
+
+            mySummaryStatus.textContent = "Processing transcript with webMCP (Summarizing/Answering)...";
+            mySummaryOutput.textContent = "Loading AI response...";
+
+            // System prompt for the LLM
+            const mySystemPrompt = "You are a helpful AI assistant known as 'webMCP'. Your job is to process the user's spoken transcript. Summarize the text in one concise paragraph. If the text clearly poses a question (e.g., 'What is the capital of France?'), answer the question directly instead of summarizing. Do not include any introductory phrases like 'The summary is' or 'The answer is'.";
+            
+            const myUserQuery = myText;
+            const myPayload = {
+                contents: [{ parts: [{ text: myUserQuery }] }],
+                tools: [{ "google_search": {} }], // Use Google Search for up-to-date knowledge
+                systemInstruction: { parts: [{ text: mySystemPrompt }] },
+            };
+
+            const myHeaders = { 'Content-Type': 'application/json' };
+            let myResponse = null;
+            let myAttempt = 0;
+            const myMaxRetries = 3;
+
+            while (myAttempt < myMaxRetries) {
+                try {
+                    const myFetchUrl = `${myApiUrl}?key=${myApiKey}`;
+                    myResponse = await fetch(myFetchUrl, {
+                        method: 'POST',
+                        headers: myHeaders,
+                        body: JSON.stringify(myPayload)
+                    });
+
+                    if (!myResponse.ok) {
+                        if (myResponse.status === 429) {
+                            throw new Error('Rate limit exceeded');
+                        }
+                        throw new Error(`HTTP error! status: ${myResponse.status}`);
+                    }
+
+                    const myResult = await myResponse.json();
+                    const myGeneratedText = myResult.candidates?.[0]?.content?.parts?.[0]?.text || "Error: Could not retrieve text from LLM. Check API response structure.";
+                    
+                    mySummaryOutput.textContent = myGeneratedText;
+                    mySummaryStatus.textContent = "webMCP Processing Complete.";
+                    return; // Success, exit loop
+                } catch (myError) {
+                    console.error(`Attempt ${myAttempt + 1} failed:`, myError.message);
+                    myAttempt++;
+                    if (myAttempt < myMaxRetries) {
+                        const myDelay = Math.pow(2, myAttempt) * 1000; // Exponential backoff
+                        await new Promise(myResolve => setTimeout(myResolve, myDelay));
+                    } else {
+                        mySummaryOutput.textContent = `Error: Failed to process transcript after ${myMaxRetries} attempts. ${myError.message}`;
+                        mySummaryStatus.textContent = "webMCP Error.";
+                        return; // Max retries reached
+                    }
+                }
+            }
+        }
+        // --- End webMCP Function ---
+
+
+        // Function to start or stop recording
+        function myToggleRecording() {
+            if (!mySpeechRecognition) {
+                mySpeechRecognition = myCreateSpeechRecognition();
+                if (!mySpeechRecognition) return;
+
+                // Event listener for when a result is received
+                mySpeechRecognition.onresult = (event) => {
+                    let myInterimTranscript = '';
+                    let myCurrentFinalTranscript = '';
+                    
+                    // Reset global final transcript at the start of results processing
+                    myFinalTranscriptGlobal = '';
+
+                    for (const myResult of event.results) {
+                        if (myResult.isFinal) {
+                            myCurrentFinalTranscript += myResult[0].transcript + ' ';
+                        } else {
+                            myInterimTranscript += myResult[0].transcript;
+                        }
+                    }
+                    
+                    // Update global final transcript to include all final results so far
+                    myFinalTranscriptGlobal = myCurrentFinalTranscript;
+                    
+                    // Display both final (captured) and interim (currently being spoken)
+                    myOutput.textContent = myFinalTranscriptGlobal + myInterimTranscript;
+                };
+
+                // Event listener for when the speech recognition ends
+                mySpeechRecognition.onend = () => {
+                    if (myIsRecording) {
+                        mySpeechRecognition.start(); // Restart if still recording (for continuous listening)
+                    } else {
+                        myStatus.textContent = "Recording stopped. Processing with webMCP...";
+                        // Call the LLM processor with the complete, final text
+                        myProcessTranscript(myFinalTranscriptGlobal);
+                    }
+                };
+                
+                mySpeechRecognition.onerror = (event) => {
+                    myStopRecording(event.error);
+                };
+            }
+
+            if (!myIsRecording) {
+                myStartRecording();
+            } else {
+                myStopRecording();
+            }
+        }
+
+        // Function to start the recording process
+        function myStartRecording() {
+            myIsRecording = true;
+            myRecordButton.textContent = "Stop Recording";
+            myStatus.textContent = "Listening...";
+            myOutput.textContent = '';
+            mySummaryOutput.textContent = 'The summary or answer from the AI will appear here after you stop recording.';
+            mySummaryStatus.textContent = "Awaiting transcription.";
+            myFinalTranscriptGlobal = ''; // Clear the global transcript for a new session
+            mySpeechRecognition.start();
+        }
+
+        // Function to stop the recording process
+        function myStopRecording(myError = null) {
+            myIsRecording = false;
+            myRecordButton.textContent = "Start Recording";
+            mySpeechRecognition.stop();
+            if (myError) {
+                myStatus.textContent = `Error: ${myError}`;
+                // Do not call LLM on error
+            } else {
+                myStatus.textContent = "Recording stopped. Processing with webMCP...";
+                // The onend event will handle the call to myProcessTranscript
+            }
+        }
+    </script>
+</body>
+
+</html>
