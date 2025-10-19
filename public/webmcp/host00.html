@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebMCP Host Site</title>
+</head>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+
+    <h1 style="color: #4A90E2;">The WebMCP Host Site</h1>
+    <p>This is the website content. An AI Agent is expected to connect to this document and discover its tools.</p>
+    
+    <div id="myStatusDiv" style="margin-top: 20px; padding: 10px; border: 1px solid #90E24A; background-color: #E2FFC2;">
+        Status: Tool definition is ready. Awaiting Agent connection...
+    </div>
+
+    <script>
+        // Use an IIFE (Immediately Invoked Function Expression) to keep variables scoped
+        (function mySetupWebMCP() {
+            
+            // --- 1. The Function the AI Agent can call (The "Tool") ---
+
+            /**
+             * @function myGetQuoteOfTheDay
+             * @description Returns a famous, short quote about learning and teaching.
+             * @returns {string} The quote.
+             */
+            function myGetQuoteOfTheDay() {
+                const myQuotesArray = [
+                    "The mind is not a vessel to be filled, but a fire to be kindled.",
+                    "Tell me and I forget, teach me and I may remember, involve me and I learn.",
+                    "Education is the most powerful weapon which you can use to change the world.",
+                    "Develop a passion for learning. If you do, you will never cease to grow."
+                ];
+                
+                const myRandomIndex = Math.floor(Math.random() * myQuotesArray.length);
+                return myQuotesArray[myRandomIndex];
+            }
+
+            // --- 2. Conceptual WebMCP API (Exposed to the window) ---
+
+            // The main object that AI Agents look for on the window object.
+            // We expose this globally so the client in the iframe can access it.
+            window.myWebMCP = {
+                // Stores all registered tools
+                myRegisteredTools: [], 
+
+                /**
+                 * @function defineTool
+                 * @description Registers a tool for the agent to use.
+                 * @param {object} myToolObject - The tool definition.
+                 */
+                defineTool: function(myToolObject) {
+                    this.myRegisteredTools.push(myToolObject);
+                    const myStatusDiv = document.getElementById("myStatusDiv");
+                    myStatusDiv.innerHTML = `Status: Tool **${myToolObject.name}** successfully registered.`;
+                    console.log("WebMCP Host: Tool Registered:", myToolObject.name);
+                },
+
+                /**
+                 * @function getTools
+                 * @description Exposes the list of defined tools (the Agent Client will call this).
+                 * @returns {Array<object>} The list of tools.
+                 */
+                getTools: function() {
+                    return this.myRegisteredTools;
+                }
+            };
+
+            // --- 3. Register the tool on load ---
+            window.myWebMCP.defineTool({
+                // The name the AI agent will use to call the function
+                name: "get_inspirational_quote",
+                
+                // The natural language description for the AI agent
+                description: "Retrieves a random, inspirational quote about learning and teaching.",
+                
+                // The actual JavaScript function to execute
+                function: myGetQuoteOfTheDay, 
+                
+                // The schema definition (simplified for this example)
+                schema: {
+                    type: "function",
+                    parameters: { type: "object", properties: {} },
+                    returns: { type: "string", description: "A short, inspirational quote." }
+                }
+            });
+
+        })(); // End of IIFE
+    </script>
+</body>
+</html>
