@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebMCP Click Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/@jason.today/webmcp@latest/webmcp.js" defer></script> 
+</head>
+<body>
+
+    <h1 style="font-family: Arial, sans-serif; color: #333;">WebMCP Agent Tool Demo</h1>
+    <p style="font-family: Arial, sans-serif;">
+        This page exposes a 'clickTracker' tool to a connected AI agent. Click the button and then ask your agent for the current count!
+    </p>
+    
+    <div id="myCounterDiv">
+        <button id="myClickButton" style="padding: 10px 20px; font-size: 16px; background-color: #4CAF50; color: white; border: none; cursor: pointer;">
+            Click Me
+        </button>
+        <p id="myCountDisplay" style="font-family: monospace; font-size: 1.2em; margin-top: 15px;">
+            Current Clicks: 0
+        </p>
+    </div>
+
+    <script>
+        // Use a descriptive, 'my' prefixed variable name
+        let myClickCount = 0;
+        
+        // Use an async function for the tool as per preference
+        async function myGetClickCount() {
+            // WebMCP tools must return a structured result object
+            return { 
+                content: [{ 
+                    type: "text", 
+                    text: `The current click count is ${myClickCount}.` 
+                }] 
+            };
+        }
+
+        // Use a descriptive, 'my' prefixed function name
+        function myUpdateClickCount() {
+            myClickCount++;
+            document.getElementById('myCountDisplay').textContent = `Current Clicks: ${myClickCount}`;
+        }
+        
+        // Static link to the function name
+        document.getElementById('myClickButton').onclick = myUpdateClickCount;
+
+        // Initialize WebMCP and register the tool
+        // Check if WebMCP is available (it loads asynchronously)
+        if (typeof WebMCP !== 'undefined') {
+            const myMcp = new WebMCP({}); // Initialize the widget
+            
+            // Register the tool: Name, Description, Arguments Schema, Function to call
+            myMcp.registerTool(
+                'clickTracker', 
+                'Gets the current number of clicks on the main button.', 
+                {}, // No arguments needed for this simple tool
+                myGetClickCount
+            );
+            console.log("WebMCP 'clickTracker' tool registered.");
+        } else {
+            // Fallback if the script hasn't loaded or WebMCP object is missing
+            console.warn("WebMCP object not found. Ensure webmcp.js is correctly loaded.");
+        }
+    </script>
+</body>
+</html>
