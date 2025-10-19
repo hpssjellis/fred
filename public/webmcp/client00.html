@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebMCP Client Agent</title>
+</head>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+
+    <h1 style="color: #E24A90;">The WebMCP Client Agent</h1>
+    <p>This document simulates the AI Agent running, which is inspecting the content loaded in the iframe below for WebMCP tools.</p>
+
+    <div id="myAgentOutput" style="margin-top: 20px; padding: 15px; border: 2px solid #333; background-color: #FFF3E0; white-space: pre-wrap;">
+        Agent Console: Initializing...
+    </div>
+
+    <!-- The Host Website is loaded inside an iframe -->
+    <iframe id="myHostIframe" src="host00.html" style="width: 100%; height: 250px; border: 1px solid #ccc; margin-top: 20px;"></iframe>
+
+    <script>
+        // Use an IIFE to encapsulate agent logic
+        (async function myAgentLogic() {
+            
+            const myOutputDiv = document.getElementById('myAgentOutput');
+            const myIframe = document.getElementById('myHostIframe');
+            
+            function myLog(myMessage) {
+                myOutputDiv.innerHTML += `\n> ${myMessage}`;
+            }
+
+            function myWaitForIframeLoad() {
+                return new Promise(myResolve => {
+                    myIframe.onload = myResolve;
+                });
+            }
+
+            async function myDiscoverAndExecuteTool() {
+                myLog("Waiting for Host Site (iframe) to load...");
+                await myWaitForIframeLoad();
+                myLog("Host Site loaded successfully.");
+                await myWait(500); // Wait a moment for host script to fully run
+
+                // --- AGENT DISCOVERY STEP ---
+                
+                const myHostWindow = myIframe.contentWindow;
+
+                if (!myHostWindow.myWebMCP) {
+                    myLog("Error: myWebMCP object not found on the Host window. WebMCP not supported.");
+                    return;
+                }
+                
+                const myWebMCP = myHostWindow.myWebMCP;
+                myLog("WebMCP Interface found! Querying for tools...");
+                
+                const myTools = myWebMCP.getTools();
+
+                if (myTools.length === 0) {
+                    myLog("No tools were exposed by the Host Site.");
+                    return;
+                }
+                
+                myLog(`Found ${myTools.length} tool(s).`);
+                
+                // --- AGENT EXECUTION STEP ---
+                
+                const myTargetTool = myTools.find(myTool => myTool.name === "get_inspirational_quote");
+                
+                if (myTargetTool) {
+                    myLog(`Target Tool found: **${myTargetTool.name}**. Description: "${myTargetTool.description}"`);
+                    myLog("AI Agent is now calling the tool function...");
+                    
+                    // The agent executes the function directly via the iframe's context
+                    const myQuoteResult = myTargetTool.function(); 
+
+                    myLog("Tool execution successful!");
+                    myLog(`**Result from Host Site:**\n"${myQuoteResult}"`);
+
+                } else {
+                    myLog("The expected tool 'get_inspirational_quote' was not found.");
+                }
+            }
+
+            // Simple utility function for the async/await simulation
+            function myWait(myMilliseconds) {
+                return new Promise(myResolve => setTimeout(myResolve, myMilliseconds));
+            }
+
+            // Start the agent process
+            await myDiscoverAndExecuteTool();
+
+        })();
+    </script>
+</body>
+</html>
