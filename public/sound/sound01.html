@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dynamic Frequency Generator</title>
+</head>
+<body>
+
+    <h2>Frequency Generator (20 Hz to 2000 Hz)</h2>
+    
+    <label for="myFrequencyRange">Frequency (Hz): </label>
+    <span id="myFrequencyDisplay">440</span>
+    
+    <input 
+        type="range" 
+        id="myFrequencyRange" 
+        min="20" 
+        max="2000" 
+        value="440" 
+        step="1" 
+        oninput="myUpdateFrequencyDisplay(this.value)" 
+        onchange="myStartFrequency(this.value, 0.5)"
+        style="width: 300px; display: block; margin-top: 5px;"
+    >
+    
+    <button 
+        id="myPlayButton" 
+        onclick="myStartFrequency(document.getElementById('myFrequencyRange').value, 1)"
+        style="margin-top: 15px;"
+    >
+        Play Current Frequency
+    </button>
+
+    <script>
+        // Use a global variable to hold the AudioContext
+        let myAudioContext;
+
+        /**
+         * Updates the text display to show the current frequency slider value.
+         * @param {string} myValue The current value of the range input.
+         */
+        function myUpdateFrequencyDisplay(myValue) {
+            document.getElementById('myFrequencyDisplay').innerText = myValue;
+        }
+
+        /**
+         * Initializes and plays a frequency using the Web Audio API.
+         * @param {number} myFrequency The frequency in Hz to generate (e.g., 440).
+         * @param {number} myDuration The duration in seconds to play the sound.
+         */
+        function myStartFrequency(myFrequency, myDuration) {
+            // Convert the frequency string to a number
+            const myNumFrequency = parseFloat(myFrequency);
+
+            // Initialize or resume the AudioContext
+            if (!myAudioContext || myAudioContext.state === 'closed') {
+                myAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } else if (myAudioContext.state === 'suspended') {
+                myAudioContext.resume();
+            }
+
+            // 1. Create the source node (oscillator)
+            const myOscillator = myAudioContext.createOscillator();
+            
+            // 2. Create the gain node (volume control)
+            const myGainNode = myAudioContext.createGain();
+
+            // Set the frequency and waveform type
+            myOscillator.type = 'sine';
+            // Use setValueAtTime for immediate, precise setting
+            myOscillator.frequency.setValueAtTime(myNumFrequency, myAudioContext.currentTime);
+
+            // Set the volume to a safe level
+            myGainNode.gain.setValueAtTime(0.3, myAudioContext.currentTime);
+
+            // 3. Connect the nodes: Oscillator -> Gain -> Destination
+            myOscillator.connect(myGainNode);
+            myGainNode.connect(myAudioContext.destination);
+
+            // 4. Start the oscillator
+            myOscillator.start();
+
+            // 5. Stop the oscillator after the specified duration
+            myOscillator.stop(myAudioContext.currentTime + myDuration);
+        }
+    </script>
+
+</body>
+</html>
