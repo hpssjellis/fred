@@ -122,6 +122,13 @@
             z-index: 2;
         }
         
+        /* Playhead highlighting style overlay */
+        .matrix-cell.active-column {
+            filter: brightness(0.85);
+            outline: 1px solid #007aff;
+            z-index: 3;
+        }
+        
         /* BeatMarkers: Pure white structure gaps separating bars */
         .matrix-cell:nth-child(4n) {
             margin-right: 3px;
@@ -182,7 +189,6 @@
 </head>
 <body>
 
-    <!-- Audio Elements -->
     <audio preload="auto" id="mySound0" data-title="Bass Drum"    src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/boom.wav"></audio>
     <audio preload="auto" id="mySound1" data-title="Low Tom"      src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/kick.wav"></audio>
     <audio preload="auto" id="mySound2" data-title="Mid Tom"      src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/tom.wav"></audio>
@@ -264,8 +270,12 @@
         let isPlaying = false;
         let lastFiredStep = -1;
         let currentSequenceStep = 0;
+        let uiRenderedStep = -1; // Tracking state to avoid innerHTML overhead updates
         let timeAccumulator = 0;
         let playheadLine = null;
+        
+        // Cache mapping multidimensional indices to cell DOM elements
+        let cellDOMCache = []; 
 
         // --- Core Three.js Environment Setup ---
         const container = document.getElementById('canvas-container');
@@ -391,172 +401,182 @@
         }
 
         // --- Render High Contrast Printable Grid With Interactive Event Bindings ---
-     // --- Render High Contrast Printable Grid With Interactive Event Bindings ---
-// --- Render High Contrast Printable Grid With Interactive Event Bindings ---
-// --- Render High Contrast Printable Grid With Interactive Event Bindings ---
-function renderInteractiveMatrixUI() {
-    const legendContainer = document.getElementById('legend-container');
-    legendContainer.innerHTML = '';
-    
-    drumKitConfig.forEach((drum, drumIndex) => {
-        const hexColor = "#" + drum.color.toString(16).padStart(6, '0');
-        
-        const matrixWrapper = document.createElement('div');
-        matrixWrapper.className = 'legend-item';
-        
-        const gridContainer = document.createElement('div');
-        gridContainer.className = 'pattern-mini-matrix';
+        function renderInteractiveMatrixUI() {
+            const legendContainer = document.getElementById('legend-container');
+            legendContainer.innerHTML = '';
+            
+            cellDOMCache = []; // Reset global tracking references
+            uiRenderedStep = -1;
 
-        // Keep a reference to cells in this row so we can access them during a live punch-in
-        const rowCells = [];
+            drumKitConfig.forEach((drum, drumIndex) => {
+                const hexColor = "#" + drum.color.toString(16).padStart(6, '0');
+                
+                const matrixWrapper = document.createElement('div');
+                matrixWrapper.className = 'legend-item';
+                
+                const gridContainer = document.createElement('div');
+                gridContainer.className = 'pattern-mini-matrix';
 
-        for(let step = 0; step < myTotalStepsInLoop; step++) {
-            const cell = document.createElement('div');
-            cell.className = 'matrix-cell';
-            cell.dataset.drumIdx = drumIndex;
-            cell.dataset.stepIdx = step;
+                cellDOMCache[drumIndex] = [];
 
-            if (drum.pattern && drum.pattern[step] === 1) {
-                cell.style.background = hexColor;
-                cell.style.boxShadow = `0 0 2px ${hexColor}88`;
-            }
+                for(let step = 0; step < myTotalStepsInLoop; step++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'matrix-cell';
+                    cell.dataset.drumIdx = drumIndex;
+                    cell.dataset.stepIdx = step;
 
-            // --- Long Press / Hold to Clear Row Logic ---
-            let pressTimer = null;
-            let isLongPressTriggered = false;
-
-            const startPress = (e) => {
-                isLongPressTriggered = false;
-                pressTimer = setTimeout(() => {
-                    isLongPressTriggered = true;
-                    for (let i = 0; i < myTotalStepsInLoop; i++) {
-                        drum.pattern[i] = 0;
+                    if (drum.pattern && drum.pattern[step] === 1) {
+                        cell.style.background = hexColor;
+                        cell.style.boxShadow = `0 0 2px ${hexColor}88`;
                     }
-                    renderInteractiveMatrixUI();
-                }, 600);
-            };
 
-            const cancelPress = (e) => {
-                if (pressTimer) {
-                    clearTimeout(pressTimer);
-                    pressTimer = null;
+                    // --- Long Press / Hold to Clear Row Logic ---
+                    let pressTimer = null;
+                    let isLongPressTriggered = false;
+
+                    const startPress = (e) => {
+                        isLongPressTriggered = false;
+                        pressTimer = setTimeout(() => {
+                            isLongPressTriggered = true;
+                            for (let i = 0; i < myTotalStepsInLoop; i++) {
+                                drum.pattern[i] = 0;
+                            }
+                            renderInteractiveMatrixUI();
+                        }, 600);
+                    };
+
+                    const cancelPress = (e) => {
+                        if (pressTimer) {
+                            clearTimeout(pressTimer);
+                            pressTimer = null;
+                        }
+                    };
+
+                    cell.addEventListener('mousedown', startPress);
+                    cell.addEventListener('mouseup', cancelPress);
+                    cell.addEventListener('mouseleave', cancelPress);
+                    cell.addEventListener('touchstart', startPress, { passive: true });
+                    cell.addEventListener('touchend', cancelPress, { passive: true });
+                    cell.addEventListener('touchcancel', cancelPress, { passive: true });
+
+                    // Standard Click Action Loop
+                    cell.addEventListener('click', function() {
+                        if (isLongPressTriggered) return;
+
+                        const dIdx = parseInt(this.dataset.drumIdx);
+                        const sIdx = parseInt(this.dataset.stepIdx);
+                        const currentTrack = drumKitConfig[dIdx];
+                        const trackColor = "#" + currentTrack.color.toString(16).padStart(6, '0');
+
+                        if (currentTrack.pattern[sIdx] === 1) {
+                            currentTrack.pattern[sIdx] = 0;
+                            this.style.background = '#e2e8f0';
+                            this.style.boxShadow = 'none';
+                        } else {
+                            currentTrack.pattern[sIdx] = 1;
+                            this.style.background = trackColor;
+                            this.style.boxShadow = `0 0 2px ${trackColor}88`;
+                            playSound(currentTrack.id);
+                        }
+                    });
+
+                    gridContainer.appendChild(cell);
+                    cellDOMCache[drumIndex].push(cell); // Push to cache
                 }
-            };
 
-            cell.addEventListener('mousedown', startPress);
-            cell.addEventListener('mouseup', cancelPress);
-            cell.addEventListener('mouseleave', cancelPress);
-            cell.addEventListener('touchstart', startPress, { passive: true });
-            cell.addEventListener('touchend', cancelPress, { passive: true });
-            cell.addEventListener('touchcancel', cancelPress, { passive: true });
+                matrixWrapper.appendChild(gridContainer);
 
-            // Standard Click Action Loop
-            cell.addEventListener('click', function() {
-                if (isLongPressTriggered) return;
+                const labelSpan = document.createElement('span');
+                labelSpan.className = 'drum-label';
+                labelSpan.style.color = hexColor;
+                labelSpan.style.cursor = 'pointer'; 
+                labelSpan.textContent = drum.name;
 
-                const dIdx = parseInt(this.dataset.drumIdx);
-                const sIdx = parseInt(this.dataset.stepIdx);
-                const currentTrack = drumKitConfig[dIdx];
-                const trackColor = "#" + currentTrack.color.toString(16).padStart(6, '0');
+                // --- Live Punch-In Recording Feature ---
+                labelSpan.addEventListener('click', function() {
+                    const activeStep = currentSequenceStep; 
+                    
+                    drum.pattern[activeStep] = 1;
+                    
+                    playSound(drum.id);
+                    const mappedCircleSegment = Math.floor((activeStep / myTotalStepsInLoop) * myTotalCirclePoints);
+                    registerImpactFlash(drum.id, mappedCircleSegment);
+                    
+                    const targetCell = cellDOMCache[drumIndex][activeStep];
+                    if (targetCell) {
+                        targetCell.style.background = hexColor;
+                        targetCell.style.boxShadow = `0 0 2px ${hexColor}88`;
+                    }
+                });
 
-                if (currentTrack.pattern[sIdx] === 1) {
-                    currentTrack.pattern[sIdx] = 0;
-                    this.style.background = '#e2e8f0';
-                    this.style.boxShadow = 'none';
-                } else {
-                    currentTrack.pattern[sIdx] = 1;
-                    this.style.background = trackColor;
-                    this.style.boxShadow = `0 0 2px ${trackColor}88`;
-                    playSound(currentTrack.id);
+                matrixWrapper.appendChild(labelSpan);
+                legendContainer.appendChild(matrixWrapper);
+            });
+        }
+        
+        // --- High Performance HTML Playhead Tracking Sync Execution Engine ---
+        function updateHTMLGridPlayhead(activeStep) {
+            if (activeStep === uiRenderedStep) return; 
+            
+            for (let drumIdx = 0; drumIdx < drumKitConfig.length; drumIdx++) {
+                if (!cellDOMCache[drumIdx]) continue;
+                
+                // Remove the playhead style class from the previous step cell
+                if (uiRenderedStep >= 0 && cellDOMCache[drumIdx][uiRenderedStep]) {
+                    cellDOMCache[drumIdx][uiRenderedStep].classList.remove('active-column');
                 }
+                
+                // Add the playhead style class to the new active step cell
+                if (cellDOMCache[drumIdx][activeStep]) {
+                    cellDOMCache[drumIdx][activeStep].classList.add('active-column');
+                }
+            }
+            uiRenderedStep = activeStep;
+        }
+
+        // --- Universal File Export Infrastructure Engine (Updated Format) ---
+        document.getElementById('btn-export').addEventListener('click', () => {
+            let outputBuffer = "";
+            
+            outputBuffer += `# ====================================================================\n`;
+            outputBuffer += `# Concentric Drum Loop Configuration - Custom Export\n`;
+            outputBuffer += `# ====================================================================\n\n`;
+            outputBuffer += `BPM : ${myTempoBPM}\n`;
+            outputBuffer += `Points : ${myTotalCirclePoints}\n`;
+            outputBuffer += `Steps : ${myTotalStepsInLoop}\n`;
+            outputBuffer += `BeatMarkers : ${myBeatMarkersStepInterval}\n`;
+            outputBuffer += `Radius : ${myStartRadius}\n`;
+            outputBuffer += `Spacing : ${myRingSpacing}\n`;
+            outputBuffer += `NoteHeight : ${myPersistentNoteHt.toFixed(2)}\n`;
+            outputBuffer += `ExplosionHeight : ${myHitExplosionHt.toFixed(2)}\n`;
+            outputBuffer += `Decay : ${myExplosionDecay}\n`;
+            outputBuffer += `Spread : ${myPointsPerBeatSpread}\n\n`;
+            outputBuffer += `# Format: Audio_ID | Instrument Name | Hex Color | 16-Step Pattern\n`;
+
+            drumKitConfig.forEach(drum => {
+                const hexColorStr = "#" + drum.color.toString(16).padStart(6, '0');
+                const paddedId = drum.id.padEnd(8, ' ');
+                const paddedName = drum.name.padEnd(12, ' ');
+                
+                let textPattern = "";
+                for (let i = 0; i < myTotalStepsInLoop; i++) {
+                    if (i > 0 && i % 4 === 0) {
+                        textPattern += " ";
+                    }
+                    textPattern += (drum.pattern[i] === 1) ? "1" : "0";
+                }
+
+                outputBuffer += `${paddedId} | ${paddedName} | ${hexColorStr} | ${textPattern}\n`;
             });
 
-            gridContainer.appendChild(cell);
-            rowCells.push(cell); // Store reference
-        }
-
-        matrixWrapper.appendChild(gridContainer);
-
-        const labelSpan = document.createElement('span');
-        labelSpan.className = 'drum-label';
-        labelSpan.style.color = hexColor;
-        labelSpan.style.cursor = 'pointer'; 
-        labelSpan.textContent = drum.name;
-
-        // --- Live Punch-In Recording Feature (Fixed & Targeted) ---
-        labelSpan.addEventListener('click', function() {
-            const activeStep = currentSequenceStep; 
-            
-            // 1. Drop the note into the array matrix
-            drum.pattern[activeStep] = 1;
-            
-            // 2. Fire the audio and 3D visual triggers instantly
-            playSound(drum.id);
-            const mappedCircleSegment = Math.floor((activeStep / myTotalStepsInLoop) * myTotalCirclePoints);
-            registerImpactFlash(drum.id, mappedCircleSegment);
-            
-            // 3. Directly update the single DOM cell style instead of rebuilding the UI
-            const targetCell = rowCells[activeStep];
-            if (targetCell) {
-                targetCell.style.background = hexColor;
-                targetCell.style.boxShadow = `0 0 2px ${hexColor}88`;
-            }
+            const fileBlob = new Blob([outputBuffer], { type: "text/plain;charset=utf-8" });
+            const temporaryAnchor = document.createElement("a");
+            temporaryAnchor.href = URL.createObjectURL(fileBlob);
+            temporaryAnchor.download = "custom-concentric-drum-loop.txt";
+            document.body.appendChild(temporaryAnchor);
+            temporaryAnchor.click();
+            document.body.removeChild(temporaryAnchor);
         });
-
-        matrixWrapper.appendChild(labelSpan);
-        legendContainer.appendChild(matrixWrapper);
-    });
-}
-        // --- Universal File Export Infrastructure Engine ---
-      // --- Universal File Export Infrastructure Engine (Updated Format) ---
-document.getElementById('btn-export').addEventListener('click', () => {
-    let outputBuffer = "";
-    
-    // Append Global Header Configuration State Definitions
-    outputBuffer += `# ====================================================================\n`;
-    outputBuffer += `# Concentric Drum Loop Configuration - Custom Export\n`;
-    outputBuffer += `# ====================================================================\n\n`;
-    outputBuffer += `BPM : ${myTempoBPM}\n`;
-    outputBuffer += `Points : ${myTotalCirclePoints}\n`;
-    outputBuffer += `Steps : ${myTotalStepsInLoop}\n`;
-    outputBuffer += `BeatMarkers : ${myBeatMarkersStepInterval}\n`;
-    outputBuffer += `Radius : ${myStartRadius}\n`;
-    outputBuffer += `Spacing : ${myRingSpacing}\n`;
-    outputBuffer += `NoteHeight : ${myPersistentNoteHt.toFixed(2)}\n`;
-    outputBuffer += `ExplosionHeight : ${myHitExplosionHt.toFixed(2)}\n`;
-    outputBuffer += `Decay : ${myExplosionDecay}\n`;
-    outputBuffer += `Spread : ${myPointsPerBeatSpread}\n\n`;
-    outputBuffer += `# Format: Audio_ID | Instrument Name | Hex Color | 16-Step Pattern\n`;
-
-    drumKitConfig.forEach(drum => {
-        const hexColorStr = "#" + drum.color.toString(16).padStart(6, '0');
-        
-        // Pad out standard column naming for a clean text profile block
-        const paddedId = drum.id.padEnd(8, ' ');
-        const paddedName = drum.name.padEnd(12, ' ');
-        
-        // Chunk binary pattern with spaces every 4 beats
-        let textPattern = "";
-        for (let i = 0; i < myTotalStepsInLoop; i++) {
-            if (i > 0 && i % 4 === 0) {
-                textPattern += " ";
-            }
-            textPattern += (drum.pattern[i] === 1) ? "1" : "0";
-        }
-
-        outputBuffer += `${paddedId} | ${paddedName} | ${hexColorStr} | ${textPattern}\n`;
-    });
-
-    // Trigger safe automated browser download pipelines
-    const fileBlob = new Blob([outputBuffer], { type: "text/plain;charset=utf-8" });
-    const temporaryAnchor = document.createElement("a");
-    temporaryAnchor.href = URL.createObjectURL(fileBlob);
-    temporaryAnchor.download = "custom-concentric-drum-loop.txt";
-    document.body.appendChild(temporaryAnchor);
-    temporaryAnchor.click();
-    document.body.removeChild(temporaryAnchor);
-});
-
 
         // --- Fetch Config File from Remote Root Server Sub-Directory ---
         document.getElementById('preset-select').addEventListener('change', function(e) {
@@ -712,6 +732,16 @@ document.getElementById('btn-export').addEventListener('click', () => {
                 playbackBtn.textContent = "Start Loop Sequence";
                 playbackBtn.classList.remove('toggle-active');
                 lastFiredStep = -1;
+                
+                // Clear out HTML playhead highlights when stopping playback
+                if (uiRenderedStep >= 0) {
+                    for (let d = 0; d < drumKitConfig.length; d++) {
+                        if (cellDOMCache[d] && cellDOMCache[d][uiRenderedStep]) {
+                            cellDOMCache[d][uiRenderedStep].classList.remove('active-column');
+                        }
+                    }
+                    uiRenderedStep = -1;
+                }
             }
         });
 
@@ -753,6 +783,8 @@ document.getElementById('btn-export').addEventListener('click', () => {
                     timeAccumulator -= stepDurationSeconds;
                     currentSequenceStep = (currentSequenceStep + 1) % myTotalStepsInLoop;
                 }
+                // Call playhead update during loop sequence state running
+                updateHTMLGridPlayhead(currentSequenceStep);
             }
 
             const stepFractionalOffset = isPlaying ? (timeAccumulator / stepDurationSeconds) : 0;
