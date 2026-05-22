@@ -384,6 +384,7 @@
 
         // --- Render High Contrast Printable Grid With Interactive Event Bindings ---
      // --- Render High Contrast Printable Grid With Interactive Event Bindings ---
+// --- Render High Contrast Printable Grid With Interactive Event Bindings ---
 function renderInteractiveMatrixUI() {
     const legendContainer = document.getElementById('legend-container');
     legendContainer.innerHTML = '';
@@ -408,23 +409,23 @@ function renderInteractiveMatrixUI() {
                 cell.style.boxShadow = `0 0 2px ${hexColor}88`;
             }
 
-            // --- Long Press / Hold to Delete Detection Infrastructure ---
+            // --- Long Press / Hold to Clear Row Logic ---
             let pressTimer = null;
             let isLongPressTriggered = false;
 
             const startPress = (e) => {
                 isLongPressTriggered = false;
-                // Trigger deletion after a solid 600ms hold
+                // Trigger clear after holding down for 600ms
                 pressTimer = setTimeout(() => {
                     isLongPressTriggered = true;
                     
-                    // Confirm row deletion with a clean browser alert
-                    if (confirm(`Delete the entire row for "${drum.name}"?`)) {
-                        // Remove the targeted track index from the active layout array
-                        drumKitConfig.splice(drumIndex, 1);
-                        // Completely rebuild the live audio pipelines and 3D visual environments
-                        rebuildVisualizationScene();
+                    // Clear all step values back to 0 for this specific instrument row
+                    for (let i = 0; i < myTotalStepsInLoop; i++) {
+                        drum.pattern[i] = 0;
                     }
+                    
+                    // Instantly refresh the visual UI elements to show the empty row
+                    renderInteractiveMatrixUI();
                 }, 600);
             };
 
@@ -480,7 +481,6 @@ function renderInteractiveMatrixUI() {
         legendContainer.appendChild(matrixWrapper);
     });
 }
-
         // --- Universal File Export Infrastructure Engine ---
       // --- Universal File Export Infrastructure Engine (Updated Format) ---
 document.getElementById('btn-export').addEventListener('click', () => {
