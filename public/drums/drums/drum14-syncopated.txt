@@ -1,0 +1,25 @@
+# ====================================================================
+# Concentric Drum Loop Configuration - Syncopated Funk Break
+# ====================================================================
+
+BPM : 105
+Points : 256
+Steps : 16
+BeatMarkers : 4
+Radius : 1.5
+Spacing : 0.8
+NoteHeight : 0.55
+ExplosionHeight : 3.20
+Decay : 5.8
+Spread : 7
+
+# Format: Audio_ID | Instrument Name | Hex Color | 16-Step Pattern
+mySound0 | Bass Drum    | #ff1e27 | 1000 0000 0010 1000
+mySound1 | Low Tom      | #ff5e00 | 0000 0000 0000 0000
+mySound2 | Mid Tom      | #ffb300 | 0000 0000 0000 0000
+mySound3 | High Tom     | #e5ff00 | 0000 0000 0000 0000
+mySound4 | Snare Drum   | #26ff00 | 0000 1000 0000 1000
+mySound5 | Hi Hat       | #00ffb3 | 1010 1010 1010 1010
+mySound6 | Crash Cymbal | #00bfff | 1000 0000 0000 0000
+mySound7 | Ride Cymbal  | #8b00ff | 0000 0010 0000 0000
+mySound8 | Tink Bell    | #ff00ff | 0000 0000 0000 0001

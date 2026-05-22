@@ -1,0 +1,21 @@
+# ====================================================================
+# Concentric Drum Loop Configuration - "We Will Rock You" (Queen Style)
+# ====================================================================
+
+# Core Engine Parameters
+BPM : 81
+Points : 256
+Steps : 16
+BeatMarkers : 4
+Radius : 1.5
+Spacing : 0.8
+NoteHeight : 0.60
+ExplosionHeight : 3.50
+Decay : 5.5
+Spread : 8
+
+# Instrument Tracks Mapping (9-Ring Layout)
+# Format: Audio_ID | Instrument Name | Hex Color | 16-Step Pattern
+mySound0 | Bass Drum    | #ff1e27 | 1100 1100 1100 1100
+
+
