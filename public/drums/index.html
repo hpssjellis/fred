@@ -531,15 +531,6 @@ document.getElementById('btn-export').addEventListener('click', () => {
     document.body.removeChild(temporaryAnchor);
 });
 
-            // Trigger safe automated browser download pipelines
-            const fileBlob = new Blob([outputBuffer], { type: "text/plain;charset=utf-8" });
-            const temporaryAnchor = document.createElement("a");
-            temporaryAnchor.href = URL.createObjectURL(fileBlob);
-            temporaryAnchor.download = "custom-concentric-drum-loop.txt";
-            document.body.appendChild(temporaryAnchor);
-            temporaryAnchor.click();
-            document.body.removeChild(temporaryAnchor);
-        });
 
         // --- Fetch Config File from Remote Root Server Sub-Directory ---
         document.getElementById('preset-select').addEventListener('change', function(e) {
