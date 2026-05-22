@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concentric Multi-Drum FFT Sequencer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #040408;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #fff;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(10, 10, 22, 0.85);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            max-width: 320px;
+        }
+        h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.3rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #4facfe;
+        }
+        p {
+            margin: 0 0 15px 0;
+            font-size: 0.8rem;
+            color: #888;
+            line-height: 1.3;
+        }
+        .legend-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .color-swatch {
+            width: 14px;
+            height: 8px;
+            border-radius: 3px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        #controls-bar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 15px;
+            background: rgba(15, 15, 30, 0.8);
+            padding: 10px 25px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+        }
+        button {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            background: #0063cc;
+            transform: scale(1.05);
+        }
+        button.toggle-active {
+            background: #34c759;
+        }
+        button.toggle-active:hover {
+            background: #28a745;
+        }
+    </style>
+    <!-- Dependencies: Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <!-- Hidden Audio elements referencing resources from provided sample code source -->
+    <audio preload="auto" id="mySound0" src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/clap.wav"></audio>
+    <audio preload="auto" id="mySound1" src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/boom.wav"></audio>
+    <audio preload="auto" id="mySound2" src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/kick.wav"></audio>
+    <audio preload="auto" id="mySound3" src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/openhat.wav"></audio>
+    <audio preload="auto" id="mySound4" src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/ride.wav"></audio>
+    <audio preload="auto" id="mySound5" src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/snare.wav"></audio>
+    <audio preload="auto" id="mySound6" src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/tom.wav"></audio>
+    <audio preload="auto" id="mySound7" src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/tink.wav"></audio>
+    <audio preload="auto" id="mySound8" src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/hihat.wav"></audio>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-overlay">
+        <h1>Concentric Drum Loop</h1>
+        <p>360° space maps 1 full loop (16 steps). Low drums reside at the center; crisp cymbals expand to the outer edge boundary lines.</p>
+        <div class="legend-grid" id="legend-container"></div>
+    </div>
+
+    <div id="controls-bar">
+        <button id="btn-playback">Start Loop Sequence</button>
+    </div>
+
+    <script>
+        // --- Complete Kit Specification Array ---
+        // Explicitly arranged by base frequencies: Lowest (Center) -> Highest (Outer Rim Edge)
+        const drumKitConfig = [
+            { id: "mySound1", name: "Boom (Sub)",   radius: 1.5, color: 0xff1e27, pattern: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0] },
+            { id: "mySound2", name: "Kick Drum",   radius: 2.3, color: 0xff5e00, pattern: [1,0,0,0, 0,0,1,0, 0,1,0,0, 0,0,1,0] },
+            { id: "mySound6", name: "Floor Tom",   radius: 3.1, color: 0xffb300, pattern: [0,0,0,0, 1,0,0,0, 0,0,0,1, 1,0,0,0] },
+            { id: "mySound5", name: "Snare Drum",  radius: 3.9, color: 0xe5ff00, pattern: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0] },
+            { id: "mySound0", name: "Hand Clap",   radius: 4.7, color: 0x26ff00, pattern: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1] },
+            { id: "mySound3", name: "Open HiHat",  radius: 5.5, color: 0x00ffb3, pattern: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,0,0] },
+            { id: "mySound8", name: "Closed Hat",  radius: 6.3, color: 0x00bfff, pattern: [1,1,0,1, 1,1,0,1, 1,1,0,1, 1,1,1,1] },
+            { id: "mySound4", name: "Ride Cymbal", radius: 7.1, color: 0x8b00ff, pattern: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0] },
+            { id: "mySound7", name: "Tink Bell",   radius: 7.9, color: 0xff00ff, pattern: [0,0,0,1, 0,0,0,0, 0,1,0,0, 0,0,1,0] }
+        ];
+
+        // --- Generate UI HTML Legend Elements Dynamically ---
+        const legendContainer = document.getElementById('legend-container');
+        drumKitConfig.forEach(drum => {
+            const hexColor = "#" + drum.color.toString(16).padStart(6, '0');
+            legendContainer.innerHTML += `
+                <div class="legend-item">
+                    <div class="color-swatch" style="background: ${hexColor}; box-shadow: 0 0 8px ${hexColor}88;"></div>
+                    <span>${drum.name} (R: ${drum.radius.toFixed(1)})</span>
+                </div>
+            `;
+        });
+
+        // --- Core Three.js Environment Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x040408, 0.04);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 14, 13);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+        // --- Lighting Structure ---
+        scene.add(new THREE.AmbientLight(0x151525));
+        const pointLight = new THREE.PointLight(0xffffff, 1.0, 50);
+        pointLight.position.set(0, 10, 0);
+        scene.add(pointLight);
+
+        // --- Base Geometry Platforms & Layout Grid ---
+        const floorGeo = new THREE.PlaneGeometry(24, 24);
+        const floorMat = new THREE.MeshBasicMaterial({ color: 0x05050a, side: THREE.DoubleSide, depthWrite: false });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = Math.PI / 2;
+        scene.add(floor);
+
+        const gridHelper = new THREE.GridHelper(24, 24, 0x22223a, 0x0f0f18);
+        gridHelper.position.y = -0.01;
+        scene.add(gridHelper);
+
+        // --- Graph Architecture Model Generation ---
+        const totalCircleSegments = 128; // Discrete radial frequency bars per drum track
+        const visualBarMeshArray = [];
+        const baseBoxGeometry = new THREE.BoxGeometry(0.06, 1, 0.06);
+        baseBoxGeometry.translate(0, 0.5, 0); // Reposition baseline reference pivot point up to bottom cap face
+
+        // Dynamic State Tracking Containers
+        const currentFFTHeights = {};
+        const targetFFTHeights = {};
+
+        // Generate Target Rings and Object Mesh Tracks
+        drumKitConfig.forEach((drum) => {
+            currentFFTHeights[drum.id] = new Float32Array(totalCircleSegments);
+            targetFFTHeights[drum.id] = new Float32Array(totalCircleSegments);
+
+            // Construct thin structural wire rails matching target circle path widths
+            const structuralRingGeo = new THREE.RingGeometry(drum.radius - 0.015, drum.radius + 0.015, 64);
+            const structuralRingMat = new THREE.MeshBasicMaterial({
+                color: drum.color,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.15
+            });
+            const ringMesh = new THREE.Mesh(structuralRingGeo, structuralRingMat);
+            ringMesh.rotation.x = Math.PI / 2;
+            scene.add(ringMesh);
+
+            // Generate structural visualizer nodes around full 360 ring path space
+            const barMaterial = new THREE.MeshStandardMaterial({
+                color: drum.color,
+                emissive: drum.color,
+                emissiveIntensity: 0.5,
+                roughness: 0.2,
+                metalness: 0.1
+            });
+
+            for (let s = 0; s < totalCircleSegments; s++) {
+                const angleRad = (s / totalCircleSegments) * Math.PI * 2;
+                const nodeMesh = new THREE.Mesh(baseBoxGeometry, barMaterial);
+
+                nodeMesh.position.x = Math.cos(angleRad) * drum.radius;
+                nodeMesh.position.z = Math.sin(angleRad) * drum.radius;
+                nodeMesh.rotation.y = -angleRad;
+                nodeMesh.scale.set(1, 0.02, 1);
+
+                scene.add(nodeMesh);
+                visualBarMeshArray.push({ mesh: nodeMesh, drumId: drum.id, segmentIdx: s });
+            }
+        });
+
+        // --- Radial Playhead Indicator Beam ---
+        const playheadGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0.02, 0),
+            new THREE.Vector3(8.5, 0.02, 0)
+        ]);
+        const playheadMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+        const playheadLine = new THREE.Line(playheadGeo, playheadMat);
+        scene.add(playheadLine);
+
+        // --- Sequencer Logic Engines & Real-time State Handling ---
+        let isPlaying = false;
+        let currentSequenceStep = 0;
+        const totalStepsInBar = 16;
+        let timeAccumulator = 0;
+        const stepDurationSeconds = 60 / 125 / 4; // Normalized reference tempo tracking (approx 125 BPM sixteenth notes)
+
+        function triggerDrumStroke(drum) {
+            const audioElement = document.getElementById(drum.id);
+            if (audioElement) {
+                audioElement.currentTime = 0;
+                audioElement.play().catch(() => {});
+            }
+
+            // Map standard sequencer position (0-15 steps) out across radial coordinates (0-127 indices)
+            const targetCenterSegment = Math.floor((currentSequenceStep / totalStepsInBar) * totalCircleSegments);
+            const burstImpactSpreadWidth = 5; 
+
+            // Project data changes onto model mapping targets
+            for (let offset = -burstImpactSpreadWidth; offset <= burstImpactSpreadWidth; offset++) {
+                const targetIdx = (targetCenterSegment + offset + totalCircleSegments) % totalCircleSegments;
+                const distanceFactor = 1 - (Math.abs(offset) / burstImpactSpreadWidth);
+                const spikeAmplitude = (1.5 + Math.random() * 1.5) * Math.pow(distanceFactor, 2);
+
+                if (spikeAmplitude > targetFFTHeights[drum.id][targetIdx]) {
+                    targetFFTHeights[drum.id][targetIdx] = spikeAmplitude;
+                }
+            }
+        }
+
+        // --- Interactive State Controls ---
+        const playbackBtn = document.getElementById('btn-playback');
+        playbackBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playbackBtn.textContent = "Pause Loop Sequence";
+                playbackBtn.classList.add('toggle-active');
+            } else {
+                playbackBtn.textContent = "Start Loop Sequence";
+                playbackBtn.classList.remove('toggle-active');
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- Core Animation & Calculations Frame Runner ---
+        const globalClock = new THREE.Clock();
+
+        function mainRenderLoop() {
+            requestAnimationFrame(mainRenderLoop);
+
+            const deltaTime = globalClock.getDelta();
+            
+            if (isPlaying) {
+                timeAccumulator += deltaTime;
+
+                if (timeAccumulator >= stepDurationSeconds) {
+                    timeAccumulator -= stepDurationSeconds;
+
+                    // Evaluate and fire all active programmatic instrument registers concurrently
+                    drumKitConfig.forEach(drum => {
+                        if (drum.pattern[currentSequenceStep] === 1) {
+                            triggerDrumStroke(drum);
+                        }
+                    });
+
+                    // Advance timing counters forwards
+                    currentSequenceStep = (currentSequenceStep + 1) % totalStepsInBar;
+                }
+            }
+
+            // Animate playhead line mesh directly relative to current fractional bar cycle location
+            const fractionalStepPosition = isPlaying ? (timeAccumulator / stepDurationSeconds) : 0;
+            const absoluteInterpolatedStepValue = (currentSequenceStep + fractionalStepPosition) % totalStepsInBar;
+            const finalRadialAngle = (absoluteInterpolatedStepValue / totalStepsInBar) * Math.PI * 2;
+            playheadLine.rotation.y = -finalRadialAngle;
+
+            // Decay targets slowly over delta ticks to emulate visual persistence/damping
+            drumKitConfig.forEach(drum => {
+                const targets = targetFFTHeights[drum.id];
+                const currents = currentFFTHeights[drum.id];
+
+                for (let s = 0; s < totalCircleSegments; s++) {
+                    // Decay the target over time so it returns to baseline
+                    targets[s] -= 4.0 * deltaTime;
+                    if (targets[s] < 0.05) targets[s] = 0.05;
+
+                    // Interpolate the visual current values towards targets
+                    currents[s] += (targets[s] - currents[s]) * 15.0 * deltaTime;
+                }
+            });
+
+            // Commit modifications onto physical display lines
+            visualBarMeshArray.forEach(bar => {
+                const currentCalculatedHeight = currentFFTHeights[bar.drumId][bar.segmentIdx];
+                // Introduce structural noise micro variations across active nodes to preserve dynamic identity
+                const subtleNoise = Math.sin(globalClock.getElapsedTime() * 30 + bar.segmentIdx) * 0.02;
+                
+                bar.mesh.scale.y = Math.max(0.02, currentCalculatedHeight + (currentCalculatedHeight > 0.1 ? subtleNoise : 0));
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Run visual frame updates execution
+        mainRenderLoop();
+    </script>
+</body>
+</html>
