@@ -393,6 +393,7 @@
         // --- Render High Contrast Printable Grid With Interactive Event Bindings ---
      // --- Render High Contrast Printable Grid With Interactive Event Bindings ---
 // --- Render High Contrast Printable Grid With Interactive Event Bindings ---
+// --- Render High Contrast Printable Grid With Interactive Event Bindings ---
 function renderInteractiveMatrixUI() {
     const legendContainer = document.getElementById('legend-container');
     legendContainer.innerHTML = '';
@@ -405,6 +406,9 @@ function renderInteractiveMatrixUI() {
         
         const gridContainer = document.createElement('div');
         gridContainer.className = 'pattern-mini-matrix';
+
+        // Keep a reference to cells in this row so we can access them during a live punch-in
+        const rowCells = [];
 
         for(let step = 0; step < myTotalStepsInLoop; step++) {
             const cell = document.createElement('div');
@@ -423,16 +427,11 @@ function renderInteractiveMatrixUI() {
 
             const startPress = (e) => {
                 isLongPressTriggered = false;
-                // Trigger clear after holding down for 600ms
                 pressTimer = setTimeout(() => {
                     isLongPressTriggered = true;
-                    
-                    // Clear all step values back to 0 for this specific instrument row
                     for (let i = 0; i < myTotalStepsInLoop; i++) {
                         drum.pattern[i] = 0;
                     }
-                    
-                    // Instantly refresh the visual UI elements to show the empty row
                     renderInteractiveMatrixUI();
                 }, 600);
             };
@@ -444,19 +443,16 @@ function renderInteractiveMatrixUI() {
                 }
             };
 
-            // Bind mouse tracking for traditional desktop layouts
             cell.addEventListener('mousedown', startPress);
             cell.addEventListener('mouseup', cancelPress);
             cell.addEventListener('mouseleave', cancelPress);
-
-            // Bind touch event streams for cross-platform mobile environments
             cell.addEventListener('touchstart', startPress, { passive: true });
             cell.addEventListener('touchend', cancelPress, { passive: true });
             cell.addEventListener('touchcancel', cancelPress, { passive: true });
 
-            // Standard Click Action Loop (only fires if they didn't do a long press)
+            // Standard Click Action Loop
             cell.addEventListener('click', function() {
-                if (isLongPressTriggered) return; // Block double actioning
+                if (isLongPressTriggered) return;
 
                 const dIdx = parseInt(this.dataset.drumIdx);
                 const sIdx = parseInt(this.dataset.stepIdx);
@@ -476,41 +472,39 @@ function renderInteractiveMatrixUI() {
             });
 
             gridContainer.appendChild(cell);
+            rowCells.push(cell); // Store reference
         }
 
         matrixWrapper.appendChild(gridContainer);
 
-const labelSpan = document.createElement('span');
+        const labelSpan = document.createElement('span');
         labelSpan.className = 'drum-label';
         labelSpan.style.color = hexColor;
-        labelSpan.style.cursor = 'pointer'; // Visual cue that it's clickable
+        labelSpan.style.cursor = 'pointer'; 
         labelSpan.textContent = drum.name;
 
-        // --- Live Punch-In Recording Feature ---
+        // --- Live Punch-In Recording Feature (Fixed & Targeted) ---
         labelSpan.addEventListener('click', function() {
-            // 1. Determine the currently playing sequence step
-            // We use currentSequenceStep to target the exact 16-step grid division
             const activeStep = currentSequenceStep; 
             
-            // 2. Add the note to the drum pattern sequence
+            // 1. Drop the note into the array matrix
             drum.pattern[activeStep] = 1;
             
-            // 3. Immediately play the audio sample for instant feedback
+            // 2. Fire the audio and 3D visual triggers instantly
             playSound(drum.id);
-            
-            // 4. Register the 3D visual explosion at the exact playhead position
             const mappedCircleSegment = Math.floor((activeStep / myTotalStepsInLoop) * myTotalCirclePoints);
             registerImpactFlash(drum.id, mappedCircleSegment);
             
-            // 5. Redraw the UI grid matrix to visually show the newly added step
-            renderInteractiveMatrixUI();
+            // 3. Directly update the single DOM cell style instead of rebuilding the UI
+            const targetCell = rowCells[activeStep];
+            if (targetCell) {
+                targetCell.style.background = hexColor;
+                targetCell.style.boxShadow = `0 0 2px ${hexColor}88`;
+            }
         });
 
         matrixWrapper.appendChild(labelSpan);
-
-
-
-        
+        legendContainer.appendChild(matrixWrapper);
     });
 }
         // --- Universal File Export Infrastructure Engine ---
