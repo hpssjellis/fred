@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Custom Config Concentric Drum Loop Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #040408;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #fff;
+            user-select: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(10, 10, 22, 0.85);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            width: 380px; 
+            min-width: 40px;
+            max-width: 550px;
+            display: flex;
+            flex-direction: row;
+        }
+        #ui-content {
+            flex-grow: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #drag-handle {
+            width: 12px;
+            cursor: ew-resize;
+            background: rgba(255, 255, 255, 0.05);
+            margin: -20px -20px -20px 15px;
+            border-radius: 0 12px 12px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        #drag-handle:hover, #ui-overlay.dragging #drag-handle {
+            background: rgba(79, 172, 254, 0.3);
+        }
+        #drag-handle::after {
+            content: "||";
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 10px;
+            letter-spacing: -1px;
+        }
+        h1 {
+            margin: 0 0 15px 0;
+            font-size: 1.3rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #4facfe;
+            white-space: nowrap;
+        }
+        .sidebar-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        /* --- Inverted High-Contrast Printable Grid Container --- */
+        .legend-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1px; 
+            max-height: 320px;
+            overflow-y: auto;
+            padding-right: 5px;
+            background: #ffffff; /* Total white background for printable isolation */
+            border-radius: 6px;
+            border: 1px solid #ffffff;
+            padding: 6px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: #ffffff; /* Isolates row backdrops to pure white */
+            padding: 0px; 
+            height: 14px; 
+            white-space: nowrap;
+        }
+        
+        .pattern-mini-matrix {
+            display: flex;
+            flex-direction: row;
+            background: #ffffff;
+            padding: 0;
+            margin-right: 12px;
+        }
+        .matrix-cell {
+            width: 8px;
+            height: 14px;
+            background: #e2e8f0; /* Soft off-white light gray for clear empty states */
+            margin-right: 1px; 
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .matrix-cell:hover {
+            transform: scale(1.1);
+            z-index: 2;
+        }
+        
+        /* BeatMarkers: Pure white structure gaps separating bars */
+        .matrix-cell:nth-child(4n) {
+            margin-right: 3px;
+        }
+        .matrix-cell:last-child {
+            margin-right: 0px;
+        }
+        
+        .drum-label {
+            white-space: nowrap;
+            background: #ffffff;
+            padding-left: 2px;
+        }
+
+        button, label.btn-label, select.dropdown-control {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            display: block;
+            text-align: center;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        select.dropdown-control {
+            text-align-last: center;
+            appearance: none;
+            outline: none;
+        }
+        button:hover, label.btn-label:hover, select.dropdown-control:hover {
+            background: #0063cc;
+            transform: scale(1.02);
+        }
+        button.toggle-active {
+            background: #34c759;
+        }
+        button.toggle-active:hover {
+            background: #28a745;
+        }
+        button.export-btn {
+            background: #ff9500;
+            margin-top: 5px;
+        }
+        button.export-btn:hover {
+            background: #e08200;
+        }
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <!-- Audio Elements -->
+    <audio preload="auto" id="mySound0" data-title="Bass Drum"    src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/boom.wav"></audio>
+    <audio preload="auto" id="mySound1" data-title="Low Tom"      src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/kick.wav"></audio>
+    <audio preload="auto" id="mySound2" data-title="Mid Tom"      src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/tom.wav"></audio>
+    <audio preload="auto" id="mySound3" data-title="High Tom"     src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/openhat.wav"></audio>
+    <audio preload="auto" id="mySound4" data-title="Snare Drum"   src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/snare.wav"></audio>
+    <audio preload="auto" id="mySound5" data-title="Hi Hat"       src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/hihat.wav"></audio>
+    <audio preload="auto" id="mySound6" data-title="Crash Cymbal" src="https://hpssjellis.github.io/fred/public/drums/wav/gretschDrumset_crash_1_SnareMic.wav"></audio>
+    <audio preload="auto" id="mySound7" data-title="Ride Cymbal"  src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/ride.wav"></audio>
+    <audio preload="auto" id="mySound8" data-title="Tink Bell"    src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/tink.wav"></audio>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-overlay">
+        <div id="ui-content">
+            <h1>Concentric Drums</h1>
+            
+            <div class="sidebar-controls">
+                <button id="btn-playback">Start Loop Sequence</button>
+                
+                <select id="preset-select" class="dropdown-control">
+                    <option value="" disabled selected>Select Server Preset</option>
+                    <option value="./drums/drum1.txt">drum1.txt</option>
+                    <option value="./drums/drum2.txt">drum2.txt</option>
+                    <option value="./drums/drum3.txt">drum3.txt</option>
+                    <option value="./drums/drum4.txt">drum4.txt</option>
+                    <option value="./drums/"></option>
+                    <option value="./drums/"></option>
+                    <option value="./drums/"></option>
+                    <option value="./drums/"></option>
+                    <option value="./drums/"></option>
+                    <option value="./drums/"></option>
+                    <option value="./drums/drum10-queen-rock-you.txt">drum10-queen-rock-you.txt</option>
+                </select>
+
+                <label for="file-upload" class="btn-label">Load Local File</label>
+                <input type="file" id="file-upload" accept=".txt">
+
+                <button id="btn-export" class="export-btn">Export Current Config</button>
+            </div>
+
+            <div class="legend-grid" id="legend-container"></div>
+        </div>
+        <div id="drag-handle"></div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // TRACK ENVIRONMENT STATE SCOPE
+        // =========================================================================
+        let myTotalCirclePoints = 256;
+        let myTotalStepsInLoop  = 16;
+        let myBeatMarkersStepInterval = 4;
+        let myTempoBPM          = 115;
+        let myStartRadius       = 1.5;
+        let myRingSpacing       = 0.8;
+        let myBarWidthScale     = 0.04;
+        let myPersistentNoteHt  = 0.50;
+        let myHitExplosionHt    = 3.00;
+        let myExplosionDecay    = 6.0;
+        let myPointsPerBeatSpread = 6;
+
+        let drumKitConfig = [
+            { id: "mySound0", name: "Bass Drum",    color: 0xff1e27, pattern: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0] },
+            { id: "mySound1", name: "Low Tom",     color: 0xff5e00, pattern: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0] },
+            { id: "mySound2", name: "Mid Tom",     color: 0xffb300, pattern: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,1,0,0] },
+            { id: "mySound3", name: "High Tom",    color: 0xe5ff00, pattern: [0,0,0,0, 0,0,0,0, 0,0,0,0, 1,0,0,0] },
+            { id: "mySound4", name: "Snare Drum",   color: 0x26ff00, pattern: [0,0,0,0, 1,0,0,0, 0,0,0,0, 0,0,0,1] },
+            { id: "mySound5", name: "Hi Hat",       color: 0x00ffb3, pattern: [1,1,0,1, 1,0,1,1, 1,1,0,1, 1,0,0,0] },
+            { id: "mySound6", name: "Crash Cymbal", color: 0x00bfff, pattern: [1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0] },
+            { id: "mySound7", name: "Ride Cymbal",  color: 0x8b00ff, pattern: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0] },
+            { id: "mySound8", name: "Tink Bell",    color: 0xff00ff, pattern: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0] }
+        ];
+
+        let visualBarMeshArray = [];
+        let structuralRingArray = [];
+        let mapMarkerArray = [];
+        let hitImpactEnergy = {};
+        let stepDurationSeconds = 0;
+        let isPlaying = false;
+        let lastFiredStep = -1;
+        let currentSequenceStep = 0;
+        let timeAccumulator = 0;
+        let playheadLine = null;
+
+        // --- Core Three.js Environment Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x040408, 0.04);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 13, 14);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+        scene.add(new THREE.AmbientLight(0x222233));
+        const pointLight = new THREE.PointLight(0xffffff, 1.0, 50);
+        pointLight.position.set(0, 12, 0);
+        scene.add(pointLight);
+
+        const floorGeo = new THREE.PlaneGeometry(30, 30);
+        const floorMat = new THREE.MeshBasicMaterial({ color: 0x05050a, side: THREE.DoubleSide, depthWrite: false });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = Math.PI / 2;
+        scene.add(floor);
+
+        const gridHelper = new THREE.GridHelper(30, 30, 0x22223a, 0x0f0f18);
+        gridHelper.position.y = -0.01;
+        scene.add(gridHelper);
+
+        const downbeatGeo = new THREE.SphereGeometry(0.06, 12, 12);
+        const downbeatMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+        const barMarkerGeo = new THREE.SphereGeometry(0.04, 8, 8);
+        const barMarkerMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+        function rebuildVisualizationScene() {
+            visualBarMeshArray.forEach(item => scene.remove(item.mesh));
+            structuralRingArray.forEach(ring => scene.remove(ring));
+            mapMarkerArray.forEach(marker => scene.remove(marker));
+            if (playheadLine) scene.remove(playheadLine);
+
+            visualBarMeshArray = [];
+            structuralRingArray = [];
+            mapMarkerArray = [];
+            hitImpactEnergy = {};
+            
+            stepDurationSeconds = 60 / myTempoBPM / 4;
+
+            const baseBoxGeometry = new THREE.BoxGeometry(myBarWidthScale, 1, myBarWidthScale);
+            baseBoxGeometry.translate(0, 0.5, 0);
+
+            let maxOuterRadius = 0;
+
+            drumKitConfig.forEach((drum, idx) => {
+                drum.radius = myStartRadius + (idx * myRingSpacing);
+                if (drum.radius > maxOuterRadius) maxOuterRadius = drum.radius;
+
+                hitImpactEnergy[drum.id] = new Float32Array(myTotalCirclePoints);
+
+                const structuralRingGeo = new THREE.RingGeometry(drum.radius - 0.015, drum.radius + 0.015, 64);
+                const structuralRingMat = new THREE.MeshBasicMaterial({
+                    color: drum.color,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.12
+                });
+                const ringMesh = new THREE.Mesh(structuralRingGeo, structuralRingMat);
+                ringMesh.rotation.x = Math.PI / 2;
+                scene.add(ringMesh);
+                structuralRingArray.push(ringMesh);
+
+                for (let stepIdx = 0; stepIdx < myTotalStepsInLoop; stepIdx++) {
+                    if (stepIdx % myBeatMarkersStepInterval === 0) {
+                        const radialAngle = (stepIdx / myTotalStepsInLoop) * Math.PI * 2;
+                        
+                        let referenceMarker;
+                        if (stepIdx === 0) {
+                            referenceMarker = new THREE.Mesh(downbeatGeo, downbeatMat);
+                        } else {
+                            referenceMarker = new THREE.Mesh(barMarkerGeo, barMarkerMat);
+                        }
+                        
+                        referenceMarker.position.set(
+                            Math.cos(radialAngle) * drum.radius,
+                            0.01,
+                            Math.sin(radialAngle) * drum.radius
+                        );
+                        scene.add(referenceMarker);
+                        mapMarkerArray.push(referenceMarker);
+                    }
+                }
+
+                const barMaterial = new THREE.MeshBasicMaterial({ color: drum.color });
+
+                for (let s = 0; s < myTotalCirclePoints; s++) {
+                    const angleRad = (s / myTotalCirclePoints) * Math.PI * 2;
+                    const nodeMesh = new THREE.Mesh(baseBoxGeometry, barMaterial);
+
+                    nodeMesh.position.x = Math.cos(angleRad) * drum.radius;
+                    nodeMesh.position.z = Math.sin(angleRad) * drum.radius;
+                    nodeMesh.rotation.y = -angleRad;
+                    nodeMesh.scale.set(1, 0.02, 1);
+
+                    scene.add(nodeMesh);
+                    visualBarMeshArray.push({ mesh: nodeMesh, drum: drum, segmentIdx: s });
+                }
+            });
+
+            const playheadGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0.02, 0),
+                new THREE.Vector3(maxOuterRadius + 0.6, 0.02, 0)
+            ]);
+            const playheadMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+            playheadLine = new THREE.Line(playheadGeo, playheadMat);
+            scene.add(playheadLine);
+
+            renderInteractiveMatrixUI();
+        }
+
+        // --- Render High Contrast Printable Grid With Interactive Event Bindings ---
+     // --- Render High Contrast Printable Grid With Interactive Event Bindings ---
+// --- Render High Contrast Printable Grid With Interactive Event Bindings ---
+function renderInteractiveMatrixUI() {
+    const legendContainer = document.getElementById('legend-container');
+    legendContainer.innerHTML = '';
+    
+    drumKitConfig.forEach((drum, drumIndex) => {
+        const hexColor = "#" + drum.color.toString(16).padStart(6, '0');
+        
+        const matrixWrapper = document.createElement('div');
+        matrixWrapper.className = 'legend-item';
+        
+        const gridContainer = document.createElement('div');
+        gridContainer.className = 'pattern-mini-matrix';
+
+        for(let step = 0; step < myTotalStepsInLoop; step++) {
+            const cell = document.createElement('div');
+            cell.className = 'matrix-cell';
+            cell.dataset.drumIdx = drumIndex;
+            cell.dataset.stepIdx = step;
+
+            if (drum.pattern && drum.pattern[step] === 1) {
+                cell.style.background = hexColor;
+                cell.style.boxShadow = `0 0 2px ${hexColor}88`;
+            }
+
+            // --- Long Press / Hold to Clear Row Logic ---
+            let pressTimer = null;
+            let isLongPressTriggered = false;
+
+            const startPress = (e) => {
+                isLongPressTriggered = false;
+                // Trigger clear after holding down for 600ms
+                pressTimer = setTimeout(() => {
+                    isLongPressTriggered = true;
+                    
+                    // Clear all step values back to 0 for this specific instrument row
+                    for (let i = 0; i < myTotalStepsInLoop; i++) {
+                        drum.pattern[i] = 0;
+                    }
+                    
+                    // Instantly refresh the visual UI elements to show the empty row
+                    renderInteractiveMatrixUI();
+                }, 600);
+            };
+
+            const cancelPress = (e) => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+            };
+
+            // Bind mouse tracking for traditional desktop layouts
+            cell.addEventListener('mousedown', startPress);
+            cell.addEventListener('mouseup', cancelPress);
+            cell.addEventListener('mouseleave', cancelPress);
+
+            // Bind touch event streams for cross-platform mobile environments
+            cell.addEventListener('touchstart', startPress, { passive: true });
+            cell.addEventListener('touchend', cancelPress, { passive: true });
+            cell.addEventListener('touchcancel', cancelPress, { passive: true });
+
+            // Standard Click Action Loop (only fires if they didn't do a long press)
+            cell.addEventListener('click', function() {
+                if (isLongPressTriggered) return; // Block double actioning
+
+                const dIdx = parseInt(this.dataset.drumIdx);
+                const sIdx = parseInt(this.dataset.stepIdx);
+                const currentTrack = drumKitConfig[dIdx];
+                const trackColor = "#" + currentTrack.color.toString(16).padStart(6, '0');
+
+                if (currentTrack.pattern[sIdx] === 1) {
+                    currentTrack.pattern[sIdx] = 0;
+                    this.style.background = '#e2e8f0';
+                    this.style.boxShadow = 'none';
+                } else {
+                    currentTrack.pattern[sIdx] = 1;
+                    this.style.background = trackColor;
+                    this.style.boxShadow = `0 0 2px ${trackColor}88`;
+                    playSound(currentTrack.id);
+                }
+            });
+
+            gridContainer.appendChild(cell);
+        }
+
+        matrixWrapper.appendChild(gridContainer);
+
+const labelSpan = document.createElement('span');
+        labelSpan.className = 'drum-label';
+        labelSpan.style.color = hexColor;
+        labelSpan.style.cursor = 'pointer'; // Visual cue that it's clickable
+        labelSpan.textContent = drum.name;
+
+        // --- Live Punch-In Recording Feature ---
+        labelSpan.addEventListener('click', function() {
+            // 1. Determine the currently playing sequence step
+            // We use currentSequenceStep to target the exact 16-step grid division
+            const activeStep = currentSequenceStep; 
+            
+            // 2. Add the note to the drum pattern sequence
+            drum.pattern[activeStep] = 1;
+            
+            // 3. Immediately play the audio sample for instant feedback
+            playSound(drum.id);
+            
+            // 4. Register the 3D visual explosion at the exact playhead position
+            const mappedCircleSegment = Math.floor((activeStep / myTotalStepsInLoop) * myTotalCirclePoints);
+            registerImpactFlash(drum.id, mappedCircleSegment);
+            
+            // 5. Redraw the UI grid matrix to visually show the newly added step
+            renderInteractiveMatrixUI();
+        });
+
+        matrixWrapper.appendChild(labelSpan);
+    });
+}
+        // --- Universal File Export Infrastructure Engine ---
+      // --- Universal File Export Infrastructure Engine (Updated Format) ---
+document.getElementById('btn-export').addEventListener('click', () => {
+    let outputBuffer = "";
+    
+    // Append Global Header Configuration State Definitions
+    outputBuffer += `# ====================================================================\n`;
+    outputBuffer += `# Concentric Drum Loop Configuration - Custom Export\n`;
+    outputBuffer += `# ====================================================================\n\n`;
+    outputBuffer += `BPM : ${myTempoBPM}\n`;
+    outputBuffer += `Points : ${myTotalCirclePoints}\n`;
+    outputBuffer += `Steps : ${myTotalStepsInLoop}\n`;
+    outputBuffer += `BeatMarkers : ${myBeatMarkersStepInterval}\n`;
+    outputBuffer += `Radius : ${myStartRadius}\n`;
+    outputBuffer += `Spacing : ${myRingSpacing}\n`;
+    outputBuffer += `NoteHeight : ${myPersistentNoteHt.toFixed(2)}\n`;
+    outputBuffer += `ExplosionHeight : ${myHitExplosionHt.toFixed(2)}\n`;
+    outputBuffer += `Decay : ${myExplosionDecay}\n`;
+    outputBuffer += `Spread : ${myPointsPerBeatSpread}\n\n`;
+    outputBuffer += `# Format: Audio_ID | Instrument Name | Hex Color | 16-Step Pattern\n`;
+
+    drumKitConfig.forEach(drum => {
+        const hexColorStr = "#" + drum.color.toString(16).padStart(6, '0');
+        
+        // Pad out standard column naming for a clean text profile block
+        const paddedId = drum.id.padEnd(8, ' ');
+        const paddedName = drum.name.padEnd(12, ' ');
+        
+        // Chunk binary pattern with spaces every 4 beats
+        let textPattern = "";
+        for (let i = 0; i < myTotalStepsInLoop; i++) {
+            if (i > 0 && i % 4 === 0) {
+                textPattern += " ";
+            }
+            textPattern += (drum.pattern[i] === 1) ? "1" : "0";
+        }
+
+        outputBuffer += `${paddedId} | ${paddedName} | ${hexColorStr} | ${textPattern}\n`;
+    });
+
+    // Trigger safe automated browser download pipelines
+    const fileBlob = new Blob([outputBuffer], { type: "text/plain;charset=utf-8" });
+    const temporaryAnchor = document.createElement("a");
+    temporaryAnchor.href = URL.createObjectURL(fileBlob);
+    temporaryAnchor.download = "custom-concentric-drum-loop.txt";
+    document.body.appendChild(temporaryAnchor);
+    temporaryAnchor.click();
+    document.body.removeChild(temporaryAnchor);
+});
+
+
+        // --- Fetch Config File from Remote Root Server Sub-Directory ---
+        document.getElementById('preset-select').addEventListener('change', function(e) {
+            const targetPresetUrl = e.target.value;
+            if (!targetPresetUrl) return;
+
+            fetch(targetPresetUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error("Preset track file path data could not be located.");
+                    return response.text();
+                })
+                .then(textData => {
+                    parseCustomTextConfiguration(textData);
+                })
+                .catch(err => console.error("Error loading server preset file configuration settings: ", err));
+        });
+
+        // --- Local File Upload Handler ---
+        document.getElementById('file-upload').addEventListener('change', function(e) {
+            const uploadedFile = e.target.files[0];
+            if (!uploadedFile) return;
+
+            const fileReader = new FileReader();
+            fileReader.onload = function(evt) {
+                parseCustomTextConfiguration(evt.target.result);
+            };
+            fileReader.readAsText(uploadedFile);
+        });
+
+        function parseCustomTextConfiguration(rawText) {
+            const codeLines = rawText.split('\n');
+            const analyticalDrumAccumulator = [];
+
+            codeLines.forEach(line => {
+                let formattedLine = line.trim();
+                if (!formattedLine || formattedLine.startsWith('#')) return;
+
+                if (formattedLine.includes(':')) {
+                    const structuralSplit = formattedLine.split(':');
+                    const configKey = structuralSplit[0].trim().toLowerCase();
+                    const configVal = parseFloat(structuralSplit[1].trim());
+
+                    if (!isNaN(configVal)) {
+                        if (configKey === 'bpm') myTempoBPM = configVal;
+                        else if (configKey === 'points') myTotalCirclePoints = parseInt(configVal);
+                        else if (configKey === 'steps') myTotalStepsInLoop = parseInt(configVal);
+                        else if (configKey === 'beatmarkers') myBeatMarkersStepInterval = parseInt(configVal);
+                        else if (configKey === 'radius') myStartRadius = configVal;
+                        else if (configKey === 'spacing') myRingSpacing = configVal;
+                        else if (configKey === 'noteheight') myPersistentNoteHt = configVal;
+                        else if (configKey === 'explosionheight') myHitExplosionHt = configVal;
+                        else if (configKey === 'decay') myExplosionDecay = configVal;
+                        else if (configKey === 'spread') myPointsPerBeatSpread = parseInt(configVal);
+                    }
+                    return;
+                }
+
+                if (formattedLine.includes('|')) {
+                    const rowTokens = formattedLine.split('|').map(token => token.trim());
+                    if (rowTokens.length >= 4) {
+                        const drumId = rowTokens[0];
+                        const drumName = rowTokens[1];
+                        const hexColorString = rowTokens[2].replace('#', '0x');
+                        const rawPatternString = rowTokens[3].replace(/\s+/g, '');
+
+                        if (rowTokens.length >= 5 && rowTokens[4].trim() !== '') {
+                            let customAudioSrc = rowTokens[4].trim();
+                            if (!customAudioSrc.startsWith('http') && !customAudioSrc.startsWith('/')) {
+                                customAudioSrc = 'drums/' + customAudioSrc;
+                            }
+                            const audElement = document.getElementById(drumId);
+                            if (audElement) audElement.src = customAudioSrc;
+                        }
+
+                        const stepSequenceArray = [];
+                        for (let charIdx = 0; charIdx < myTotalStepsInLoop; charIdx++) {
+                            const characterToken = rawPatternString[charIdx];
+                            stepSequenceArray.push((characterToken === 'x' || characterToken === '1') ? 1 : 0);
+                        }
+
+                        analyticalDrumAccumulator.push({
+                            id: drumId,
+                            name: drumName,
+                            color: parseInt(hexColorString),
+                            pattern: stepSequenceArray
+                        });
+                    }
+                }
+            });
+
+            if (analyticalDrumAccumulator.length > 0) {
+                drumKitConfig = analyticalDrumAccumulator;
+                
+                isPlaying = true;
+                const playbackBtn = document.getElementById('btn-playback');
+                playbackBtn.textContent = "Pause Loop Sequence";
+                playbackBtn.classList.add('toggle-active');
+                
+                lastFiredStep = -1;
+                currentSequenceStep = 0;
+                timeAccumulator = 0;
+
+                rebuildVisualizationScene();
+            }
+        }
+
+        // --- Drag Panels Logic Hook ---
+        const uiOverlay = document.getElementById('ui-overlay');
+        const dragHandle = document.getElementById('drag-handle');
+        const uiContent = document.getElementById('ui-content');
+        let myIsDragging = false;
+
+        dragHandle.addEventListener('mousedown', (e) => {
+            myIsDragging = true;
+            uiOverlay.classList.add('dragging');
+            e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!myIsDragging) return;
+            let calculatedWidth = e.clientX - uiOverlay.offsetLeft;
+            
+            if (calculatedWidth < 120) {
+                uiOverlay.style.width = '0px';
+                uiOverlay.style.paddingLeft = '0px';
+                uiOverlay.style.paddingRight = '0px';
+                uiOverlay.style.border = 'none';
+                uiContent.style.display = 'none';
+            } else {
+                uiOverlay.style.width = calculatedWidth + 'px';
+                uiOverlay.style.paddingLeft = '20px';
+                uiOverlay.style.paddingRight = '20px';
+                uiOverlay.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                uiContent.style.display = 'flex';
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (myIsDragging) {
+                myIsDragging = false;
+                uiOverlay.classList.remove('dragging');
+            }
+        });
+
+        // --- Audio Toggles Loop Setup ---
+        const playbackBtn = document.getElementById('btn-playback');
+        playbackBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playbackBtn.textContent = "Pause Loop Sequence";
+                playbackBtn.classList.add('toggle-active');
+            } else {
+                playbackBtn.textContent = "Start Loop Sequence";
+                playbackBtn.classList.remove('toggle-active');
+                lastFiredStep = -1;
+            }
+        });
+
+        function playSound(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.currentTime = 0;
+                el.play().catch(() => {});
+            }
+        }
+
+        function registerImpactFlash(drumId, centerSegment) {
+            for (let offset = -myPointsPerBeatSpread; offset <= myPointsPerBeatSpread; offset++) {
+                const targetIdx = (centerSegment + offset + myTotalCirclePoints) % myTotalCirclePoints;
+                const dropoff = 1 - (Math.abs(offset) / myPointsPerBeatSpread);
+                const spike = (myHitExplosionHt * 0.7 + Math.random() * (myHitExplosionHt * 0.3)) * Math.pow(dropoff, 2);
+
+                if (spike > hitImpactEnergy[drumId][targetIdx]) {
+                    hitImpactEnergy[drumId][targetIdx] = spike;
+                }
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        const globalClock = new THREE.Clock();
+
+        function mainRenderLoop() {
+            requestAnimationFrame(mainRenderLoop);
+            const deltaTime = globalClock.getDelta();
+            
+            if (isPlaying) {
+                timeAccumulator += deltaTime;
+                if (timeAccumulator >= stepDurationSeconds) {
+                    timeAccumulator -= stepDurationSeconds;
+                    currentSequenceStep = (currentSequenceStep + 1) % myTotalStepsInLoop;
+                }
+            }
+
+            const stepFractionalOffset = isPlaying ? (timeAccumulator / stepDurationSeconds) : 0;
+            const absoluteSequenceTime = (currentSequenceStep + stepFractionalOffset) % myTotalStepsInLoop;
+            const currentPlayheadAngleRad = (absoluteSequenceTime / myTotalStepsInLoop) * Math.PI * 2;
+            
+            if (playheadLine) playheadLine.rotation.y = -currentPlayheadAngleRad;
+
+            if (isPlaying) {
+                const exactRadialStepIndex = Math.floor((currentPlayheadAngleRad / (Math.PI * 2)) * myTotalStepsInLoop) % myTotalStepsInLoop;
+
+                if (exactRadialStepIndex !== lastFiredStep) {
+                    drumKitConfig.forEach(drum => {
+                        if (drum.pattern[exactRadialStepIndex] === 1) {
+                            playSound(drum.id);
+                            
+                            const mappedCircleSegment = Math.floor((exactRadialStepIndex / myTotalStepsInLoop) * myTotalCirclePoints);
+                            registerImpactFlash(drum.id, mappedCircleSegment);
+                        }
+                    });
+                    lastFiredStep = exactRadialStepIndex;
+                }
+            }
+
+            drumKitConfig.forEach(drum => {
+                const energyArr = hitImpactEnergy[drum.id];
+                if (energyArr) {
+                    for (let s = 0; s < myTotalCirclePoints; s++) {
+                        energyArr[s] -= myExplosionDecay * deltaTime;
+                        if (energyArr[s] < 0) energyArr[s] = 0;
+                    }
+                }
+            });
+
+            visualBarMeshArray.forEach(item => {
+                const drum = item.drum;
+                const segmentIdx = item.segmentIdx;
+                
+                const associatedStepIndex = Math.floor((segmentIdx / myTotalCirclePoints) * myTotalStepsInLoop);
+                const stepNoteIsPresent = drum.pattern[associatedStepIndex] === 1;
+
+                let targetHeightScale = 0.02; 
+                
+                if (stepNoteIsPresent) {
+                    const stepCenterSegment = Math.floor((associatedStepIndex / myTotalStepsInLoop) * myTotalCirclePoints);
+                    const stepsDistance = Math.abs(segmentIdx - stepCenterSegment);
+                    
+                    const maxSpreadFootprint = Math.max(1, Math.floor(myTotalCirclePoints / 64));
+                    if (stepsDistance <= maxSpreadFootprint) {
+                        targetHeightScale = myPersistentNoteHt * (1 - (stepsDistance / (maxSpreadFootprint + 1)));
+                    }
+                }
+
+                const flashEnergy = hitImpactEnergy[drum.id] ? hitImpactEnergy[drum.id][segmentIdx] : 0;
+                let absoluteFinalScale = targetHeightScale + flashEnergy;
+
+                item.mesh.scale.y = Math.max(0.02, absoluteFinalScale);
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        rebuildVisualizationScene();
+        mainRenderLoop();
+    </script>
+</body>
+</html>
