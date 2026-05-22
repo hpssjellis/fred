@@ -1,0 +1,20 @@
+BPM: 95
+Points: 256
+Steps: 32
+Radius: 1.5
+Spacing: 0.7
+NoteHeight: 0.4
+ExplosionHeight: 2.8
+Decay: 5.5
+Spread: 5
+
+# ID       | Name         | Color   | Step Pattern
+mySound1   | Sub Bass     | #ff1e27 | x--- ---- ---- ---- x--- ---- ---- ----
+mySound2   | Kick Drum    | #ff5e00 | x--- ---- ---- --x- ---- --x- ---- ----
+mySound6   | Low Tom      | #ffb300 | ---- ---- ---- ---- ---- ---- --x- ----
+mySound5   | Snare Drum   | #e5ff00 | ---- ---- x--- ---- ---- ---- x--- ----
+mySound0   | Ghost Snare  | #26ff00 | --x- -x-- --x- -x-- --x- -x-- ---- -x--
+mySound3   | Open HiHat   | #00ffb3 | ---- ---- ---- ---x ---- ---- ---- ---x
+mySound8   | Shuffle Hat  | #00bfff | x-xx -xx- xx-x x-xx -xx- xx-x x-xx -xx-
+mySound4   | Ride Cymbal  | #8b00ff | x--- x--- x--- x--- x--- x--- x--- x---
+mySound7   | Tink Bell    | #ff00ff | x--- ---- ---- ---- ---- ---- ---- ----
