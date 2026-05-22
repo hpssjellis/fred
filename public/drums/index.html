@@ -383,64 +383,103 @@
         }
 
         // --- Render High Contrast Printable Grid With Interactive Event Bindings ---
-        function renderInteractiveMatrixUI() {
-            const legendContainer = document.getElementById('legend-container');
-            legendContainer.innerHTML = '';
-            
-            drumKitConfig.forEach((drum, drumIndex) => {
-                const hexColor = "#" + drum.color.toString(16).padStart(6, '0');
-                
-                const matrixWrapper = document.createElement('div');
-                matrixWrapper.className = 'legend-item';
-                
-                const gridContainer = document.createElement('div');
-                gridContainer.className = 'pattern-mini-matrix';
+     // --- Render High Contrast Printable Grid With Interactive Event Bindings ---
+function renderInteractiveMatrixUI() {
+    const legendContainer = document.getElementById('legend-container');
+    legendContainer.innerHTML = '';
+    
+    drumKitConfig.forEach((drum, drumIndex) => {
+        const hexColor = "#" + drum.color.toString(16).padStart(6, '0');
+        
+        const matrixWrapper = document.createElement('div');
+        matrixWrapper.className = 'legend-item';
+        
+        const gridContainer = document.createElement('div');
+        gridContainer.className = 'pattern-mini-matrix';
 
-                for(let step = 0; step < myTotalStepsInLoop; step++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'matrix-cell';
-                    cell.dataset.drumIdx = drumIndex;
-                    cell.dataset.stepIdx = step;
+        for(let step = 0; step < myTotalStepsInLoop; step++) {
+            const cell = document.createElement('div');
+            cell.className = 'matrix-cell';
+            cell.dataset.drumIdx = drumIndex;
+            cell.dataset.stepIdx = step;
 
-                    // Apply the track's color directly if hit is active
-                    if (drum.pattern && drum.pattern[step] === 1) {
-                        cell.style.background = hexColor;
-                        cell.style.boxShadow = `0 0 2px ${hexColor}88`;
+            if (drum.pattern && drum.pattern[step] === 1) {
+                cell.style.background = hexColor;
+                cell.style.boxShadow = `0 0 2px ${hexColor}88`;
+            }
+
+            // --- Long Press / Hold to Delete Detection Infrastructure ---
+            let pressTimer = null;
+            let isLongPressTriggered = false;
+
+            const startPress = (e) => {
+                isLongPressTriggered = false;
+                // Trigger deletion after a solid 600ms hold
+                pressTimer = setTimeout(() => {
+                    isLongPressTriggered = true;
+                    
+                    // Confirm row deletion with a clean browser alert
+                    if (confirm(`Delete the entire row for "${drum.name}"?`)) {
+                        // Remove the targeted track index from the active layout array
+                        drumKitConfig.splice(drumIndex, 1);
+                        // Completely rebuild the live audio pipelines and 3D visual environments
+                        rebuildVisualizationScene();
                     }
+                }, 600);
+            };
 
-                    // Click Trigger Event Logic Loop Hook
-                    cell.addEventListener('click', function() {
-                        const dIdx = parseInt(this.dataset.drumIdx);
-                        const sIdx = parseInt(this.dataset.stepIdx);
-                        const currentTrack = drumKitConfig[dIdx];
-                        const trackColor = "#" + currentTrack.color.toString(16).padStart(6, '0');
-
-                        if (currentTrack.pattern[sIdx] === 1) {
-                            currentTrack.pattern[sIdx] = 0;
-                            this.style.background = '#e2e8f0';
-                            this.style.boxShadow = 'none';
-                        } else {
-                            currentTrack.pattern[sIdx] = 1;
-                            this.style.background = trackColor;
-                            this.style.boxShadow = `0 0 2px ${trackColor}88`;
-                            playSound(currentTrack.id);
-                        }
-                    });
-
-                    gridContainer.appendChild(cell);
+            const cancelPress = (e) => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
                 }
+            };
 
-                matrixWrapper.appendChild(gridContainer);
+            // Bind mouse tracking for traditional desktop layouts
+            cell.addEventListener('mousedown', startPress);
+            cell.addEventListener('mouseup', cancelPress);
+            cell.addEventListener('mouseleave', cancelPress);
 
-                const labelSpan = document.createElement('span');
-                labelSpan.className = 'drum-label';
-                labelSpan.style.color = hexColor;
-                labelSpan.textContent = drum.name;
-                matrixWrapper.appendChild(labelSpan);
+            // Bind touch event streams for cross-platform mobile environments
+            cell.addEventListener('touchstart', startPress, { passive: true });
+            cell.addEventListener('touchend', cancelPress, { passive: true });
+            cell.addEventListener('touchcancel', cancelPress, { passive: true });
 
-                legendContainer.appendChild(matrixWrapper);
+            // Standard Click Action Loop (only fires if they didn't do a long press)
+            cell.addEventListener('click', function() {
+                if (isLongPressTriggered) return; // Block double actioning
+
+                const dIdx = parseInt(this.dataset.drumIdx);
+                const sIdx = parseInt(this.dataset.stepIdx);
+                const currentTrack = drumKitConfig[dIdx];
+                const trackColor = "#" + currentTrack.color.toString(16).padStart(6, '0');
+
+                if (currentTrack.pattern[sIdx] === 1) {
+                    currentTrack.pattern[sIdx] = 0;
+                    this.style.background = '#e2e8f0';
+                    this.style.boxShadow = 'none';
+                } else {
+                    currentTrack.pattern[sIdx] = 1;
+                    this.style.background = trackColor;
+                    this.style.boxShadow = `0 0 2px ${trackColor}88`;
+                    playSound(currentTrack.id);
+                }
             });
+
+            gridContainer.appendChild(cell);
         }
+
+        matrixWrapper.appendChild(gridContainer);
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'drum-label';
+        labelSpan.style.color = hexColor;
+        labelSpan.textContent = drum.name;
+        matrixWrapper.appendChild(labelSpan);
+
+        legendContainer.appendChild(matrixWrapper);
+    });
+}
 
         // --- Universal File Export Infrastructure Engine ---
       // --- Universal File Export Infrastructure Engine (Updated Format) ---
