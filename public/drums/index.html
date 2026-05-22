@@ -1,0 +1,337 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyclic Drum Beat FFT Visualization</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #05050b;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            pointer-events: none;
+            background: rgba(10, 10, 20, 0.7);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, #ff3b30, #007aff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p {
+            margin: 0 0 15px 0;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 15px;
+        }
+        button {
+            background: #1c1c1e;
+            color: white;
+            border: 1px solid #3a3a3c;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            pointer-events: auto;
+        }
+        button:hover {
+            background: #2c2c2e;
+            border-color: #545456;
+            transform: scale(1.05);
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+    </style>
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <h1>Cyclic Beat FFT</h1>
+        <p>Time mapping: 360° Loop<br>Frequency mapping: Center (Low) → Edge (High)</p>
+        <div class="legend">
+            <div class="legend-item"><div class="color-dot" style="background: #ff3344;"></div>Kick Drum (Sub/Bass ~60-150Hz)</div>
+            <div class="legend-item"><div class="color-dot" style="background: #ffaa00;"></div>Snare Drum (Mids ~500-2kHz)</div>
+            <div class="legend-item"><div class="color-dot" style="background: #00aaff;"></div>Hi-Hats / Cymbals (Highs ~8-16kHz)</div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <button id="btn-play">Simulate Next Measure</button>
+        <button id="btn-rotate">Toggle Rotation</button>
+    </div>
+
+    <script>
+        // --- Scene Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x05050b, 0.03);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 15, 15);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05; // Don't go below ground
+
+        // --- Lighting ---
+        const ambientLight = new THREE.AmbientLight(0x222233);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        dirLight.position.set(10, 20, 10);
+        scene.add(dirLight);
+
+        // --- Grid & Environment Floor Base ---
+        const floorGeo = new THREE.PlaneGeometry(30, 30);
+        const floorMat = new THREE.MeshBasicMaterial({ 
+            color: 0x0a0a14, 
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = Math.PI / 2;
+        scene.add(floor);
+
+        const grid = new THREE.GridHelper(30, 30, 0x444455, 0x111122);
+        grid.position.y = -0.01;
+        scene.add(grid);
+
+        // --- Geometric Circular Rings (The Frequency Target Rails) ---
+        const ringColors = [0xff3344, 0xffaa00, 0x00aaff];
+        const ringRadii = [2.5, 5.0, 7.5]; // Inner to outer tracking layers
+        
+        ringRadii.forEach((radius, idx) => {
+            const ringGeo = new THREE.RingGeometry(radius - 0.02, radius + 0.02, 64);
+            const ringMat = new THREE.MeshBasicMaterial({ 
+                color: ringColors[idx], 
+                side: THREE.DoubleSide, 
+                transparent: true, 
+                opacity: 0.25 
+            });
+            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+            ringMesh.rotation.x = Math.PI / 2;
+            scene.add(ringMesh);
+        });
+
+        // --- Core Blueprint Architecture for the FFT Graph ---
+        // A full 4/4 bar broken down step-by-step into angle increments
+        const totalSteps = 128; 
+        const maxRadius = 8.5;
+        const minRadius = 1.0;
+
+        // Data arrays holding target heights to smooth transitions gracefully
+        let currentHeights = new Float32Array(totalSteps * 3); // 3 bands (Kick, Snare, Hat)
+        let targetHeights = new Float32Array(totalSteps * 3);
+
+        // Create instantiation arrays for individual bar representations
+        const barInstancedMeshGroup = new THREE.Group();
+        scene.add(barInstancedMeshGroup);
+
+        const barGeometry = new THREE.BoxGeometry(0.1, 1, 0.1);
+        barGeometry.translate(0, 0.5, 0); // Shift pivot point to structural bottom point
+
+        const meshes = [];
+
+        // Build out physical graph lines arranged concentrically matching the image concept
+        for (let bandIdx = 0; bandIdx < 3; bandIdx++) {
+            const bandRadius = ringRadii[bandIdx];
+            const bandColor = ringColors[bandIdx];
+            
+            const mat = new THREE.MeshStandardMaterial({
+                color: bandColor,
+                roughness: 0.3,
+                metalness: 0.2,
+                emissive: bandColor,
+                emissiveIntensity: 0.4
+            });
+
+            for (let step = 0; step < totalSteps; step++) {
+                // Map linear progression sequentially along continuous 360 degree space
+                const angle = (step / totalSteps) * Math.PI * 2;
+                
+                const mesh = new THREE.Mesh(barGeometry, mat);
+                
+                // Calculate position relative to center of circle
+                mesh.position.x = Math.cos(angle) * bandRadius;
+                mesh.position.z = Math.sin(angle) * bandRadius;
+                
+                // Point bars structurally upward and slightly matching the circle's tangent angles
+                mesh.rotation.y = -angle; 
+                mesh.scale.set(1, 0.01, 1);
+                
+                barInstancedMeshGroup.add(mesh);
+                meshes.push({ mesh, bandIdx, step });
+            }
+        }
+
+        // --- Sound Profile Generation Blueprint ---
+        // Simulates typical syncopated patterns inside a cyclic container
+        function generateSequenceData() {
+            // Wipe slate clean for calculation cycle
+            for(let i=0; i < targetHeights.length; i++) targetHeights[i] = 0;
+
+            // Step mappings across 128 indices representing common subdivisions
+            // Kick hits primary markers
+            const kickBeats = [0, 16, 32, 48, 64, 80, 96, 112];
+            // Snare cuts regular backbeat gaps
+            const snareBeats = [32, 96, 44, 108]; 
+            // Hats run high speed rhythms
+            const hatBeats = [0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120];
+
+            // Local Helper injects sound pressure energy spikes across neighboring vectors (simulating FFT spreading)
+            function injectPulse(band, centerStep, maxMagnitude, span) {
+                for (let i = -span; i <= span; i++) {
+                    const targetIndex = (centerStep + i + totalSteps) % totalSteps;
+                    const dataCoord = (band * totalSteps) + targetIndex;
+                    const falloffFactor = 1 - (Math.abs(i) / span);
+                    const calculatedValue = maxMagnitude * Math.pow(falloffFactor, 2);
+                    
+                    if (calculatedValue > targetHeights[dataCoord]) {
+                        targetHeights[dataCoord] = calculatedValue;
+                    }
+                }
+            }
+
+            // Apply patterns onto virtual structure space
+            kickBeats.forEach(b => injectPulse(0, b, 2.5 + Math.random()*1.5, 6));
+            snareBeats.forEach(b => injectPulse(1, b, 3.5 + Math.random()*1.0, 4));
+            hatBeats.forEach(b => injectPulse(2, b, 1.2 + Math.random()*0.8, 2));
+
+            // Inject low intensity structural noise floor anomalies 
+            for(let band=0; band<3; band++) {
+                for(let step=0; step<totalSteps; step++) {
+                    const coord = (band * totalSteps) + step;
+                    if(targetHeights[coord] === 0) {
+                        targetHeights[coord] = Math.random() * 0.15;
+                    }
+                }
+            }
+        }
+
+        // Trigger foundational base beat data configuration
+        generateSequenceData();
+
+        // --- Interaction Listeners ---
+        let autoRotateActive = true;
+        document.getElementById('btn-play').addEventListener('click', () => {
+            generateSequenceData();
+        });
+        document.getElementById('btn-rotate').addEventListener('click', () => {
+            autoRotateActive = !autoRotateActive;
+        });
+
+        // Window resize framework adjustments
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- Main Real-time Update Loop Rendering Engine Execution ---
+        const animationClock = new THREE.Clock();
+
+        function renderEngineStep() {
+            requestAnimationFrame(renderEngineStep);
+            
+            const elapsedDelta = animationClock.getDelta();
+            const timeInstant = animationClock.getElapsedTime();
+
+            // Smoothly ease current graph height vectors forward onto target goals
+            const interpolationSpeed = 12.0; 
+            for (let i = 0; i < currentHeights.length; i++) {
+                currentHeights[i] += (targetHeights[i] - currentHeights[i]) * interpolationSpeed * elapsedDelta;
+            }
+
+            // Parse heights configuration updates out directly down into physical canvas elements
+            meshes.forEach(item => {
+                const dataCoord = (item.bandIdx * totalSteps) + item.step;
+                let activeValue = currentHeights[dataCoord];
+
+                // Modulate visualization vectors continuously over runtime metrics
+                // Emulates lively organic behaviors of real-time incoming analog capture feeds
+                const slightNoiseModulator = Math.sin(timeInstant * 25 + item.step * 0.5) * 0.04;
+                if(activeValue > 0.2) {
+                    activeValue += slightNoiseModulator;
+                }
+
+                // Update scales matching derived dimensions calculated above
+                item.mesh.scale.y = Math.max(0.01, activeValue);
+            });
+
+            // Handle global structural platform drift adjustments when requested
+            if (autoRotateActive) {
+                barInstancedMeshGroup.rotation.y += 0.08 * elapsedDelta;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Initialize display pipelines
+        renderEngineStep();
+    </script>
+</body>
+</html>
