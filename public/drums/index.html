@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concentric Drum Loop Visualizer v23</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #040408;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #fff;
+            user-select: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 1;
+        }
+
+        /* ===================== FALLING NOTES OVERLAY ===================== */
+        #rockstar-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2;
+            pointer-events: none;
+            display: none;
+        }
+        #rockstar-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        .rockstar-hit-line {
+            position: absolute;
+            bottom: 80px;
+            left: 0; right: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.25);
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        /* ===================== SIDEBAR ===================== */
+        #ui-overlay {
+            position: absolute;
+            top: 20px; left: 20px;
+            z-index: 10;
+            background: rgba(8, 8, 20, 0.90);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            width: 400px;
+            min-width: 40px;
+            max-width: 580px;
+            display: flex;
+            flex-direction: row;
+            max-height: calc(100vh - 40px);
+        }
+        #ui-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(79,172,254,0.4) transparent;
+        }
+        #ui-content::-webkit-scrollbar { width: 4px; }
+        #ui-content::-webkit-scrollbar-track { background: transparent; }
+        #ui-content::-webkit-scrollbar-thumb { background: rgba(79,172,254,0.4); border-radius: 2px; }
+        #drag-handle {
+            width: 12px;
+            cursor: ew-resize;
+            background: rgba(255,255,255,0.05);
+            margin: -16px -16px -16px 12px;
+            border-radius: 0 12px 12px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        #drag-handle:hover, #ui-overlay.dragging #drag-handle { background: rgba(79,172,254,0.3); }
+        #drag-handle::after { content: "||"; color: rgba(255,255,255,0.3); font-size: 10px; letter-spacing: -1px; }
+
+        h1 {
+            margin: 0 0 12px 0;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #4facfe;
+            white-space: nowrap;
+        }
+
+        /* ======== SECTION HEADERS ======== */
+        .section-header {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: rgba(79,172,254,0.7);
+            margin: 12px 0 6px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(79,172,254,0.2);
+        }
+
+        /* ======== TRANSPORT CONTROLS ======== */
+        .sidebar-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-bottom: 8px;
+        }
+        button, label.btn-label, select.dropdown-control {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+            display: block;
+            text-align: center;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        select.dropdown-control { text-align-last: center; appearance: none; outline: none; }
+        button:hover, label.btn-label:hover, select.dropdown-control:hover { background: #0063cc; transform: scale(1.02); }
+        button.toggle-active { background: #34c759; }
+        button.toggle-active:hover { background: #28a745; }
+        button.export-btn { background: #ff9500; }
+        button.export-btn:hover { background: #e08200; }
+        button.rockstar-btn { background: #8b00ff; }
+        button.rockstar-btn:hover { background: #6a00cc; }
+        button.rockstar-btn.toggle-active { background: #bf5fff; }
+        input[type="file"] { display: none; }
+
+        /* ======== DRUM GRID ======== */
+        .legend-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            background: #ffffff;
+            border-radius: 6px;
+            border: 1px solid #ffffff;
+            padding: 5px;
+            margin-bottom: 4px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: #ffffff;
+            padding: 0;
+            height: 16px;
+            white-space: nowrap;
+        }
+        .pattern-mini-matrix {
+            display: flex;
+            flex-direction: row;
+            background: #ffffff;
+            padding: 0;
+            margin-right: 8px;
+        }
+        .matrix-cell {
+            width: 8px;
+            height: 16px;
+            background: #e2e8f0;
+            margin-right: 1px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .matrix-cell:hover { transform: scale(1.1); z-index: 2; }
+        .matrix-cell.active-column { filter: brightness(0.8); outline: 1px solid #007aff; z-index: 3; }
+        .matrix-cell:nth-child(4n) { margin-right: 3px; }
+        .matrix-cell:last-child { margin-right: 0; }
+        .drum-label {
+            white-space: nowrap;
+            background: #ffffff;
+            padding-left: 2px;
+            cursor: pointer;
+        }
+        .drum-label-edit {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid currentColor;
+            color: inherit;
+            font-size: 0.75rem;
+            font-weight: 700;
+            font-family: inherit;
+            width: 90px;
+            outline: none;
+            cursor: text;
+        }
+
+        /* ======== SOUND EDITOR ======== */
+        .sound-editor-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .sound-row {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 6px 8px;
+        }
+        .sound-row-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+        .sound-swatch {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .sound-name {
+            font-size: 0.72rem;
+            font-weight: 700;
+            flex-grow: 1;
+        }
+        .sound-name-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed rgba(255,255,255,0.2);
+            color: inherit;
+            font-size: 0.72rem;
+            font-weight: 700;
+            font-family: inherit;
+            flex-grow: 1;
+            min-width: 0;
+            outline: none;
+            cursor: text;
+            padding: 0 2px;
+        }
+        .sound-name-input:focus {
+            border-bottom-color: rgba(79,172,254,0.7);
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px 3px 0 0;
+        }
+        .sound-row-actions {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .sound-row-actions button {
+            width: auto;
+            flex: 1;
+            padding: 4px 6px;
+            font-size: 0.65rem;
+            border-radius: 10px;
+            min-width: 44px;
+        }
+        .sound-url-input {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.65rem;
+            padding: 4px 6px;
+            width: 100%;
+            box-sizing: border-box;
+            outline: none;
+            margin-top: 4px;
+            display: none;
+        }
+        .sound-url-input:focus { border-color: rgba(79,172,254,0.6); }
+        .sound-status {
+            font-size: 0.6rem;
+            color: rgba(255,255,255,0.45);
+            margin-top: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .rec-indicator {
+            display: inline-block;
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #ff3b30;
+            margin-right: 3px;
+            animation: recBlink 0.8s infinite;
+        }
+        @keyframes recBlink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+        /* ======== CONFIG SLIDERS ======== */
+        .config-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .config-row {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .config-row-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .config-label {
+            font-size: 0.68rem;
+            color: rgba(255,255,255,0.7);
+            font-weight: 600;
+        }
+        .config-value-display {
+            font-size: 0.68rem;
+            color: #4facfe;
+            font-family: monospace;
+            font-weight: 700;
+        }
+        .config-slider-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            flex-grow: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.15);
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: #4facfe;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: #4facfe;
+            cursor: pointer;
+            border: none;
+        }
+        .config-override {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 5px;
+            color: #ffd60a;
+            font-size: 0.65rem;
+            padding: 2px 5px;
+            width: 55px;
+            text-align: center;
+            outline: none;
+            font-family: monospace;
+        }
+        .config-override:focus { border-color: #ffd60a; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <!-- AUDIO ELEMENTS — order matches drumKitConfig display order -->
+    <audio preload="auto" id="mySound5" data-title="Hi Hat"       src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/hihat.wav"></audio>
+    <audio preload="auto" id="mySound4" data-title="Snare Drum"   src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/snare.wav"></audio>
+    <audio preload="auto" id="mySound6" data-title="Crash Cymbal" src="https://hpssjellis.github.io/fred/public/drums/wav/gretschDrumset_crash_1_SnareMic.wav"></audio>
+    <audio preload="auto" id="mySound3" data-title="High Tom"     src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/openhat.wav"></audio>
+    <audio preload="auto" id="mySound0" data-title="Bass Drum"    src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/boom.wav"></audio>
+    <audio preload="auto" id="mySound2" data-title="Mid Tom"      src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/tom.wav"></audio>
+    <audio preload="auto" id="mySound7" data-title="Ride Cymbal"  src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/ride.wav"></audio>
+    <audio preload="auto" id="mySound1" data-title="Low Tom"      src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/kick.wav"></audio>
+    <audio preload="auto" id="mySound8" data-title="Tink Bell"    src="https://raw.githubusercontent.com/wesbos/JavaScript30/master/01%20-%20JavaScript%20Drum%20Kit/sounds/tink.wav"></audio>
+
+    <div id="canvas-container"></div>
+
+    <!-- Rockstar falling notes overlay -->
+    <div id="rockstar-overlay">
+        <canvas id="rockstar-canvas"></canvas>
+        <div class="rockstar-hit-line"></div>
+    </div>
+
+    <div id="ui-overlay">
+        <div id="ui-content">
+            <h1>Concentric Drums</h1>
+
+            <!-- Transport Controls -->
+            <div class="sidebar-controls">
+                <button id="btn-playback">Start Loop Sequence</button>
+                <button id="btn-rockstar" class="rockstar-btn">🎸 Rockstar Follow Mode</button>
+
+                <select id="preset-select" class="dropdown-control">
+                    <option value="" disabled selected>Select Server Preset</option>
+                    <option value="./drums/drum1.txt">drum1.txt</option>
+                    <option value="./drums/drum2.txt">drum2.txt</option>
+                    <option value="./drums/drum3.txt">drum3.txt</option>
+                    <option value="./drums/drum4.txt">drum4.txt</option>
+                    <option value="./drums/drum5-jer.txt">drum5-jer.txt</option>
+                    <option value="./drums/drum6-jer.txt">drum6-jer.txt</option>
+                    <option value="./drums/drum7-jer.txt">drum7-jer.txt</option>
+                    <option value="./drums/drum8-jer-3beat.txt">drum8-jer-3beat.txt</option>
+                    <option value="./drums/drum9-jer.txt">drum9-jer.txt</option>
+                    <option value="./drums/drum10-queen-rock-you.txt">drum10-queen-rock-you.txt</option>
+                    <option value="./drums/drum11.txt">drum11.txt</option>
+                    <option value="./drums/drum12.txt">drum12.txt</option>
+                    <option value="./drums/drum13-pop.txt">drum13-pop.txt</option>
+                    <option value="./drums/drum14-syncopated.txt">drum14-syncopated.txt</option>
+                    <option value="./drums/drum15-tom.txt">drum15-tom.txt</option>
+                    <option value="./drums/drum16-good times.txt">drum16-good times.txt</option>
+                    <option value="./drums/drum17-46 grove.txt">drum17-46 grove.txt</option>
+                    <option value="./drums/drum18-tom-sawyer.txt">drum18-tom-sawyer.txt</option>
+                    <option value="./drums/nice1.txt">nice1.txt</option>
+                </select>
+
+                <label for="file-upload" class="btn-label">Load Local Config (.txt)</label>
+                <input type="file" id="file-upload" accept=".txt">
+
+                <button id="btn-export" class="export-btn">Export Current Config</button>
+            </div>
+
+            <!-- Drum Grid -->
+            <div class="section-header">Pattern Grid — click cell to toggle · hold to clear row · click name to edit</div>
+            <div class="legend-grid" id="legend-container"></div>
+
+            <!-- Sound Editor -->
+            <div class="section-header">Sound Sources — load file, URL, or record mic</div>
+            <div class="sound-editor-panel" id="sound-editor-panel"></div>
+
+            <!-- Config Sliders -->
+            <div class="section-header">Visual & Timing Parameters</div>
+            <div class="config-panel" id="config-panel"></div>
+        </div>
+        <div id="drag-handle"></div>
+    </div>
+
+    <script>
+    // =========================================================================
+    // STATE
+    // =========================================================================
+    let myTotalCirclePoints      = 256;
+    let myTotalStepsInLoop       = 16;
+    let myBeatMarkersStepInterval = 4;
+    let myTempoBPM               = 115;
+    let myStartRadius            = 1.5;
+    let myRingSpacing            = 0.8;
+    let myBarWidthScale          = 0.04;
+    let myPersistentNoteHt       = 0.50;
+    let myHitExplosionHt         = 3.00;
+    let myExplosionDecay         = 6.0;
+    let myPointsPerBeatSpread    = 6;
+
+    // Drum order: left-to-right on a real kit
+    let drumKitConfig = [
+        { id: "mySound5", name: "Hi Hat",       color: 0x00ffb3, pattern: [1,1,0,1, 1,0,1,1, 1,1,0,1, 1,0,0,0], audioSrc: null },
+        { id: "mySound4", name: "Snare Drum",   color: 0x26ff00, pattern: [0,0,0,0, 1,0,0,0, 0,0,0,0, 0,0,0,1], audioSrc: null },
+        { id: "mySound6", name: "Crash Cymbal", color: 0x00bfff, pattern: [1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], audioSrc: null },
+        { id: "mySound3", name: "High Tom",     color: 0xe5ff00, pattern: [0,0,0,0, 0,0,0,0, 0,0,0,0, 1,0,0,0], audioSrc: null },
+        { id: "mySound0", name: "Bass Drum",    color: 0xff1e27, pattern: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], audioSrc: null },
+        { id: "mySound2", name: "Mid Tom",      color: 0xffb300, pattern: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,1,0,0], audioSrc: null },
+        { id: "mySound7", name: "Ride Cymbal",  color: 0x8b00ff, pattern: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], audioSrc: null },
+        { id: "mySound1", name: "Low Tom",      color: 0xff5e00, pattern: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0], audioSrc: null },
+        { id: "mySound8", name: "Tink Bell",    color: 0xff00ff, pattern: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], audioSrc: null }
+    ];
+
+
+
+    let visualBarMeshArray = [];
+    let structuralRingArray = [];
+    let mapMarkerArray = [];
+    let hitImpactEnergy = {};
+    let stepDurationSeconds = 0;
+    let isPlaying = false;
+    let lastFiredStep = -1;
+    let currentSequenceStep = 0;
+    let uiRenderedStep = -1;
+    let timeAccumulator = 0;
+    let playheadLine = null;
+    let cellDOMCache = [];
+
+    // Rockstar mode
+    let myRockstarMode = false;
+    let myRockstarNotes = []; // { drumIdx, x, y, color, alpha, hit }
+    let myRockstarCanvas = null;
+    let myRockstarCtx = null;
+
+    // =========================================================================
+    // THREE.JS SETUP
+    // =========================================================================
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x040408, 0.04);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 13, 14);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+    scene.add(new THREE.AmbientLight(0x222233));
+    const pointLight = new THREE.PointLight(0xffffff, 1.0, 50);
+    pointLight.position.set(0, 12, 0);
+    scene.add(pointLight);
+
+    const floorGeo = new THREE.PlaneGeometry(30, 30);
+    const floorMat = new THREE.MeshBasicMaterial({ color: 0x05050a, side: THREE.DoubleSide, depthWrite: false });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = Math.PI / 2;
+    scene.add(floor);
+
+    const gridHelper = new THREE.GridHelper(30, 30, 0x22223a, 0x0f0f18);
+    gridHelper.position.y = -0.01;
+    scene.add(gridHelper);
+
+    const downbeatGeo = new THREE.SphereGeometry(0.06, 12, 12);
+    const downbeatMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const barMarkerGeo = new THREE.SphereGeometry(0.04, 8, 8);
+    const barMarkerMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+    // =========================================================================
+    // SCENE BUILD
+    // =========================================================================
+    function rebuildVisualizationScene() {
+        visualBarMeshArray.forEach(item => scene.remove(item.mesh));
+        structuralRingArray.forEach(ring => scene.remove(ring));
+        mapMarkerArray.forEach(marker => scene.remove(marker));
+        if (playheadLine) scene.remove(playheadLine);
+
+        visualBarMeshArray = [];
+        structuralRingArray = [];
+        mapMarkerArray = [];
+        hitImpactEnergy = {};
+
+        stepDurationSeconds = 60 / myTempoBPM / 4;
+
+        const baseBoxGeometry = new THREE.BoxGeometry(myBarWidthScale, 1, myBarWidthScale);
+        baseBoxGeometry.translate(0, 0.5, 0);
+
+        let maxOuterRadius = 0;
+
+        drumKitConfig.forEach((drum, idx) => {
+            drum.radius = myStartRadius + (idx * myRingSpacing);
+            if (drum.radius > maxOuterRadius) maxOuterRadius = drum.radius;
+            hitImpactEnergy[drum.id] = new Float32Array(myTotalCirclePoints);
+
+            const structuralRingGeo = new THREE.RingGeometry(drum.radius - 0.015, drum.radius + 0.015, 64);
+            const structuralRingMat = new THREE.MeshBasicMaterial({
+                color: drum.color,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.12
+            });
+            const ringMesh = new THREE.Mesh(structuralRingGeo, structuralRingMat);
+            ringMesh.rotation.x = Math.PI / 2;
+            scene.add(ringMesh);
+            structuralRingArray.push(ringMesh);
+
+            for (let stepIdx = 0; stepIdx < myTotalStepsInLoop; stepIdx++) {
+                if (stepIdx % myBeatMarkersStepInterval === 0) {
+                    const radialAngle = (stepIdx / myTotalStepsInLoop) * Math.PI * 2;
+                    let referenceMarker;
+                    if (stepIdx === 0) {
+                        referenceMarker = new THREE.Mesh(downbeatGeo, downbeatMat);
+                    } else {
+                        referenceMarker = new THREE.Mesh(barMarkerGeo, barMarkerMat);
+                    }
+                    referenceMarker.position.set(
+                        Math.cos(radialAngle) * drum.radius, 0.01,
+                        Math.sin(radialAngle) * drum.radius
+                    );
+                    scene.add(referenceMarker);
+                    mapMarkerArray.push(referenceMarker);
+                }
+            }
+
+            const barMaterial = new THREE.MeshBasicMaterial({ color: drum.color });
+            for (let s = 0; s < myTotalCirclePoints; s++) {
+                const angleRad = (s / myTotalCirclePoints) * Math.PI * 2;
+                const nodeMesh = new THREE.Mesh(baseBoxGeometry, barMaterial);
+                nodeMesh.position.x = Math.cos(angleRad) * drum.radius;
+                nodeMesh.position.z = Math.sin(angleRad) * drum.radius;
+                nodeMesh.rotation.y = -angleRad;
+                nodeMesh.scale.set(1, 0.02, 1);
+                scene.add(nodeMesh);
+                visualBarMeshArray.push({ mesh: nodeMesh, drum: drum, segmentIdx: s });
+            }
+        });
+
+        const playheadGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0.02, 0),
+            new THREE.Vector3(maxOuterRadius + 0.6, 0.02, 0)
+        ]);
+        const playheadMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+        playheadLine = new THREE.Line(playheadGeo, playheadMat);
+        scene.add(playheadLine);
+
+        renderInteractiveMatrixUI();
+        renderSoundEditor();
+        renderConfigPanel();
+    }
+
+    // =========================================================================
+    // SHARED: create an editable drum label span
+    // dblclick → rename inline; single click → punch-in at current step
+    // =========================================================================
+    function makeDrumLabel(drum, drumIndex, hexColor) {
+        const span = document.createElement('span');
+        span.className = 'drum-label';
+        span.style.color = hexColor;
+        span.textContent = drum.name;
+        span.title = 'Double-click to rename · click to punch-in at current step';
+
+        span.addEventListener('dblclick', function(e) {
+            e.stopPropagation();
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'drum-label-edit';
+            input.value = drum.name;
+            input.style.color = hexColor;
+            span.replaceWith(input);
+            input.focus();
+            input.select();
+
+            const finish = () => {
+                const newName = input.value.trim() || drum.name;
+                drum.name = newName;
+                span.textContent = newName;
+                input.replaceWith(span);
+                // Sync sound editor name display
+                const audioEl = document.getElementById(drum.id);
+                if (audioEl) audioEl.dataset.title = newName;
+                const nameEl = document.getElementById('sname-' + drum.id);
+                if (nameEl) nameEl.textContent = newName;
+            };
+
+            input.addEventListener('blur', finish);
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter')  { e.preventDefault(); finish(); }
+                if (e.key === 'Escape') { input.value = drum.name; finish(); }
+            });
+        });
+
+        span.addEventListener('click', function(e) {
+            // Guard: ignore if we just finished a dblclick sequence
+            if (e.detail >= 2) return;
+            const activeStep = currentSequenceStep;
+            drum.pattern[activeStep] = 1;
+            playSound(drum.id);
+            const mappedCircleSegment = Math.floor((activeStep / myTotalStepsInLoop) * myTotalCirclePoints);
+            registerImpactFlash(drum.id, mappedCircleSegment);
+            const targetCell = cellDOMCache[drumIndex] && cellDOMCache[drumIndex][activeStep];
+            if (targetCell) {
+                targetCell.style.background = hexColor;
+                targetCell.style.boxShadow = `0 0 2px ${hexColor}88`;
+            }
+        });
+
+        return span;
+    }
+
+    // =========================================================================
+    // DRUM GRID UI
+    // =========================================================================
+    function renderInteractiveMatrixUI() {
+        const legendContainer = document.getElementById('legend-container');
+        legendContainer.innerHTML = '';
+        cellDOMCache = [];
+        uiRenderedStep = -1;
+
+        drumKitConfig.forEach((drum, drumIndex) => {
+            const hexColor = "#" + drum.color.toString(16).padStart(6, '0');
+
+            const matrixWrapper = document.createElement('div');
+            matrixWrapper.className = 'legend-item';
+
+            const gridContainer = document.createElement('div');
+            gridContainer.className = 'pattern-mini-matrix';
+            cellDOMCache[drumIndex] = [];
+
+            for (let step = 0; step < myTotalStepsInLoop; step++) {
+                const cell = document.createElement('div');
+                cell.className = 'matrix-cell';
+                cell.dataset.drumIdx = drumIndex;
+                cell.dataset.stepIdx = step;
+
+                if (drum.pattern && drum.pattern[step] === 1) {
+                    cell.style.background = hexColor;
+                    cell.style.boxShadow = `0 0 2px ${hexColor}88`;
+                }
+
+                let pressTimer = null;
+                let isLongPressTriggered = false;
+
+                const startPress = () => {
+                    isLongPressTriggered = false;
+                    pressTimer = setTimeout(() => {
+                        isLongPressTriggered = true;
+                        for (let i = 0; i < myTotalStepsInLoop; i++) drum.pattern[i] = 0;
+                        renderInteractiveMatrixUI();
+                    }, 600);
+                };
+                const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+
+                cell.addEventListener('mousedown', startPress);
+                cell.addEventListener('mouseup', cancelPress);
+                cell.addEventListener('mouseleave', cancelPress);
+                cell.addEventListener('touchstart', startPress, { passive: true });
+                cell.addEventListener('touchend', cancelPress, { passive: true });
+                cell.addEventListener('touchcancel', cancelPress, { passive: true });
+
+                cell.addEventListener('click', function() {
+                    if (isLongPressTriggered) return;
+                    const dIdx = parseInt(this.dataset.drumIdx);
+                    const sIdx = parseInt(this.dataset.stepIdx);
+                    const currentTrack = drumKitConfig[dIdx];
+                    const trackColor = "#" + currentTrack.color.toString(16).padStart(6, '0');
+                    if (currentTrack.pattern[sIdx] === 1) {
+                        currentTrack.pattern[sIdx] = 0;
+                        this.style.background = '#e2e8f0';
+                        this.style.boxShadow = 'none';
+                    } else {
+                        currentTrack.pattern[sIdx] = 1;
+                        this.style.background = trackColor;
+                        this.style.boxShadow = `0 0 2px ${trackColor}88`;
+                        playSound(currentTrack.id);
+                    }
+                });
+
+                gridContainer.appendChild(cell);
+                cellDOMCache[drumIndex].push(cell);
+            }
+
+            matrixWrapper.appendChild(gridContainer);
+
+            const labelSpan = makeDrumLabel(drum, drumIndex, hexColor);
+            matrixWrapper.appendChild(labelSpan);
+            legendContainer.appendChild(matrixWrapper);
+        });
+    }
+
+    // =========================================================================
+    // SOUND EDITOR
+    // =========================================================================
+    function renderSoundEditor() {
+        const panel = document.getElementById('sound-editor-panel');
+        panel.innerHTML = '';
+
+        drumKitConfig.forEach((drum, drumIndex) => {
+            const hexColor = "#" + drum.color.toString(16).padStart(6, '0');
+            const audioEl = document.getElementById(drum.id);
+
+            const row = document.createElement('div');
+            row.className = 'sound-row';
+            row.id = 'srow-' + drum.id;
+
+            // Header — editable name field
+            const header = document.createElement('div');
+            header.className = 'sound-row-header';
+
+            const swatch = document.createElement('div');
+            swatch.className = 'sound-swatch';
+            swatch.style.background = hexColor;
+
+            // Inline editable name input (always visible, minimal style)
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.className = 'sound-name-input';
+            nameInput.id = 'sname-' + drum.id;
+            nameInput.value = drum.name;
+            nameInput.style.color = hexColor;
+            nameInput.title = 'Edit instrument name';
+            nameInput.addEventListener('change', () => {
+                const newName = nameInput.value.trim() || drum.name;
+                drum.name = newName;
+                nameInput.value = newName;
+                // Sync grid label
+                const audioEl2 = document.getElementById(drum.id);
+                if (audioEl2) audioEl2.dataset.title = newName;
+                // Sync grid span — easiest to just refresh the whole grid
+                renderInteractiveMatrixUI();
+            });
+            nameInput.addEventListener('keydown', e => {
+                if (e.key === 'Enter') nameInput.blur();
+            });
+
+            header.appendChild(swatch);
+            header.appendChild(nameInput);
+            row.appendChild(header);
+
+            // Status line — shows current audio source path
+            const statusEl = document.createElement('div');
+            statusEl.className = 'sound-status';
+            statusEl.id = 'sstatus-' + drum.id;
+            const currentSrc = drum.audioSrc || '';
+            statusEl.textContent = currentSrc ? shortenPath(currentSrc) : (audioEl ? shortenPath(audioEl.src) : 'default');
+            row.appendChild(statusEl);
+
+            // Action buttons
+            const actions = document.createElement('div');
+            actions.className = 'sound-row-actions';
+
+            // -- Local File button
+            const fileBtn = document.createElement('button');
+            fileBtn.textContent = '📂 File';
+            fileBtn.title = 'Load local audio file';
+            fileBtn.onclick = () => {
+                const fi = document.createElement('input');
+                fi.type = 'file';
+                fi.accept = 'audio/*';
+                fi.onchange = (e) => {
+                    const f = e.target.files[0];
+                    if (!f) return;
+                    const blobUrl = URL.createObjectURL(f);
+                    // Store just the filename as the audioSrc reference
+                    drum.audioSrc = f.name;
+                    loadAudioSrc(drum.id, blobUrl);
+                    updateSoundStatus(drum.id, '📂 ' + f.name);
+                };
+                fi.click();
+            };
+            actions.appendChild(fileBtn);
+
+            // -- URL button + expandable input
+            const urlBtn = document.createElement('button');
+            urlBtn.textContent = '🔗 URL';
+            urlBtn.title = 'Load from URL';
+            const urlInput = document.createElement('input');
+            urlInput.type = 'text';
+            urlInput.className = 'sound-url-input';
+            urlInput.placeholder = 'https://example.com/sound.wav — press Enter';
+            urlBtn.onclick = () => {
+                urlInput.style.display = urlInput.style.display === 'none' ? 'block' : 'none';
+                if (urlInput.style.display === 'block') urlInput.focus();
+            };
+            urlInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const url = urlInput.value.trim();
+                    if (!url) return;
+                    drum.audioSrc = url;
+                    loadAudioSrc(drum.id, url);
+                    updateSoundStatus(drum.id, '🔗 ' + url);
+                    urlInput.style.display = 'none';
+                    urlInput.value = '';
+                }
+                if (e.key === 'Escape') urlInput.style.display = 'none';
+            });
+            actions.appendChild(urlBtn);
+
+            // -- Record button
+            const recBtn = document.createElement('button');
+            recBtn.textContent = '🎙 Rec';
+            recBtn.title = 'Record from mic · click to start · click again to stop & save';
+            let myRecorder = null;
+            let myRecChunks = [];
+            let myIsRecording = false;
+
+            recBtn.onclick = async () => {
+                if (!myIsRecording) {
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        myRecChunks = [];
+                        // Pick best available format
+                        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                            ? 'audio/webm;codecs=opus'
+                            : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+                        myRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+                        myRecorder.ondataavailable = e => { if (e.data.size > 0) myRecChunks.push(e.data); };
+                        myRecorder.onstop = () => {
+                            stream.getTracks().forEach(t => t.stop());
+                            const ext = (myRecorder.mimeType || 'audio/webm').includes('ogg') ? 'ogg' : 'webm';
+                            const blob = new Blob(myRecChunks, { type: myRecorder.mimeType || 'audio/webm' });
+                            const suggestedName = drum.id + '-recording.' + ext;
+
+                            // 1. Play it immediately via blob URL
+                            const blobUrl = URL.createObjectURL(blob);
+                            loadAudioSrc(drum.id, blobUrl);
+
+                            // 2. Trigger download so user can save to disk
+                            const a = document.createElement('a');
+                            a.href = blobUrl;
+                            a.download = suggestedName;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+
+                            // 3. Show path textarea for user to confirm/edit saved path
+                            showRecordingPathPrompt(drum, suggestedName, statusEl);
+
+                            recBtn.textContent = '🎙 Rec';
+                            recBtn.style.background = '';
+                            myIsRecording = false;
+                        };
+                        myRecorder.start();
+                        myIsRecording = true;
+                        recBtn.innerHTML = '<span class="rec-indicator"></span>Stop';
+                        recBtn.style.background = '#ff3b30';
+                        updateSoundStatus(drum.id, '● Recording…');
+                    } catch (err) {
+                        alert('Microphone access denied or unavailable.\n' + err.message);
+                    }
+                } else {
+                    if (myRecorder && myRecorder.state !== 'inactive') myRecorder.stop();
+                }
+            };
+            actions.appendChild(recBtn);
+
+            // -- Test button
+            const testBtn = document.createElement('button');
+            testBtn.textContent = '▶ Test';
+            testBtn.title = 'Preview this sound';
+            testBtn.onclick = () => playSound(drum.id);
+            actions.appendChild(testBtn);
+
+            row.appendChild(actions);
+            row.appendChild(urlInput);
+            panel.appendChild(row);
+        });
+    }
+
+    // Show a small textarea after recording so the user can type/confirm the saved file path
+    function showRecordingPathPrompt(drum, suggestedName, statusEl) {
+        // Remove any existing prompt for this drum
+        const existingPrompt = document.getElementById('recpath-' + drum.id);
+        if (existingPrompt) existingPrompt.remove();
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'recpath-' + drum.id;
+        wrapper.style.cssText = 'margin-top:5px;';
+
+        const hint = document.createElement('div');
+        hint.style.cssText = 'font-size:0.6rem;color:rgba(255,255,255,0.5);margin-bottom:3px;';
+        hint.textContent = '📥 File saved — paste the path/filename where you saved it, then press Enter:';
+        wrapper.appendChild(hint);
+
+        const pathInput = document.createElement('input');
+        pathInput.type = 'text';
+        pathInput.className = 'sound-url-input';
+        pathInput.style.display = 'block';
+        pathInput.value = suggestedName;
+        pathInput.placeholder = 'path/to/' + suggestedName;
+
+        pathInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                const p = pathInput.value.trim() || suggestedName;
+                drum.audioSrc = p;
+                updateSoundStatus(drum.id, '🎙 ' + p);
+                wrapper.remove();
+            }
+            if (e.key === 'Escape') {
+                // Use suggested name as fallback
+                drum.audioSrc = suggestedName;
+                updateSoundStatus(drum.id, '🎙 ' + suggestedName);
+                wrapper.remove();
+            }
+        });
+
+        wrapper.appendChild(pathInput);
+
+        // Insert after the row's action buttons area
+        const row = document.getElementById('srow-' + drum.id);
+        if (row) {
+            row.appendChild(wrapper);
+            setTimeout(() => { pathInput.focus(); pathInput.select(); }, 50);
+        }
+    }
+
+    function loadAudioSrc(audioId, src) {
+        const el = document.getElementById(audioId);
+        if (el) { el.src = src; el.load(); }
+    }
+
+    function shortenPath(src) {
+        if (!src) return '';
+        // For long URLs/paths, trim from the left
+        return src.length > 58 ? '…' + src.slice(-55) : src;
+    }
+
+    function updateSoundStatus(drumId, text) {
+        const el = document.getElementById('sstatus-' + drumId);
+        if (el) el.textContent = shortenPath(text);
+    }
+
+    // =========================================================================
+    // CONFIG PANEL (sliders + override)
+    // =========================================================================
+    const myConfigDefs = [
+        { key: 'bpm',        label: 'BPM',             min: 40,  max: 240, step: 1,    decimals: 0, getter: () => myTempoBPM,               setter: v => { myTempoBPM = v; stepDurationSeconds = 60 / myTempoBPM / 4; } },
+        { key: 'points',     label: 'Circle Points',   min: 64,  max: 512, step: 16,   decimals: 0, getter: () => myTotalCirclePoints,       setter: v => { myTotalCirclePoints = v; myNeedRebuild = true; } },
+        { key: 'steps',      label: 'Steps',           min: 4,   max: 64,  step: 4,    decimals: 0, getter: () => myTotalStepsInLoop,        setter: v => { myTotalStepsInLoop = v; myNeedRebuild = true; } },
+        { key: 'beatmarkers',label: 'Beat Markers',    min: 1,   max: 16,  step: 1,    decimals: 0, getter: () => myBeatMarkersStepInterval, setter: v => { myBeatMarkersStepInterval = v; myNeedRebuild = true; } },
+        { key: 'radius',     label: 'Start Radius',    min: 0.5, max: 6,   step: 0.1,  decimals: 1, getter: () => myStartRadius,             setter: v => { myStartRadius = v; myNeedRebuild = true; } },
+        { key: 'spacing',    label: 'Ring Spacing',    min: 0.2, max: 3,   step: 0.05, decimals: 2, getter: () => myRingSpacing,             setter: v => { myRingSpacing = v; myNeedRebuild = true; } },
+        { key: 'noteheight', label: 'Note Height',     min: 0.05,max: 3,   step: 0.05, decimals: 2, getter: () => myPersistentNoteHt,        setter: v => { myPersistentNoteHt = v; } },
+        { key: 'explosionheight', label: 'Explosion Ht', min: 0.5, max: 10, step: 0.5, decimals: 1, getter: () => myHitExplosionHt,          setter: v => { myHitExplosionHt = v; } },
+        { key: 'decay',      label: 'Decay',           min: 1,   max: 20,  step: 0.5,  decimals: 1, getter: () => myExplosionDecay,          setter: v => { myExplosionDecay = v; } },
+        { key: 'spread',     label: 'Spread',          min: 1,   max: 20,  step: 1,    decimals: 0, getter: () => myPointsPerBeatSpread,     setter: v => { myPointsPerBeatSpread = v; } },
+    ];
+
+    let myNeedRebuild = false;
+    let myRebuildTimeout = null;
+
+    function scheduleRebuild() {
+        if (myRebuildTimeout) clearTimeout(myRebuildTimeout);
+        myRebuildTimeout = setTimeout(() => {
+            if (myNeedRebuild) {
+                myNeedRebuild = false;
+                rebuildVisualizationScene();
+            }
+        }, 400);
+    }
+
+    function renderConfigPanel() {
+        const panel = document.getElementById('config-panel');
+        panel.innerHTML = '';
+
+        myConfigDefs.forEach(def => {
+            const row = document.createElement('div');
+            row.className = 'config-row';
+
+            const headerRow = document.createElement('div');
+            headerRow.className = 'config-row-header';
+
+            const label = document.createElement('span');
+            label.className = 'config-label';
+            label.textContent = def.label;
+
+            const valueDisplay = document.createElement('span');
+            valueDisplay.className = 'config-value-display';
+            valueDisplay.id = 'cfg-val-' + def.key;
+            valueDisplay.textContent = def.getter().toFixed(def.decimals);
+
+            headerRow.appendChild(label);
+            headerRow.appendChild(valueDisplay);
+            row.appendChild(headerRow);
+
+            const sliderRow = document.createElement('div');
+            sliderRow.className = 'config-slider-row';
+
+            const slider = document.createElement('input');
+            slider.type = 'range';
+            slider.min = def.min;
+            slider.max = def.max;
+            slider.step = def.step;
+            slider.value = def.getter();
+            slider.id = 'cfg-slider-' + def.key;
+
+            const override = document.createElement('input');
+            override.type = 'text';
+            override.className = 'config-override';
+            override.title = 'Override: type any value and press Enter';
+            override.placeholder = '…';
+
+            slider.addEventListener('input', () => {
+                const v = parseFloat(slider.value);
+                def.setter(v);
+                valueDisplay.textContent = v.toFixed(def.decimals);
+                if (myNeedRebuild) scheduleRebuild();
+            });
+
+            override.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const v = parseFloat(override.value);
+                    if (!isNaN(v)) {
+                        def.setter(v);
+                        // Clamp slider display if within range
+                        if (v >= def.min && v <= def.max) slider.value = v;
+                        valueDisplay.textContent = v.toFixed(def.decimals);
+                        override.value = '';
+                        if (myNeedRebuild) scheduleRebuild();
+                    }
+                }
+            });
+
+            sliderRow.appendChild(slider);
+            sliderRow.appendChild(override);
+            row.appendChild(sliderRow);
+            panel.appendChild(row);
+        });
+    }
+
+    // Sync slider displays after external config load
+    function syncConfigSliders() {
+        myConfigDefs.forEach(def => {
+            const slider = document.getElementById('cfg-slider-' + def.key);
+            const display = document.getElementById('cfg-val-' + def.key);
+            if (slider) {
+                const v = def.getter();
+                slider.value = Math.min(def.max, Math.max(def.min, v));
+                if (display) display.textContent = v.toFixed(def.decimals);
+            }
+        });
+    }
+
+    // =========================================================================
+    // PLAYHEAD + GRID SYNC
+    // =========================================================================
+    function updateHTMLGridPlayhead(activeStep) {
+        if (activeStep === uiRenderedStep) return;
+        for (let drumIdx = 0; drumIdx < drumKitConfig.length; drumIdx++) {
+            if (!cellDOMCache[drumIdx]) continue;
+            if (uiRenderedStep >= 0 && cellDOMCache[drumIdx][uiRenderedStep]) {
+                cellDOMCache[drumIdx][uiRenderedStep].classList.remove('active-column');
+            }
+            if (cellDOMCache[drumIdx][activeStep]) {
+                cellDOMCache[drumIdx][activeStep].classList.add('active-column');
+            }
+        }
+        uiRenderedStep = activeStep;
+    }
+
+    // =========================================================================
+    // ROCKSTAR FALLING NOTES MODE
+    // =========================================================================
+    function initRockstarCanvas() {
+        myRockstarCanvas = document.getElementById('rockstar-canvas');
+        myRockstarCtx = myRockstarCanvas.getContext('2d');
+        resizeRockstarCanvas();
+    }
+
+    function resizeRockstarCanvas() {
+        if (!myRockstarCanvas) return;
+        myRockstarCanvas.width = window.innerWidth;
+        myRockstarCanvas.height = window.innerHeight;
+    }
+
+    const ROCKSTAR_HIT_Y_FRAC = 0.82; // where the hit line sits (fraction of screen height)
+    const ROCKSTAR_FALL_SPEED = 220;   // px per second
+    const ROCKSTAR_SPAWN_Y = -30;
+
+    function spawnRockstarNote(drumIdx) {
+        if (!myRockstarCanvas) return;
+        const n = drumKitConfig.length;
+        const margin = 60;
+        const laneW = (myRockstarCanvas.width - margin * 2) / n;
+        const x = margin + drumIdx * laneW + laneW / 2;
+        const color = "#" + drumKitConfig[drumIdx].color.toString(16).padStart(6, '0');
+        myRockstarNotes.push({ drumIdx, x, y: ROCKSTAR_SPAWN_Y, color, alpha: 1, hit: false, size: 18 });
+    }
+
+    function drawRockstarFrame(dt) {
+        if (!myRockstarCtx || !myRockstarCanvas) return;
+        const W = myRockstarCanvas.width;
+        const H = myRockstarCanvas.height;
+        const hitY = H * ROCKSTAR_HIT_Y_FRAC;
+        const n = drumKitConfig.length;
+        const margin = 60;
+        const laneW = (W - margin * 2) / n;
+
+        myRockstarCtx.clearRect(0, 0, W, H);
+
+        // Lane dividers + labels
+        myRockstarCtx.save();
+        for (let i = 0; i < n; i++) {
+            const laneX = margin + i * laneW;
+            const centerX = laneX + laneW / 2;
+            const color = "#" + drumKitConfig[i].color.toString(16).padStart(6, '0');
+
+            // Subtle lane tint
+            myRockstarCtx.fillStyle = color + '0a';
+            myRockstarCtx.fillRect(laneX, 0, laneW, H);
+
+            // Lane divider
+            myRockstarCtx.strokeStyle = color + '22';
+            myRockstarCtx.lineWidth = 1;
+            myRockstarCtx.beginPath();
+            myRockstarCtx.moveTo(laneX, 0);
+            myRockstarCtx.lineTo(laneX, H);
+            myRockstarCtx.stroke();
+
+            // Hit pad at bottom
+            myRockstarCtx.save();
+            myRockstarCtx.shadowColor = color;
+            myRockstarCtx.shadowBlur = 15;
+            myRockstarCtx.fillStyle = color + '55';
+            myRockstarCtx.beginPath();
+            myRockstarCtx.ellipse(centerX, hitY, laneW * 0.4, 12, 0, 0, Math.PI * 2);
+            myRockstarCtx.fill();
+            myRockstarCtx.restore();
+
+            // Label
+            myRockstarCtx.fillStyle = color;
+            myRockstarCtx.font = 'bold 10px Segoe UI, sans-serif';
+            myRockstarCtx.textAlign = 'center';
+            myRockstarCtx.fillText(drumKitConfig[i].name.split(' ')[0], centerX, hitY + 28);
+        }
+        myRockstarCtx.restore();
+
+        // Hit line
+        myRockstarCtx.save();
+        myRockstarCtx.strokeStyle = 'rgba(255,255,255,0.35)';
+        myRockstarCtx.lineWidth = 2;
+        myRockstarCtx.setLineDash([6, 4]);
+        myRockstarCtx.beginPath();
+        myRockstarCtx.moveTo(margin, hitY);
+        myRockstarCtx.lineTo(W - margin, hitY);
+        myRockstarCtx.stroke();
+        myRockstarCtx.setLineDash([]);
+        myRockstarCtx.restore();
+
+        // Update + draw notes
+        const hitThreshold = 22;
+        myRockstarNotes = myRockstarNotes.filter(note => note.alpha > 0.02);
+        myRockstarNotes.forEach(note => {
+            if (!note.hit) {
+                note.y += ROCKSTAR_FALL_SPEED * dt;
+                // Auto-hit at the line
+                if (note.y >= hitY - hitThreshold && note.y <= hitY + hitThreshold * 2) {
+                    note.hit = true;
+                    note.hitTimer = 0.25;
+                }
+            } else {
+                note.hitTimer -= dt;
+                note.alpha = Math.max(0, note.hitTimer / 0.25);
+                note.size = 18 + (1 - note.alpha) * 20;
+            }
+
+            myRockstarCtx.save();
+            myRockstarCtx.globalAlpha = note.alpha;
+            myRockstarCtx.shadowColor = note.color;
+            myRockstarCtx.shadowBlur = note.hit ? 30 : 10;
+            myRockstarCtx.fillStyle = note.color;
+            myRockstarCtx.beginPath();
+            myRockstarCtx.ellipse(note.x, note.y, note.size, note.size * 0.55, 0, 0, Math.PI * 2);
+            myRockstarCtx.fill();
+            // Inner highlight
+            myRockstarCtx.fillStyle = 'rgba(255,255,255,0.3)';
+            myRockstarCtx.beginPath();
+            myRockstarCtx.ellipse(note.x - note.size * 0.2, note.y - note.size * 0.15, note.size * 0.3, note.size * 0.2, -0.4, 0, Math.PI * 2);
+            myRockstarCtx.fill();
+            myRockstarCtx.restore();
+        });
+    }
+
+    // =========================================================================
+    // AUDIO
+    // =========================================================================
+    function playSound(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.currentTime = 0;
+            el.play().catch(() => {});
+        }
+    }
+
+    function registerImpactFlash(drumId, centerSegment) {
+        for (let offset = -myPointsPerBeatSpread; offset <= myPointsPerBeatSpread; offset++) {
+            const targetIdx = (centerSegment + offset + myTotalCirclePoints) % myTotalCirclePoints;
+            const dropoff = 1 - (Math.abs(offset) / myPointsPerBeatSpread);
+            const spike = (myHitExplosionHt * 0.7 + Math.random() * (myHitExplosionHt * 0.3)) * Math.pow(dropoff, 2);
+            if (spike > hitImpactEnergy[drumId][targetIdx]) {
+                hitImpactEnergy[drumId][targetIdx] = spike;
+            }
+        }
+    }
+
+    // =========================================================================
+    // EXPORT
+    // =========================================================================
+    document.getElementById('btn-export').addEventListener('click', () => {
+        let buf = "";
+        buf += `# ====================================================================\n`;
+        buf += `# Concentric Drum Loop Configuration - Custom Export\n`;
+        buf += `# ====================================================================\n\n`;
+        buf += `BPM : ${myTempoBPM}\n`;
+        buf += `Points : ${myTotalCirclePoints}\n`;
+        buf += `Steps : ${myTotalStepsInLoop}\n`;
+        buf += `BeatMarkers : ${myBeatMarkersStepInterval}\n`;
+        buf += `Radius : ${myStartRadius}\n`;
+        buf += `Spacing : ${myRingSpacing}\n`;
+        buf += `NoteHeight : ${myPersistentNoteHt.toFixed(2)}\n`;
+        buf += `ExplosionHeight : ${myHitExplosionHt.toFixed(2)}\n`;
+        buf += `Decay : ${myExplosionDecay}\n`;
+        buf += `Spread : ${myPointsPerBeatSpread}\n\n`;
+        buf += `# Format: Audio_ID | Instrument Name | Hex Color | 16-Step Pattern | Audio_Source\n`;
+
+        drumKitConfig.forEach(drum => {
+            const hexColorStr = "#" + drum.color.toString(16).padStart(6, '0');
+            const paddedId   = drum.id.padEnd(8, ' ');
+            const paddedName = drum.name.padEnd(14, ' ');
+            let textPattern = "";
+            for (let i = 0; i < myTotalStepsInLoop; i++) {
+                if (i > 0 && i % 4 === 0) textPattern += " ";
+                textPattern += (drum.pattern[i] === 1) ? "1" : "0";
+            }
+            const srcField = drum.audioSrc ? ` | ${drum.audioSrc}` : '';
+            buf += `${paddedId} | ${paddedName} | ${hexColorStr} | ${textPattern}${srcField}\n`;
+        });
+
+        const blob = new Blob([buf], { type: "text/plain;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "custom-concentric-drum-loop.txt";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    });
+
+    // =========================================================================
+    // ROBUST TEXT FILE PARSER
+    // =========================================================================
+    function parseCustomTextConfiguration(rawText) {
+        if (!rawText || typeof rawText !== 'string') return;
+
+        const lines = rawText.split(/\r?\n/);
+        const newDrums = [];
+        let parseErrors = 0;
+
+        lines.forEach((rawLine, lineNum) => {
+            try {
+                // Strip inline comments (# after data)
+                let line = rawLine.split('#')[0].trim();
+                if (!line) return;
+
+                // ---- Key : Value params ----
+                if (line.includes(':') && !line.includes('|')) {
+                    // Split on first colon only
+                    const colonIdx = line.indexOf(':');
+                    const k = line.slice(0, colonIdx).trim().toLowerCase().replace(/[\s_-]/g, '');
+                    const vStr = line.slice(colonIdx + 1).trim();
+                    const v = parseFloat(vStr);
+
+                    if (!isNaN(v)) {
+                        if      (k === 'bpm')              myTempoBPM = Math.max(20, Math.min(999, v));
+                        else if (k === 'points')           myTotalCirclePoints = Math.max(16, Math.min(1024, parseInt(v)));
+                        else if (k === 'steps')            myTotalStepsInLoop = Math.max(2, Math.min(128, parseInt(v)));
+                        else if (k === 'beatmarkers')      myBeatMarkersStepInterval = Math.max(1, parseInt(v));
+                        else if (k === 'radius'||k==='startradius') myStartRadius = Math.max(0.1, v);
+                        else if (k === 'spacing'||k==='ringspacing') myRingSpacing = Math.max(0.05, v);
+                        else if (k === 'noteheight')       myPersistentNoteHt = Math.max(0.01, v);
+                        else if (k === 'explosionheight'||k==='explosion') myHitExplosionHt = Math.max(0, v);
+                        else if (k === 'decay')            myExplosionDecay = Math.max(0, v);
+                        else if (k === 'spread')           myPointsPerBeatSpread = Math.max(0, parseInt(v));
+                    }
+                    return;
+                }
+
+                // ---- Drum rows (pipe-separated) ----
+                if (line.includes('|')) {
+                    // Allow varying whitespace around pipes
+                    const tokens = line.split('|').map(t => t.trim());
+                    if (tokens.length < 4) return; // not enough fields, skip gracefully
+
+                    const drumId   = tokens[0] || ('mySound' + newDrums.length);
+                    const drumName = tokens[1] || ('Drum ' + newDrums.length);
+
+                    // Parse color — accept #rrggbb, 0xrrggbb, rrggbb, or fall back to white
+                    let colorInt = 0xffffff;
+                    try {
+                        const rawColor = tokens[2].replace(/^#/, '').replace(/^0x/i, '').trim();
+                        if (/^[0-9a-fA-F]{3,8}$/.test(rawColor)) {
+                            colorInt = parseInt(rawColor.padStart(6, '0'), 16);
+                        }
+                    } catch {}
+
+                    // Parse pattern — strip all whitespace, accept 0/1/x/X/o/O
+                    const rawPat = (tokens[3] || '').replace(/\s+/g, '');
+                    const stepSeq = [];
+                    const expectedSteps = myTotalStepsInLoop;
+                    for (let ci = 0; ci < Math.max(rawPat.length, expectedSteps); ci++) {
+                        const ch = (rawPat[ci] || '0').toLowerCase();
+                        stepSeq.push((ch === '1' || ch === 'x' || ch === 'o') ? 1 : 0);
+                    }
+                    // Pad or trim to steps
+                    while (stepSeq.length < expectedSteps) stepSeq.push(0);
+                    const pattern = stepSeq.slice(0, expectedSteps);
+
+                    // Optional audio src (column 5)
+                    let audioSrc = null;
+                    if (tokens.length >= 5 && tokens[4]) {
+                        audioSrc = tokens[4];
+                        let resolvedSrc = audioSrc;
+
+                        if (resolvedSrc.startsWith('http') || resolvedSrc.startsWith('//')) {
+                            // Remote URL — load directly
+                            const audEl = document.getElementById(drumId);
+                            if (audEl) { audEl.src = resolvedSrc; audEl.load(); }
+                        } else {
+                            // Local filename — browser can't open by path; flag it for re-upload
+                            console.info(`Drum "${drumId}" has local audio file "${resolvedSrc}" — user will need to re-upload via the Sound Sources panel.`);
+                            // We still store audioSrc so export preserves it
+                        }
+                    }
+
+                    newDrums.push({ id: drumId, name: drumName, color: colorInt, pattern, audioSrc });
+                }
+            } catch (err) {
+                parseErrors++;
+                console.warn(`Line ${lineNum + 1} parse error (skipped):`, err.message);
+            }
+        });
+
+        if (newDrums.length > 0) {
+            // Merge loaded drums — keep any existing drum data for IDs not in file
+            // then replace with file data where we have matches
+            drumKitConfig = newDrums;
+
+            isPlaying = true;
+            const playbackBtn = document.getElementById('btn-playback');
+            playbackBtn.textContent = "Pause Loop Sequence";
+            playbackBtn.classList.add('toggle-active');
+
+            lastFiredStep = -1;
+            currentSequenceStep = 0;
+            timeAccumulator = 0;
+
+            rebuildVisualizationScene();
+            syncConfigSliders();
+
+            // Flag any drums with local file paths that need re-uploading
+            setTimeout(() => {
+                drumKitConfig.forEach(drum => {
+                    if (drum.audioSrc && !drum.audioSrc.startsWith('http') && !drum.audioSrc.startsWith('//')) {
+                        const statusEl = document.getElementById('sstatus-' + drum.id);
+                        if (statusEl) {
+                            statusEl.innerHTML = `⚠️ Local file — re-upload: <em>${drum.audioSrc}</em>`;
+                            statusEl.style.color = '#ffd60a';
+                        }
+                        // Show the file picker hint
+                        const srow = document.getElementById('srow-' + drum.id);
+                        if (srow && !srow.querySelector('.reupload-hint')) {
+                            const hint = document.createElement('div');
+                            hint.className = 'reupload-hint';
+                            hint.style.cssText = 'font-size:0.6rem;color:#ffd60a;margin-top:3px;';
+                            hint.textContent = 'Use 📂 File button above to re-select this file.';
+                            srow.appendChild(hint);
+                        }
+                    }
+                });
+            }, 100);
+
+            if (parseErrors > 0) {
+                console.warn(`Config loaded with ${parseErrors} line(s) skipped due to parse errors.`);
+            }
+        }
+    }
+
+    // =========================================================================
+    // TRANSPORT CONTROLS
+    // =========================================================================
+    const playbackBtn = document.getElementById('btn-playback');
+    playbackBtn.addEventListener('click', () => {
+        isPlaying = !isPlaying;
+        if (isPlaying) {
+            playbackBtn.textContent = "Pause Loop Sequence";
+            playbackBtn.classList.add('toggle-active');
+        } else {
+            playbackBtn.textContent = "Start Loop Sequence";
+            playbackBtn.classList.remove('toggle-active');
+            lastFiredStep = -1;
+            if (uiRenderedStep >= 0) {
+                for (let d = 0; d < drumKitConfig.length; d++) {
+                    if (cellDOMCache[d] && cellDOMCache[d][uiRenderedStep]) {
+                        cellDOMCache[d][uiRenderedStep].classList.remove('active-column');
+                    }
+                }
+                uiRenderedStep = -1;
+            }
+        }
+    });
+
+    const rockstarBtn = document.getElementById('btn-rockstar');
+    rockstarBtn.addEventListener('click', () => {
+        myRockstarMode = !myRockstarMode;
+        const overlay = document.getElementById('rockstar-overlay');
+        const canvasContainer = document.getElementById('canvas-container');
+        if (myRockstarMode) {
+            overlay.style.display = 'block';
+            canvasContainer.style.display = 'none';   // hide 3D view
+            initRockstarCanvas();
+            rockstarBtn.classList.add('toggle-active');
+            rockstarBtn.textContent = '🎸 Exit Rockstar Mode';
+        } else {
+            overlay.style.display = 'none';
+            canvasContainer.style.display = 'block';  // restore 3D view
+            rockstarBtn.classList.remove('toggle-active');
+            rockstarBtn.textContent = '🎸 Rockstar Follow Mode';
+            myRockstarNotes = [];
+        }
+    });
+
+    // Preset and local file loaders
+    document.getElementById('preset-select').addEventListener('change', function(e) {
+        const url = e.target.value;
+        if (!url) return;
+        fetch(url)
+            .then(r => { if (!r.ok) throw new Error('File not found: ' + url); return r.text(); })
+            .then(text => parseCustomTextConfiguration(text))
+            .catch(err => console.warn('Preset load error:', err.message));
+    });
+
+    document.getElementById('file-upload').addEventListener('change', function(e) {
+        const f = e.target.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = evt => parseCustomTextConfiguration(evt.target.result);
+        reader.readAsText(f);
+        e.target.value = ''; // allow re-loading same file
+    });
+
+    // =========================================================================
+    // DRAG RESIZE PANEL
+    // =========================================================================
+    const uiOverlay = document.getElementById('ui-overlay');
+    const dragHandle = document.getElementById('drag-handle');
+    const uiContent = document.getElementById('ui-content');
+    let myIsDragging = false;
+
+    dragHandle.addEventListener('mousedown', (e) => {
+        myIsDragging = true;
+        uiOverlay.classList.add('dragging');
+        e.preventDefault();
+    });
+    window.addEventListener('mousemove', (e) => {
+        if (!myIsDragging) return;
+        let w = e.clientX - uiOverlay.offsetLeft;
+        if (w < 120) {
+            uiOverlay.style.width = '0px';
+            uiOverlay.style.paddingLeft = '0px';
+            uiOverlay.style.paddingRight = '0px';
+            uiOverlay.style.border = 'none';
+            uiContent.style.display = 'none';
+        } else {
+            uiOverlay.style.width = w + 'px';
+            uiOverlay.style.paddingLeft = '16px';
+            uiOverlay.style.paddingRight = '16px';
+            uiOverlay.style.border = '1px solid rgba(255,255,255,0.1)';
+            uiContent.style.display = 'flex';
+        }
+    });
+    window.addEventListener('mouseup', () => {
+        if (myIsDragging) { myIsDragging = false; uiOverlay.classList.remove('dragging'); }
+    });
+
+    // =========================================================================
+    // RESIZE
+    // =========================================================================
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        resizeRockstarCanvas();
+    });
+
+    // =========================================================================
+    // MAIN RENDER LOOP
+    // =========================================================================
+    const globalClock = new THREE.Clock();
+
+    function mainRenderLoop() {
+        requestAnimationFrame(mainRenderLoop);
+        const deltaTime = globalClock.getDelta();
+
+        if (isPlaying) {
+            timeAccumulator += deltaTime;
+            if (timeAccumulator >= stepDurationSeconds) {
+                timeAccumulator -= stepDurationSeconds;
+                currentSequenceStep = (currentSequenceStep + 1) % myTotalStepsInLoop;
+            }
+            updateHTMLGridPlayhead(currentSequenceStep);
+        }
+
+        const stepFractionalOffset = isPlaying ? (timeAccumulator / stepDurationSeconds) : 0;
+        const absoluteSequenceTime = (currentSequenceStep + stepFractionalOffset) % myTotalStepsInLoop;
+        const currentPlayheadAngleRad = (absoluteSequenceTime / myTotalStepsInLoop) * Math.PI * 2;
+
+        if (playheadLine) playheadLine.rotation.y = -currentPlayheadAngleRad;
+
+        if (isPlaying) {
+            const exactRadialStepIndex = Math.floor((currentPlayheadAngleRad / (Math.PI * 2)) * myTotalStepsInLoop) % myTotalStepsInLoop;
+
+            if (exactRadialStepIndex !== lastFiredStep) {
+                drumKitConfig.forEach((drum, drumIdx) => {
+                    if (drum.pattern[exactRadialStepIndex] === 1) {
+                        playSound(drum.id);
+                        const mappedCircleSegment = Math.floor((exactRadialStepIndex / myTotalStepsInLoop) * myTotalCirclePoints);
+                        registerImpactFlash(drum.id, mappedCircleSegment);
+
+                        if (myRockstarMode) {
+                            spawnRockstarNote(drumIdx);
+                        }
+                    }
+                });
+                lastFiredStep = exactRadialStepIndex;
+            }
+        }
+
+        drumKitConfig.forEach(drum => {
+            const energyArr = hitImpactEnergy[drum.id];
+            if (energyArr) {
+                for (let s = 0; s < myTotalCirclePoints; s++) {
+                    energyArr[s] -= myExplosionDecay * deltaTime;
+                    if (energyArr[s] < 0) energyArr[s] = 0;
+                }
+            }
+        });
+
+        visualBarMeshArray.forEach(item => {
+            const drum = item.drum;
+            const segmentIdx = item.segmentIdx;
+            const associatedStepIndex = Math.floor((segmentIdx / myTotalCirclePoints) * myTotalStepsInLoop);
+            const stepNoteIsPresent = drum.pattern[associatedStepIndex] === 1;
+
+            let targetHeightScale = 0.02;
+            if (stepNoteIsPresent) {
+                const stepCenterSegment = Math.floor((associatedStepIndex / myTotalStepsInLoop) * myTotalCirclePoints);
+                const stepsDistance = Math.abs(segmentIdx - stepCenterSegment);
+                const maxSpreadFootprint = Math.max(1, Math.floor(myTotalCirclePoints / 64));
+                if (stepsDistance <= maxSpreadFootprint) {
+                    targetHeightScale = myPersistentNoteHt * (1 - (stepsDistance / (maxSpreadFootprint + 1)));
+                }
+            }
+
+            const flashEnergy = hitImpactEnergy[drum.id] ? hitImpactEnergy[drum.id][segmentIdx] : 0;
+            item.mesh.scale.y = Math.max(0.02, targetHeightScale + flashEnergy);
+        });
+
+        if (myRockstarMode && myRockstarCtx) {
+            drawRockstarFrame(deltaTime);
+        }
+
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    // =========================================================================
+    // INIT
+    // =========================================================================
+    rebuildVisualizationScene();
+    mainRenderLoop();
+    </script>
+</body>
+</html>
