@@ -621,42 +621,14 @@
         const span = document.createElement('span');
         span.className = 'drum-label';
         span.style.color = hexColor;
+        span.title = 'Click to punch-in at current step · rename in Sound Sources below';
+
+        // Keep text in sync with drum.name via a getter call each render
+        // (renderInteractiveMatrixUI recreates this each time so textContent is always fresh)
         span.textContent = drum.name;
-        span.title = 'Double-click to rename · click to punch-in at current step';
 
-        span.addEventListener('dblclick', function(e) {
-            e.stopPropagation();
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.className = 'drum-label-edit';
-            input.value = drum.name;
-            input.style.color = hexColor;
-            span.replaceWith(input);
-            input.focus();
-            input.select();
-
-            const finish = () => {
-                const newName = input.value.trim() || drum.name;
-                drum.name = newName;
-                span.textContent = newName;
-                input.replaceWith(span);
-                // Sync sound editor name display
-                const audioEl = document.getElementById(drum.id);
-                if (audioEl) audioEl.dataset.title = newName;
-                const nameEl = document.getElementById('sname-' + drum.id);
-                if (nameEl) nameEl.textContent = newName;
-            };
-
-            input.addEventListener('blur', finish);
-            input.addEventListener('keydown', e => {
-                if (e.key === 'Enter')  { e.preventDefault(); finish(); }
-                if (e.key === 'Escape') { input.value = drum.name; finish(); }
-            });
-        });
-
+        // Single click only — punch-in the current step
         span.addEventListener('click', function(e) {
-            // Guard: ignore if we just finished a dblclick sequence
-            if (e.detail >= 2) return;
             const activeStep = currentSequenceStep;
             drum.pattern[activeStep] = 1;
             playSound(drum.id);
@@ -787,14 +759,14 @@
                 const newName = nameInput.value.trim() || drum.name;
                 drum.name = newName;
                 nameInput.value = newName;
-                // Sync grid label
-                const audioEl2 = document.getElementById(drum.id);
-                if (audioEl2) audioEl2.dataset.title = newName;
-                // Sync grid span — easiest to just refresh the whole grid
-                renderInteractiveMatrixUI();
+                // Sync the grid label span text without full rebuild
+                // renderInteractiveMatrixUI recreates spans from drum.name so just update the live span
+                const gridLabel = document.querySelector(`#legend-container .legend-item:nth-child(${drumIndex + 1}) .drum-label`);
+                if (gridLabel) gridLabel.textContent = newName;
             });
             nameInput.addEventListener('keydown', e => {
                 if (e.key === 'Enter') nameInput.blur();
+                if (e.key === 'Escape') { nameInput.value = drum.name; nameInput.blur(); }
             });
 
             header.appendChild(swatch);
@@ -1285,19 +1257,20 @@
         buf += `ExplosionHeight : ${myHitExplosionHt.toFixed(2)}\n`;
         buf += `Decay : ${myExplosionDecay}\n`;
         buf += `Spread : ${myPointsPerBeatSpread}\n\n`;
-        buf += `# Format: Audio_ID | Instrument Name | Hex Color | 16-Step Pattern | Audio_Source\n`;
+        buf += `# Format: Audio_ID | Instrument Name | Hex Color | Step Pattern | Audio_Source (only if changed)\n`;
+        buf += `# Note: local file paths need re-selection via File button on reload (browser security restriction)\n`;
 
         drumKitConfig.forEach(drum => {
             const hexColorStr = "#" + drum.color.toString(16).padStart(6, '0');
-            const paddedId   = drum.id.padEnd(8, ' ');
-            const paddedName = drum.name.padEnd(14, ' ');
             let textPattern = "";
             for (let i = 0; i < myTotalStepsInLoop; i++) {
                 if (i > 0 && i % 4 === 0) textPattern += " ";
                 textPattern += (drum.pattern[i] === 1) ? "1" : "0";
             }
+            // Only append audio source column if it was explicitly changed by the user
             const srcField = drum.audioSrc ? ` | ${drum.audioSrc}` : '';
-            buf += `${paddedId} | ${paddedName} | ${hexColorStr} | ${textPattern}${srcField}\n`;
+            // Use pipe with spaces and write name exactly as stored (no padding truncation)
+            buf += `${drum.id} | ${drum.name} | ${hexColorStr} | ${textPattern}${srcField}\n`;
         });
 
         const blob = new Blob([buf], { type: "text/plain;charset=utf-8" });
@@ -1350,14 +1323,13 @@
 
                 // ---- Drum rows (pipe-separated) ----
                 if (line.includes('|')) {
-                    // Allow varying whitespace around pipes
                     const tokens = line.split('|').map(t => t.trim());
-                    if (tokens.length < 4) return; // not enough fields, skip gracefully
+                    if (tokens.length < 4) return;
 
                     const drumId   = tokens[0] || ('mySound' + newDrums.length);
                     const drumName = tokens[1] || ('Drum ' + newDrums.length);
 
-                    // Parse color — accept #rrggbb, 0xrrggbb, rrggbb, or fall back to white
+                    // Parse color — accept #rrggbb, 0xrrggbb, rrggbb, fallback white
                     let colorInt = 0xffffff;
                     try {
                         const rawColor = tokens[2].replace(/^#/, '').replace(/^0x/i, '').trim();
@@ -1366,36 +1338,18 @@
                         }
                     } catch {}
 
-                    // Parse pattern — strip all whitespace, accept 0/1/x/X/o/O
+                    // Parse pattern — strip whitespace, accept 0/1/x/X
                     const rawPat = (tokens[3] || '').replace(/\s+/g, '');
                     const stepSeq = [];
-                    const expectedSteps = myTotalStepsInLoop;
-                    for (let ci = 0; ci < Math.max(rawPat.length, expectedSteps); ci++) {
+                    for (let ci = 0; ci < myTotalStepsInLoop; ci++) {
                         const ch = (rawPat[ci] || '0').toLowerCase();
-                        stepSeq.push((ch === '1' || ch === 'x' || ch === 'o') ? 1 : 0);
-                    }
-                    // Pad or trim to steps
-                    while (stepSeq.length < expectedSteps) stepSeq.push(0);
-                    const pattern = stepSeq.slice(0, expectedSteps);
-
-                    // Optional audio src (column 5)
-                    let audioSrc = null;
-                    if (tokens.length >= 5 && tokens[4]) {
-                        audioSrc = tokens[4];
-                        let resolvedSrc = audioSrc;
-
-                        if (resolvedSrc.startsWith('http') || resolvedSrc.startsWith('//')) {
-                            // Remote URL — load directly
-                            const audEl = document.getElementById(drumId);
-                            if (audEl) { audEl.src = resolvedSrc; audEl.load(); }
-                        } else {
-                            // Local filename — browser can't open by path; flag it for re-upload
-                            console.info(`Drum "${drumId}" has local audio file "${resolvedSrc}" — user will need to re-upload via the Sound Sources panel.`);
-                            // We still store audioSrc so export preserves it
-                        }
+                        stepSeq.push((ch === '1' || ch === 'x') ? 1 : 0);
                     }
 
-                    newDrums.push({ id: drumId, name: drumName, color: colorInt, pattern, audioSrc });
+                    // Audio source — stored but not applied here; applied after drumKitConfig is set
+                    const audioSrc = (tokens.length >= 5 && tokens[4]) ? tokens[4] : null;
+
+                    newDrums.push({ id: drumId, name: drumName, color: colorInt, pattern: stepSeq, audioSrc });
                 }
             } catch (err) {
                 parseErrors++;
@@ -1404,8 +1358,6 @@
         });
 
         if (newDrums.length > 0) {
-            // Merge loaded drums — keep any existing drum data for IDs not in file
-            // then replace with file data where we have matches
             drumKitConfig = newDrums;
 
             isPlaying = true;
@@ -1420,27 +1372,53 @@
             rebuildVisualizationScene();
             syncConfigSliders();
 
-            // Flag any drums with local file paths that need re-uploading
+            // Apply audio sources now that drumKitConfig and DOM are both ready
+            // URLs load directly; local filenames need the user to re-select the file
             setTimeout(() => {
                 drumKitConfig.forEach(drum => {
-                    if (drum.audioSrc && !drum.audioSrc.startsWith('http') && !drum.audioSrc.startsWith('//')) {
+                    if (!drum.audioSrc) return;
+                    const src = drum.audioSrc;
+
+                    if (src.startsWith('http') || src.startsWith('//') || src.startsWith('blob:')) {
+                        // Remote or blob URL — load directly into audio element
+                        const audEl = document.getElementById(drum.id);
+                        if (audEl) { audEl.src = src; audEl.load(); }
+                        updateSoundStatus(drum.id, '🔗 ' + src);
+                    } else {
+                        // Local filename — can't load by path, prompt user to re-select
                         const statusEl = document.getElementById('sstatus-' + drum.id);
                         if (statusEl) {
-                            statusEl.innerHTML = `⚠️ Local file — re-upload: <em>${drum.audioSrc}</em>`;
+                            statusEl.textContent = `⚠️ Needs re-upload: ${src}`;
                             statusEl.style.color = '#ffd60a';
                         }
-                        // Show the file picker hint
+                        // Inject an inline file-picker button specifically for this drum
                         const srow = document.getElementById('srow-' + drum.id);
-                        if (srow && !srow.querySelector('.reupload-hint')) {
-                            const hint = document.createElement('div');
-                            hint.className = 'reupload-hint';
-                            hint.style.cssText = 'font-size:0.6rem;color:#ffd60a;margin-top:3px;';
-                            hint.textContent = 'Use 📂 File button above to re-select this file.';
-                            srow.appendChild(hint);
+                        if (srow && !srow.querySelector('.reupload-btn')) {
+                            const reupBtn = document.createElement('button');
+                            reupBtn.className = 'reupload-btn';
+                            reupBtn.style.cssText = 'margin-top:4px;width:100%;background:#ff9500;font-size:0.65rem;padding:4px 8px;border-radius:8px;border:none;color:#fff;cursor:pointer;';
+                            reupBtn.textContent = `📂 Re-select "${src}"`;
+                            reupBtn.onclick = () => {
+                                const fi = document.createElement('input');
+                                fi.type = 'file';
+                                fi.accept = 'audio/*';
+                                fi.onchange = (e) => {
+                                    const f = e.target.files[0];
+                                    if (!f) return;
+                                    const blobUrl = URL.createObjectURL(f);
+                                    drum.audioSrc = f.name;
+                                    loadAudioSrc(drum.id, blobUrl);
+                                    updateSoundStatus(drum.id, '📂 ' + f.name);
+                                    reupBtn.remove();
+                                    if (statusEl) statusEl.style.color = '';
+                                };
+                                fi.click();
+                            };
+                            srow.appendChild(reupBtn);
                         }
                     }
                 });
-            }, 100);
+            }, 80);
 
             if (parseErrors > 0) {
                 console.warn(`Config loaded with ${parseErrors} line(s) skipped due to parse errors.`);
