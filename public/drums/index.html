@@ -231,6 +231,25 @@
             font-weight: 700;
             flex-grow: 1;
         }
+        .sound-name-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed rgba(255,255,255,0.2);
+            color: inherit;
+            font-size: 0.72rem;
+            font-weight: 700;
+            font-family: inherit;
+            flex-grow: 1;
+            min-width: 0;
+            outline: none;
+            cursor: text;
+            padding: 0 2px;
+        }
+        .sound-name-input:focus {
+            border-bottom-color: rgba(79,172,254,0.7);
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px 3px 0 0;
+        }
         .sound-row-actions {
             display: flex;
             gap: 4px;
@@ -451,8 +470,7 @@
         { id: "mySound8", name: "Tink Bell",    color: 0xff00ff, pattern: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], audioSrc: null }
     ];
 
-    // Recorded audio blobs per drum id
-    let myRecordedBlobs = {};
+
 
     let visualBarMeshArray = [];
     let structuralRingArray = [];
@@ -596,6 +614,65 @@
     }
 
     // =========================================================================
+    // SHARED: create an editable drum label span
+    // dblclick → rename inline; single click → punch-in at current step
+    // =========================================================================
+    function makeDrumLabel(drum, drumIndex, hexColor) {
+        const span = document.createElement('span');
+        span.className = 'drum-label';
+        span.style.color = hexColor;
+        span.textContent = drum.name;
+        span.title = 'Double-click to rename · click to punch-in at current step';
+
+        span.addEventListener('dblclick', function(e) {
+            e.stopPropagation();
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'drum-label-edit';
+            input.value = drum.name;
+            input.style.color = hexColor;
+            span.replaceWith(input);
+            input.focus();
+            input.select();
+
+            const finish = () => {
+                const newName = input.value.trim() || drum.name;
+                drum.name = newName;
+                span.textContent = newName;
+                input.replaceWith(span);
+                // Sync sound editor name display
+                const audioEl = document.getElementById(drum.id);
+                if (audioEl) audioEl.dataset.title = newName;
+                const nameEl = document.getElementById('sname-' + drum.id);
+                if (nameEl) nameEl.textContent = newName;
+            };
+
+            input.addEventListener('blur', finish);
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter')  { e.preventDefault(); finish(); }
+                if (e.key === 'Escape') { input.value = drum.name; finish(); }
+            });
+        });
+
+        span.addEventListener('click', function(e) {
+            // Guard: ignore if we just finished a dblclick sequence
+            if (e.detail >= 2) return;
+            const activeStep = currentSequenceStep;
+            drum.pattern[activeStep] = 1;
+            playSound(drum.id);
+            const mappedCircleSegment = Math.floor((activeStep / myTotalStepsInLoop) * myTotalCirclePoints);
+            registerImpactFlash(drum.id, mappedCircleSegment);
+            const targetCell = cellDOMCache[drumIndex] && cellDOMCache[drumIndex][activeStep];
+            if (targetCell) {
+                targetCell.style.background = hexColor;
+                targetCell.style.boxShadow = `0 0 2px ${hexColor}88`;
+            }
+        });
+
+        return span;
+    }
+
+    // =========================================================================
     // DRUM GRID UI
     // =========================================================================
     function renderInteractiveMatrixUI() {
@@ -669,79 +746,7 @@
 
             matrixWrapper.appendChild(gridContainer);
 
-            // Editable label — double-click to edit inline
-            const labelSpan = document.createElement('span');
-            labelSpan.className = 'drum-label';
-            labelSpan.style.color = hexColor;
-            labelSpan.textContent = drum.name;
-            labelSpan.title = 'Double-click to rename · click to punch-in record';
-
-            labelSpan.addEventListener('dblclick', function() {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'drum-label-edit';
-                input.value = drum.name;
-                input.style.color = hexColor;
-                this.replaceWith(input);
-                input.focus();
-                input.select();
-
-                const finish = () => {
-                    const newName = input.value.trim() || drum.name;
-                    drum.name = newName;
-                    // Rebuild label
-                    const newSpan = document.createElement('span');
-                    newSpan.className = 'drum-label';
-                    newSpan.style.color = hexColor;
-                    newSpan.textContent = newName;
-                    newSpan.title = 'Double-click to rename · click to punch-in record';
-                    input.replaceWith(newSpan);
-                    attachLabelEvents(newSpan, drum, drumIndex, hexColor);
-                    // Sync audio element title
-                    const audioEl = document.getElementById(drum.id);
-                    if (audioEl) audioEl.dataset.title = newName;
-                    // Refresh sound editor label
-                    const nameEl = document.getElementById('sname-' + drum.id);
-                    if (nameEl) nameEl.textContent = newName;
-                };
-
-                input.addEventListener('blur', finish);
-                input.addEventListener('keydown', e => {
-                    if (e.key === 'Enter') { e.preventDefault(); finish(); }
-                    if (e.key === 'Escape') { input.value = drum.name; finish(); }
-                });
-            });
-
-            // Single click = live punch-in record
-            labelSpan.addEventListener('click', function() {
-                const activeStep = currentSequenceStep;
-                drum.pattern[activeStep] = 1;
-                playSound(drum.id);
-                const mappedCircleSegment = Math.floor((activeStep / myTotalStepsInLoop) * myTotalCirclePoints);
-                registerImpactFlash(drum.id, mappedCircleSegment);
-                const targetCell = cellDOMCache[drumIndex][activeStep];
-                if (targetCell) {
-                    targetCell.style.background = hexColor;
-                    targetCell.style.boxShadow = `0 0 2px ${hexColor}88`;
-                }
-            });
-
-            function attachLabelEvents(span, drum, drumIndex, hexColor) {
-                span.addEventListener('dblclick', labelSpan.ondblclick);
-                span.addEventListener('click', function() {
-                    const activeStep = currentSequenceStep;
-                    drum.pattern[activeStep] = 1;
-                    playSound(drum.id);
-                    const mappedCircleSegment = Math.floor((activeStep / myTotalStepsInLoop) * myTotalCirclePoints);
-                    registerImpactFlash(drum.id, mappedCircleSegment);
-                    const targetCell = cellDOMCache[drumIndex][activeStep];
-                    if (targetCell) {
-                        targetCell.style.background = hexColor;
-                        targetCell.style.boxShadow = `0 0 2px ${hexColor}88`;
-                    }
-                });
-            }
-
+            const labelSpan = makeDrumLabel(drum, drumIndex, hexColor);
             matrixWrapper.appendChild(labelSpan);
             legendContainer.appendChild(matrixWrapper);
         });
@@ -757,13 +762,12 @@
         drumKitConfig.forEach((drum, drumIndex) => {
             const hexColor = "#" + drum.color.toString(16).padStart(6, '0');
             const audioEl = document.getElementById(drum.id);
-            const currentSrc = drum.audioSrc || (audioEl ? audioEl.src : '') || '';
 
             const row = document.createElement('div');
             row.className = 'sound-row';
             row.id = 'srow-' + drum.id;
 
-            // Header
+            // Header — editable name field
             const header = document.createElement('div');
             header.className = 'sound-row-header';
 
@@ -771,22 +775,38 @@
             swatch.className = 'sound-swatch';
             swatch.style.background = hexColor;
 
-            const nameEl = document.createElement('span');
-            nameEl.className = 'sound-name';
-            nameEl.id = 'sname-' + drum.id;
-            nameEl.style.color = hexColor;
-            nameEl.textContent = drum.name;
+            // Inline editable name input (always visible, minimal style)
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.className = 'sound-name-input';
+            nameInput.id = 'sname-' + drum.id;
+            nameInput.value = drum.name;
+            nameInput.style.color = hexColor;
+            nameInput.title = 'Edit instrument name';
+            nameInput.addEventListener('change', () => {
+                const newName = nameInput.value.trim() || drum.name;
+                drum.name = newName;
+                nameInput.value = newName;
+                // Sync grid label
+                const audioEl2 = document.getElementById(drum.id);
+                if (audioEl2) audioEl2.dataset.title = newName;
+                // Sync grid span — easiest to just refresh the whole grid
+                renderInteractiveMatrixUI();
+            });
+            nameInput.addEventListener('keydown', e => {
+                if (e.key === 'Enter') nameInput.blur();
+            });
 
             header.appendChild(swatch);
-            header.appendChild(nameEl);
+            header.appendChild(nameInput);
             row.appendChild(header);
 
-            // Status
+            // Status line — shows current audio source path
             const statusEl = document.createElement('div');
             statusEl.className = 'sound-status';
             statusEl.id = 'sstatus-' + drum.id;
-            const shortSrc = currentSrc.length > 55 ? '…' + currentSrc.slice(-52) : currentSrc;
-            statusEl.textContent = shortSrc || 'No source';
+            const currentSrc = drum.audioSrc || '';
+            statusEl.textContent = currentSrc ? shortenPath(currentSrc) : (audioEl ? shortenPath(audioEl.src) : 'default');
             row.appendChild(statusEl);
 
             // Action buttons
@@ -805,22 +825,23 @@
                     const f = e.target.files[0];
                     if (!f) return;
                     const blobUrl = URL.createObjectURL(f);
-                    drum.audioSrc = 'local:' + f.name;
-                    loadAudioSrc(drum.id, blobUrl, drum.id, f.name);
+                    // Store just the filename as the audioSrc reference
+                    drum.audioSrc = f.name;
+                    loadAudioSrc(drum.id, blobUrl);
                     updateSoundStatus(drum.id, '📂 ' + f.name);
                 };
                 fi.click();
             };
             actions.appendChild(fileBtn);
 
-            // -- URL button
+            // -- URL button + expandable input
             const urlBtn = document.createElement('button');
             urlBtn.textContent = '🔗 URL';
             urlBtn.title = 'Load from URL';
             const urlInput = document.createElement('input');
             urlInput.type = 'text';
             urlInput.className = 'sound-url-input';
-            urlInput.placeholder = 'https://example.com/sound.wav';
+            urlInput.placeholder = 'https://example.com/sound.wav — press Enter';
             urlBtn.onclick = () => {
                 urlInput.style.display = urlInput.style.display === 'none' ? 'block' : 'none';
                 if (urlInput.style.display === 'block') urlInput.focus();
@@ -830,17 +851,19 @@
                     const url = urlInput.value.trim();
                     if (!url) return;
                     drum.audioSrc = url;
-                    loadAudioSrc(drum.id, url, drum.id, url);
+                    loadAudioSrc(drum.id, url);
                     updateSoundStatus(drum.id, '🔗 ' + url);
                     urlInput.style.display = 'none';
+                    urlInput.value = '';
                 }
+                if (e.key === 'Escape') urlInput.style.display = 'none';
             });
             actions.appendChild(urlBtn);
 
             // -- Record button
             const recBtn = document.createElement('button');
-            recBtn.textContent = '🎙 Record';
-            recBtn.title = 'Record from microphone (click to start/stop)';
+            recBtn.textContent = '🎙 Rec';
+            recBtn.title = 'Record from mic · click to start · click again to stop & save';
             let myRecorder = null;
             let myRecChunks = [];
             let myIsRecording = false;
@@ -850,17 +873,34 @@
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                         myRecChunks = [];
-                        myRecorder = new MediaRecorder(stream);
-                        myRecorder.ondataavailable = e => myRecChunks.push(e.data);
+                        // Pick best available format
+                        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                            ? 'audio/webm;codecs=opus'
+                            : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+                        myRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+                        myRecorder.ondataavailable = e => { if (e.data.size > 0) myRecChunks.push(e.data); };
                         myRecorder.onstop = () => {
                             stream.getTracks().forEach(t => t.stop());
-                            const blob = new Blob(myRecChunks, { type: 'audio/webm' });
-                            myRecordedBlobs[drum.id] = blob;
+                            const ext = (myRecorder.mimeType || 'audio/webm').includes('ogg') ? 'ogg' : 'webm';
+                            const blob = new Blob(myRecChunks, { type: myRecorder.mimeType || 'audio/webm' });
+                            const suggestedName = drum.id + '-recording.' + ext;
+
+                            // 1. Play it immediately via blob URL
                             const blobUrl = URL.createObjectURL(blob);
-                            drum.audioSrc = 'recorded:' + drum.id;
-                            loadAudioSrc(drum.id, blobUrl, drum.id, 'mic recording');
-                            updateSoundStatus(drum.id, '🎙 Mic recording');
-                            recBtn.textContent = '🎙 Record';
+                            loadAudioSrc(drum.id, blobUrl);
+
+                            // 2. Trigger download so user can save to disk
+                            const a = document.createElement('a');
+                            a.href = blobUrl;
+                            a.download = suggestedName;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+
+                            // 3. Show path textarea for user to confirm/edit saved path
+                            showRecordingPathPrompt(drum, suggestedName, statusEl);
+
+                            recBtn.textContent = '🎙 Rec';
                             recBtn.style.background = '';
                             myIsRecording = false;
                         };
@@ -868,9 +908,9 @@
                         myIsRecording = true;
                         recBtn.innerHTML = '<span class="rec-indicator"></span>Stop';
                         recBtn.style.background = '#ff3b30';
-                        updateSoundStatus(drum.id, '● Recording...');
+                        updateSoundStatus(drum.id, '● Recording…');
                     } catch (err) {
-                        alert('Microphone access denied or unavailable.');
+                        alert('Microphone access denied or unavailable.\n' + err.message);
                     }
                 } else {
                     if (myRecorder && myRecorder.state !== 'inactive') myRecorder.stop();
@@ -878,7 +918,7 @@
             };
             actions.appendChild(recBtn);
 
-            // -- Test / preview button
+            // -- Test button
             const testBtn = document.createElement('button');
             testBtn.textContent = '▶ Test';
             testBtn.title = 'Preview this sound';
@@ -891,20 +931,67 @@
         });
     }
 
-    function loadAudioSrc(audioId, src, drumId, label) {
-        const el = document.getElementById(audioId);
-        if (el) {
-            el.src = src;
-            el.load();
+    // Show a small textarea after recording so the user can type/confirm the saved file path
+    function showRecordingPathPrompt(drum, suggestedName, statusEl) {
+        // Remove any existing prompt for this drum
+        const existingPrompt = document.getElementById('recpath-' + drum.id);
+        if (existingPrompt) existingPrompt.remove();
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'recpath-' + drum.id;
+        wrapper.style.cssText = 'margin-top:5px;';
+
+        const hint = document.createElement('div');
+        hint.style.cssText = 'font-size:0.6rem;color:rgba(255,255,255,0.5);margin-bottom:3px;';
+        hint.textContent = '📥 File saved — paste the path/filename where you saved it, then press Enter:';
+        wrapper.appendChild(hint);
+
+        const pathInput = document.createElement('input');
+        pathInput.type = 'text';
+        pathInput.className = 'sound-url-input';
+        pathInput.style.display = 'block';
+        pathInput.value = suggestedName;
+        pathInput.placeholder = 'path/to/' + suggestedName;
+
+        pathInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                const p = pathInput.value.trim() || suggestedName;
+                drum.audioSrc = p;
+                updateSoundStatus(drum.id, '🎙 ' + p);
+                wrapper.remove();
+            }
+            if (e.key === 'Escape') {
+                // Use suggested name as fallback
+                drum.audioSrc = suggestedName;
+                updateSoundStatus(drum.id, '🎙 ' + suggestedName);
+                wrapper.remove();
+            }
+        });
+
+        wrapper.appendChild(pathInput);
+
+        // Insert after the row's action buttons area
+        const row = document.getElementById('srow-' + drum.id);
+        if (row) {
+            row.appendChild(wrapper);
+            setTimeout(() => { pathInput.focus(); pathInput.select(); }, 50);
         }
+    }
+
+    function loadAudioSrc(audioId, src) {
+        const el = document.getElementById(audioId);
+        if (el) { el.src = src; el.load(); }
+    }
+
+    function shortenPath(src) {
+        if (!src) return '';
+        // For long URLs/paths, trim from the left
+        return src.length > 58 ? '…' + src.slice(-55) : src;
     }
 
     function updateSoundStatus(drumId, text) {
         const el = document.getElementById('sstatus-' + drumId);
-        if (el) {
-            const short = text.length > 55 ? '…' + text.slice(-52) : text;
-            el.textContent = short;
-        }
+        if (el) el.textContent = shortenPath(text);
     }
 
     // =========================================================================
@@ -1296,14 +1383,15 @@
                     if (tokens.length >= 5 && tokens[4]) {
                         audioSrc = tokens[4];
                         let resolvedSrc = audioSrc;
-                        if (!resolvedSrc.startsWith('http') && !resolvedSrc.startsWith('/') &&
-                            !resolvedSrc.startsWith('blob:') && !resolvedSrc.startsWith('local:') &&
-                            !resolvedSrc.startsWith('recorded:')) {
-                            resolvedSrc = 'drums/' + resolvedSrc;
-                        }
-                        if (!resolvedSrc.startsWith('local:') && !resolvedSrc.startsWith('recorded:')) {
-                            const audioEl = document.getElementById(drumId);
-                            if (audioEl) { audioEl.src = resolvedSrc; audioEl.load(); }
+
+                        if (resolvedSrc.startsWith('http') || resolvedSrc.startsWith('//')) {
+                            // Remote URL — load directly
+                            const audEl = document.getElementById(drumId);
+                            if (audEl) { audEl.src = resolvedSrc; audEl.load(); }
+                        } else {
+                            // Local filename — browser can't open by path; flag it for re-upload
+                            console.info(`Drum "${drumId}" has local audio file "${resolvedSrc}" — user will need to re-upload via the Sound Sources panel.`);
+                            // We still store audioSrc so export preserves it
                         }
                     }
 
@@ -1331,6 +1419,28 @@
 
             rebuildVisualizationScene();
             syncConfigSliders();
+
+            // Flag any drums with local file paths that need re-uploading
+            setTimeout(() => {
+                drumKitConfig.forEach(drum => {
+                    if (drum.audioSrc && !drum.audioSrc.startsWith('http') && !drum.audioSrc.startsWith('//')) {
+                        const statusEl = document.getElementById('sstatus-' + drum.id);
+                        if (statusEl) {
+                            statusEl.innerHTML = `⚠️ Local file — re-upload: <em>${drum.audioSrc}</em>`;
+                            statusEl.style.color = '#ffd60a';
+                        }
+                        // Show the file picker hint
+                        const srow = document.getElementById('srow-' + drum.id);
+                        if (srow && !srow.querySelector('.reupload-hint')) {
+                            const hint = document.createElement('div');
+                            hint.className = 'reupload-hint';
+                            hint.style.cssText = 'font-size:0.6rem;color:#ffd60a;margin-top:3px;';
+                            hint.textContent = 'Use 📂 File button above to re-select this file.';
+                            srow.appendChild(hint);
+                        }
+                    }
+                });
+            }, 100);
 
             if (parseErrors > 0) {
                 console.warn(`Config loaded with ${parseErrors} line(s) skipped due to parse errors.`);
@@ -1366,13 +1476,16 @@
     rockstarBtn.addEventListener('click', () => {
         myRockstarMode = !myRockstarMode;
         const overlay = document.getElementById('rockstar-overlay');
+        const canvasContainer = document.getElementById('canvas-container');
         if (myRockstarMode) {
             overlay.style.display = 'block';
+            canvasContainer.style.display = 'none';   // hide 3D view
             initRockstarCanvas();
             rockstarBtn.classList.add('toggle-active');
             rockstarBtn.textContent = '🎸 Exit Rockstar Mode';
         } else {
             overlay.style.display = 'none';
+            canvasContainer.style.display = 'block';  // restore 3D view
             rockstarBtn.classList.remove('toggle-active');
             rockstarBtn.textContent = '🎸 Rockstar Follow Mode';
             myRockstarNotes = [];
