@@ -1298,12 +1298,22 @@
         const lines = rawText.split(/\r?\n/);
         let parseErrors = 0;
 
-        // ---- PASS 1: key:value params only ----
+        // Strip inline comments: only strip # and everything after it
+        // IF the # appears before the first pipe (i.e. it's a real comment, not a hex color).
+        // Hex colors like #ff1e27 appear after pipes so they are safe.
+        function stripComment(rawLine) {
+            const pipeIdx = rawLine.indexOf('|');
+            const hashIdx = rawLine.indexOf('#');
+            if (hashIdx === -1) return rawLine.trim();
+            // If there's no pipe, or the hash comes before the first pipe → it's a comment
+            if (pipeIdx === -1 || hashIdx < pipeIdx) return rawLine.slice(0, hashIdx).trim();
+            // Hash is inside/after pipe-delimited fields → keep the whole line
+            return rawLine.trim();
+        }
         // This ensures Steps, Points etc. are set before we read drum patterns.
         lines.forEach((rawLine, lineNum) => {
             try {
-                const line = rawLine.split('#')[0].trim();
-                if (!line || line.includes('|')) return;   // skip blank + drum rows
+                const line = stripComment(rawLine);
                 if (!line.includes(':')) return;
 
                 const colonIdx = line.indexOf(':');
@@ -1331,8 +1341,7 @@
         const newDrums = [];
         lines.forEach((rawLine, lineNum) => {
             try {
-                const line = rawLine.split('#')[0].trim();
-                if (!line || !line.includes('|')) return;
+                const line = stripComment(rawLine);
 
                 const tokens = line.split('|').map(t => t.trim());
                 if (tokens.length < 4) return;
