@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Audio Oscilloscope (Time & Frequency)</title>
+    <style>
+        :root {
+            --bg: #121212;
+            --scope-bg: #050505;
+            --panel-bg: #1e1e1e;
+            --trace: #00ffcc;
+            --trace-dim: rgba(0, 255, 204, 0.3);
+            --grid: #333;
+            --text: #e0e0e0;
+            --text-muted: #888;
+            --primary: #ff9800;
+            --primary-hover: #ffb74d;
+            --danger: #ef5350;
+            --border: #444;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            padding: 10px 20px;
+            background: #000;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        header h1 { margin: 0; font-size: 1.2rem; font-weight: 400; color: var(--primary); }
+        .status { font-size: 0.8rem; color: var(--text-muted); }
+
+        #main-container {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        #scope-wrapper {
+            flex-grow: 1;
+            position: relative;
+            background-color: var(--scope-bg);
+            overflow: hidden;
+        }
+        
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #readouts {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            pointer-events: none;
+            background: rgba(0,0,0,0.6);
+            padding: 5px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        #readouts span { color: var(--text); font-weight: bold; }
+
+        aside#control-panel {
+            width: 280px;
+            background-color: var(--panel-bg);
+            border-left: 1px solid var(--border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .control-group {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+        }
+        .control-group h3 {
+            margin: 0 0 15px 0;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+        }
+
+        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; }
+        
+        select, button.control-btn {
+            width: 100%;
+            padding: 10px;
+            background-color: #2a2a2a;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 0.9rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        select:hover, button.control-btn:hover { background-color: #333; }
+        select:focus, button.control-btn:focus { outline: 2px solid var(--primary); border-color: transparent; }
+
+        #btn-toggle {
+            background-color: var(--primary);
+            color: #000;
+            font-weight: bold;
+            font-size: 1rem;
+            border: none;
+        }
+        #btn-toggle:hover { background-color: var(--primary-hover); }
+        #btn-toggle.running { background-color: var(--danger); color: #fff; }
+
+        .slider-wrap { display: flex; align-items: center; gap: 10px; }
+        input[type="range"] {
+            flex-grow: 1;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+        .slider-val { font-family: monospace; font-size: 0.8rem; width: 40px; text-align: right; }
+
+        @media (max-width: 768px) {
+            #main-container { flex-direction: column; }
+            aside#control-panel { width: 100%; border-left: none; border-top: 1px solid var(--border); height: auto; flex-direction: row; flex-wrap: wrap; }
+            .control-group { flex: 1 min-content; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>JS-SCOPE v1.0</h1>
+    <div class="status" id="status-text">Ready. Connect Input.</div>
+</header>
+
+<div id="main-container">
+    <div id="scope-wrapper">
+        <canvas id="scope-canvas"></canvas>
+        <div id="readouts">
+            SR: <span id="val-sr">-- kHz</span> | 
+            Peak: <span id="val-pk">--</span> | 
+            Dom Freq: <span id="val-freq">-- Hz</span>
+        </div>
+    </div>
+
+    <aside id="control-panel">
+        <button id="btn-toggle" class="control-btn">START/STOP INPUT</button>
+
+        <div class="control-group">
+            <h3>Display Mode</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button id="mode-time" class="control-btn active" style="border-color: var(--primary);">TIME (Wave)</button>
+                <button id="mode-freq" class="control-btn">FREQ (FFT)</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3>Source / Config</h3>
+            <label>Input Device</label>
+            <select id="select-source">
+                <option value="">(Waiting for permission)</option>
+            </select>
+            <div style="height: 10px;"></div>
+            <label>FFT / Buffer Size (Resolution)</label>
+            <select id="select-fft">
+                <option value="256">256 (Fast, Low Res)</option>
+                <option value="1024">1024 (Balanced)</option>
+                <option value="2048" selected>2048 (Default)</option>
+                <option value="8192">8192 (Slow, High Res)</option>
+                <option value="16384">16384 (Detail)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <h3>Visualization</h3>
+            <label>Gain (Vertical Zoom)</label>
+            <div class="slider-wrap">
+                <input type="range" id="slider-gain" min="0.1" max="10" step="0.1" value="1">
+                <span class="slider-val" id="val-gain">x1.0</span>
+            </div>
+        </div>
+
+    </aside>
+</div>
+
+<script>
+/**
+ * JS-SCOPE: A browser-native oscilloscope using the Web Audio API.
+ * * Note: Access to microphone requires a Secure Context (HTTPS or localhost).
+ */
+
+const state = {
+    audioContext: null,
+    stream: null,
+    sourceNode: null,
+    analyserNode: null,
+    gainNode: null,
+    isRunning: false,
+    mode: 'time', // 'time' or 'freq'
+    visualGain: 1.0,
+    currentInputId: null
+};
+
+// DOM Elements
+const canvas = document.getElementById('scope-canvas');
+const ctx = canvas.getContext('2d');
+const btnToggle = document.getElementById('btn-toggle');
+const statusText = document.getElementById('status-text');
+const selectSource = document.getElementById('select-source');
+const selectFft = document.getElementById('select-fft');
+const sliderGain = document.getElementById('slider-gain');
+const valGain = document.getElementById('val-gain');
+const modeTime = document.getElementById('mode-time');
+const modeFreq = document.getElementById('mode-freq');
+
+// Readout Elements
+const rSR = document.getElementById('val-sr');
+const rPk = document.getElementById('val-pk');
+const rFreq = document.getElementById('val-freq');
+
+// Setup Canvas Size (Handling HiDPI/Retina screens)
+function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentNode.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    // Visualizing size change immediately
+    if(!state.isRunning) drawGrid(rect.width, rect.height); 
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+/**
+ * Initialize Web Audio API pipeline.
+ */
+async function initAudio(deviceId = null) {
+    try {
+        statusText.textContent = "Requesting permission...";
+        
+        // 1. Request stream
+        const constraints = { 
+            audio: deviceId ? { deviceId: { exact: deviceId } } : true, 
+            video: false 
+        };
+        state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        // 2. Initialize Audio Context (Lazy load)
+        if (!state.audioContext) {
+            state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            rSR.textContent = `${(state.audioContext.sampleRate / 1000).toFixed(1)} kHz`;
+        }
+
+        // 3. Build Node Graph
+        // [Source] -> [Gain (Optional Pre-amp)] -> [Analyser]
+        state.sourceNode = state.audioContext.createMediaStreamSource(state.stream);
+        state.analyserNode = state.audioContext.createAnalyser();
+        state.analyserNode.fftSize = parseInt(selectFft.value);
+        state.analyserNode.smoothingTimeConstant = 0.8; // Smooth FFT transitions
+
+        state.sourceNode.connect(state.analyserNode);
+        
+        state.isRunning = true;
+        updateUI();
+        draw(); // Start render loop
+        statusText.textContent = "Running.";
+
+        // Populate device list if not done
+        if(selectSource.options.length <= 1) {
+            populateDeviceList();
+        }
+
+    } catch (err) {
+        console.error("Audio initialization failed:", err);
+        statusText.textContent = `Error: ${err.message}`;
+        state.isRunning = false;
+        updateUI();
+        alert("Could not access microphone. Ensure you are on HTTPS/localhost and have granted permission.");
+    }
+}
+
+/**
+ * Stop audio processing and release hardware resources.
+ */
+function stopAudio() {
+    if (state.stream) {
+        state.stream.getTracks().forEach(track => track.stop());
+        state.stream = null;
+    }
+    if (state.sourceNode) state.sourceNode.disconnect();
+    state.isRunning = false;
+    updateUI();
+    statusText.textContent = "Stopped.";
+    
+    // Clear display after a brief pause
+    setTimeout(() => {
+        const rect = canvas.parentNode.getBoundingClientRect();
+        drawGrid(rect.width, rect.height);
+        rPk.textContent = "--";
+        rFreq.textContent = "-- Hz";
+    }, 100);
+}
+
+/**
+ * Main Render Loop (requestAnimationFrame)
+ */
+function draw() {
+    if (!state.isRunning) return;
+    requestAnimationFrame(draw);
+
+    const rect = canvas.parentNode.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+
+    // A. Draw Background & Grid
+    drawGrid(width, height);
+
+    if (state.mode === 'time') {
+        renderTimeDomain(width, height);
+    } else {
+        renderFrequencyDomain(width, height);
+    }
+}
+
+function drawGrid(w, h) {
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--scope-bg');
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid');
+    
+    const gridStep = 40; // Pixels per grid line
+    
+    // Vertical lines (Time/Freq)
+    for (let x = 0; x <= w; x += gridStep) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    // Horizontal lines (Amplitude/Magnitude)
+    for (let y = 0; y <= h; y += gridStep) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    
+    // Center Axis (Thicker)
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border');
+    ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+}
+
+/**
+ * Oscilloscope View: Draws the raw waveform.
+ */
+function renderTimeDomain(w, h) {
+    const bufferLength = state.analyserNode.fftSize;
+    const dataArray = new Float32Array(bufferLength);
+    state.analyserNode.getFloatTimeDomainData(dataArray); // Using Float (-1.0 to 1.0)
+
+    // Optimization: Calculate readouts while drawing
+    let maxVal = 0;
+
+    // Setup style
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--trace');
+    ctx.beginPath();
+
+    const sliceWidth = w / bufferLength;
+    let x = 0;
+
+    for (let i = 0; i < bufferLength; i++) {
+        const sample = dataArray[i]; // Float value between -1.0 and 1.0
+        
+        // Calc readouts (Peak)
+        if(Math.abs(sample) > maxVal) maxVal = Math.abs(sample);
+
+        // Apply visual gain and normalize to canvas Y (0 is top, h is bottom)
+        // Center is h/2. We subtract the amplified value.
+        const y = (h / 2) - (sample * state.visualGain * (h / 2));
+
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+
+        x += sliceWidth;
+    }
+
+    ctx.stroke();
+    
+    // Update Readouts
+    rPk.textContent = (maxVal * state.visualGain).toFixed(2);
+    rFreq.textContent = "N/A (Time)";
+}
+
+/**
+ * Spectrum Analyzer View: Draws the Frequency (FFT) bars.
+ */
+function renderFrequencyDomain(w, h) {
+    const bufferLength = state.analyserNode.frequencyBinCount; // fftSize / 2
+    const dataArray = new Uint8Array(bufferLength);
+    state.analyserNode.getByteFrequencyData(dataArray); // Int values (0 to 255)
+
+    // Setup style
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--trace-dim');
+    
+    const barWidth = (w / bufferLength) * 1.5; // Slightly wider for style
+    let x = 0;
+    
+    let maxBinIndex = -1;
+    let maxBinVal = 0;
+
+    for (let i = 0; i < bufferLength; i++) {
+        // Magnitude value (0-255). 0 is silence (-Infinity dB), 255 is clip (0 dBfs)
+        const magnitude = dataArray[i]; 
+
+        // Track peak frequency for readout
+        if (magnitude > maxBinVal) {
+            maxBinVal = magnitude;
+            maxBinIndex = i;
+        }
+
+        const barHeight = (magnitude / 255) * h * state.visualGain;
+
+        // Draw bar from bottom (h) upwards
+        ctx.fillRect(x, h - barHeight, barWidth - 1, barHeight);
+
+        x += barWidth;
+    }
+    
+    // CalcFrequency readout
+    if(maxBinIndex !== -1 && maxBinVal > 20) { // Threshold to ignore noise
+        // Freq = Index * SampleRate / FFTSize
+        const freq = maxBinIndex * state.audioContext.sampleRate / state.analyserNode.fftSize;
+        rFreq.textContent = freq > 1000 ? `${(freq/1000).toFixed(2)} kHz` : `${Math.round(freq)} Hz`;
+    } else {
+        rFreq.textContent = "< noise";
+    }
+    rPk.textContent = "N/A (FFT)";
+}
+
+/**
+ * Handle UI State Updates
+ */
+function updateUI() {
+    // 1. Start/Stop Button
+    btnToggle.textContent = state.isRunning ? "STOP INPUT" : "START INPUT";
+    btnToggle.className = state.isRunning ? "control-btn running" : "control-btn";
+
+    // 2. Display Mode Buttons
+    modeTime.style.borderColor = state.mode === 'time' ? 'var(--primary)' : 'var(--border)';
+    modeFreq.style.borderColor = state.mode === 'freq' ? 'var(--primary)' : 'var(--border)';
+}
+
+/**
+ * Device Management
+ */
+async function populateDeviceList() {
+    try {
+        // Must grab a stream once before device labels are readable
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(d => d.kind === 'audioinput');
+
+        selectSource.innerHTML = ''; // Clear existing
+
+        if(audioInputs.length === 0) {
+            const opt = document.createElement('option');
+            opt.textContent = "No microphones found.";
+            selectSource.appendChild(opt);
+            return;
+        }
+
+        audioInputs.forEach((device, index) => {
+            const opt = document.createElement('option');
+            opt.value = device.deviceId;
+            opt.textContent = device.label || `Microphone ${index + 1}`;
+            // If we are already running on a stream, try to pre-select it
+            if(state.stream && state.stream.getAudioTracks()[0].label === device.label) {
+                opt.selected = true;
+                state.currentInputId = device.deviceId;
+            }
+            selectSource.appendChild(opt);
+        });
+
+    } catch (err) {
+        console.error("Could not populate device list", err);
+    }
+}
+
+/**
+ * Event Listeners
+ */
+
+// Global toggle
+btnToggle.addEventListener('click', () => {
+    if (!state.isRunning) initAudio(selectSource.value);
+    else stopAudio();
+});
+
+// Mode switching
+modeTime.addEventListener('click', () => { state.mode = 'time'; updateUI(); });
+modeFreq.addEventListener('click', () => { state.mode = 'freq'; updateUI(); });
+
+// FFT Resolution change
+selectFft.addEventListener('change', () => {
+    if (state.analyserNode) {
+        state.analyserNode.fftSize = parseInt(selectFft.value);
+    }
+});
+
+// Vertical Gain slider
+sliderGain.addEventListener('input', () => {
+    state.visualGain = parseFloat(sliderGain.value);
+    valGain.textContent = `x${state.visualGain.toFixed(1)}`;
+});
+
+// Device Source Change
+selectSource.addEventListener('change', () => {
+    const newId = selectSource.value;
+    if (newId === state.currentInputId || !newId) return;
+
+    if (state.isRunning) {
+        stopAudio(); // Stop old stream
+        initAudio(newId); // Start new stream immediately
+    }
+    state.currentInputId = newId;
+});
+
+</script>
+</body>
+</html>
