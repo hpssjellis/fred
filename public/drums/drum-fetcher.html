@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Concentric Drum Data Downloader & Config Generator</title>
+    <title>Concentric Drum File Generator v02</title>
     <style>
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
@@ -56,7 +56,7 @@
             font-weight: 600;
             color: #38bdf8;
             text-transform: uppercase;
-            min-width: 130px;
+            min-width: 140px;
         }
         select, input {
             background: #0d0e15;
@@ -70,6 +70,11 @@
         }
         select:focus, input:focus {
             border-color: #4facfe;
+        }
+        select:disabled {
+            background: #1e293b;
+            color: #475569;
+            cursor: not-allowed;
         }
         .btn-container {
             display: flex;
@@ -86,16 +91,18 @@
             cursor: pointer;
             transition: all 0.2s ease;
         }
-        #btn-fetch {
+        #btn-convert {
             background: #007aff;
             color: white;
         }
-        #btn-fetch:hover { background: #0063cc; transform: translateY(-1px); }
+        #btn-convert:hover:not(:disabled) { background: #0063cc; transform: translateY(-1px); }
+        #btn-convert:disabled { background: #1e293b; color: #475569; cursor: not-allowed; }
+
         #btn-download {
             background: #ff9500;
             color: white;
         }
-        #btn-download:hover { background: #e08200; transform: translateY(-1px); }
+        #btn-download:hover:not(:disabled) { background: #e08200; transform: translateY(-1px); }
         #btn-download:disabled {
             background: #334155;
             color: #64748b;
@@ -138,22 +145,23 @@
 <body>
 
 <div class="container">
-    <h1>Concentric Drum File Generator</h1>
-    <p>Fetch open-source patterns from historic rhythm databases, inject layout definitions, and export directly to your dropdown folder array format.</p>
+    <h1>Concentric Drum File Generator v02</h1>
+    <p>Automatically indexed database loader. Select a named pattern from the catalog, map layout boundaries, and generate optimized local configuration files.</p>
 
     <div class="control-group">
         <div class="row">
-            <label for="pattern-idx">Select Pattern ID:</label>
-            <input type="number" id="pattern-idx" min="0" max="199" value="14" style="max-width: 80px;">
-            <span style="font-size: 0.8rem; color: #64748b;">(Index 0 to 199 from the Bardet Collection)</span>
+            <label for="pattern-select">Select Rhythm:</label>
+            <select id="pattern-select" disabled>
+                <option>Loading pattern headings from server catalog...</option>
+            </select>
         </div>
         <div class="row">
             <label for="cfg-bpm">Tempo (BPM):</label>
-            <input type="number" id="cfg-bpm" min="40" max="240" value="110">
+            <input type="number" id="cfg-bpm" min="40" max="240" value="115">
         </div>
         <div class="row">
             <label for="cfg-boxwidth">Box Width (Beats):</label>
-            <input type="number" id="cfg-boxwidth" min="1" max="32" value="4">
+            <input type="number" id="cfg-boxwidth" min="1" max="32" value="8">
         </div>
         <div class="row">
             <label for="cfg-boxheight">Box Height (Rows):</label>
@@ -162,17 +170,18 @@
     </div>
 
     <div class="btn-container">
-        <button id="btn-fetch">🌐 Fetch & Convert Pattern</button>
+        <button id="btn-convert" disabled>⚙️ Process Selected Pattern</button>
         <button id="btn-download" disabled>📥 Download Text Configuration</button>
     </div>
 
     <div id="status-msg" class="status"></div>
 
     <div class="preview-header">Generated Output Preview:</div>
-    <pre id="output-preview"># Output will populate here after pulling database tokens...</pre>
+    <pre id="output-preview"># Output will populate here after selecting a processed database layout token...</pre>
 </div>
 
 <script>
+    let globalCachedDatabase = null;
     let generatedBufferText = "";
     let currentActivePatternName = "pattern";
 
@@ -183,12 +192,12 @@
     const instrumentMap = {
         "closedHihat": "mySound5",
         "snare":        "mySound4",
-        "openHihat":   "mySound5", // map to shared Hi Hat track or crash if desired
+        "openHihat":   "mySound5", 
         "kick":        "mySound0",
         "highTom":     "mySound3",
         "midTom":      "mySound2",
         "lowTom":      "mySound1",
-        "handClap":    "mySound4", // fallback to Snare row for variety
+        "handClap":    "mySound4", 
         "rimShot":     "mySound4"
     };
 
@@ -205,107 +214,126 @@
         { id: "mySound8", name: "Tink Bell",    color: "#ff00ff" }
     ];
 
-    document.getElementById('btn-fetch').addEventListener('click', () => {
-        const patternIdx = parseInt(document.getElementById('pattern-idx').value);
-        const bpm = document.getElementById('cfg-bpm').value;
-        const boxWidth = document.getElementById('cfg-boxwidth').value;
-        const boxHeight = document.getElementById('cfg-boxheight').value;
-        const statusMsg = document.getElementById('status-msg');
-        const preview = document.getElementById('output-preview');
-        const downloadBtn = document.getElementById('btn-download');
-
-        if(isNaN(patternIdx) || patternIdx < 0 || patternIdx > 199) {
-            showStatus("Please pick an index between 0 and 199", "error");
-            return;
-        }
-
-        showStatus("Connecting to repository database API...", "loading");
-
+    // --- ONPAGE INITIALIZATION PASSTHROUGH ---
+    // Fetch index metadata on window instantiation to un-blind choices
+    window.addEventListener('DOMContentLoaded', () => {
+        showStatus("Fetching pattern index collection from remote endpoint...", "loading");
+        
         fetch(DATABASE_URL)
             .then(res => {
-                if(!res.ok) throw new Error("HTTP connection failed: " + res.status);
+                if(!res.ok) throw new Error("Catalog fetch error: " + res.status);
                 return res.json();
             })
             .then(data => {
-                // Bounds validation
-                if(!data.patterns || !data.patterns[patternIdx]) {
-                    throw new Error("Target pattern vector location not found in JSON tree structure.");
+                if (!data.patterns || !Array.isArray(data.patterns)) {
+                    throw new Error("Invalid structure returned from endpoint index tree.");
                 }
 
-                const patternData = data.patterns[patternIdx];
-                currentActivePatternName = (patternData.name || `pattern-${patternIdx}`).replace(/[\s\/]/g, '-').toLowerCase();
+                globalCachedDatabase = data.patterns;
                 
-                // Initialize clean empty 16-step patterns for all 9 rows
-                const workingGrid = {};
-                baseKitConfig.forEach(drum => {
-                    workingGrid[drum.id] = new Array(16).fill(0);
+                const selectEl = document.getElementById('pattern-select');
+                selectEl.innerHTML = ''; // Clear default prompt safely
+
+                // Populate select option tokens using the genuine headings
+                globalCachedDatabase.forEach((pattern, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = idx;
+                    opt.textContent = `Pattern #${String(idx).padStart(3, '0')} - ${pattern.name || 'Unnamed Groove'}`;
+                    selectEl.appendChild(opt);
                 });
 
-                // Parse the inbound dataset notes array matrix
-                if (patternData.notes && Array.isArray(patternData.notes)) {
-                    patternData.notes.forEach(note => {
-                        const targetId = instrumentMap[note.instrument];
-                        const stepIndex = note.step; // 0-15 structural step
-                        if (targetId && stepIndex >= 0 && stepIndex < 16) {
-                            workingGrid[targetId][stepIndex] = 1;
-                        }
-                    });
-                }
-
-                // Inject default variance if the selected track has completely empty fields
-                let totalHits = 0;
-                Object.values(workingGrid).forEach(arr => arr.forEach(val => totalHits += val));
-                if (totalHits === 0) {
-                    // Fallback baseline layout if structural indices match unused elements
-                    workingGrid["mySound0"][0] = 1; workingGrid["mySound0"][8] = 1;
-                    workingGrid["mySound4"][4] = 1; workingGrid["mySound4"][12] = 1;
-                }
-
-                // Construct configuration header string matching your engine's precise parser structure
-                let buf = "";
-                buf += `# ====================================================================\n`;
-                buf += `# Concentric Drum Loop Configuration - Automated Remote Import\n`;
-                buf += `# Source Asset: 200 Drum Machine Patterns Index [${patternIdx}]\n`;
-                buf += `# Style Designation: ${patternData.name || 'Unlabeled Grid'}\n`;
-                buf += `# ====================================================================\n\n`;
-                buf += `BPM : ${bpm}\n`;
-                buf += `Points : 256\n`;
-                buf += `Steps : 16\n`;
-                buf += `BeatMarkers : 4\n`;
-                buf += `Radius : 1.5\n`;
-                buf += `Spacing : 0.8\n`;
-                buf += `NoteHeight : 0.50\n`;
-                buf += `ExplosionHeight : 3.00\n`;
-                buf += `Decay : 6\n`;
-                buf += `Spread : 6\n`;
-                buf += `BoxWidth : ${boxWidth}\n`;
-                buf += `BoxHeight : ${boxHeight}\n\n`;
-                buf += `# Format: Audio_ID | Instrument Name | Hex Color | Step Pattern | Audio_Source\n`;
-
-                // Render out rows utilizing explicit spacing format rules
-                baseKitConfig.forEach(drum => {
-                    const patternArray = workingGrid[drum.id];
-                    let textPattern = "";
-                    for (let i = 0; i < 16; i++) {
-                        if (i > 0 && i % 4 === 0) textPattern += " ";
-                        textPattern += patternArray[i];
-                    }
-                    buf += `${drum.id} | ${drum.name} | ${drum.color} | ${textPattern}\n`;
-                });
-
-                generatedBufferText = buf;
-                preview.textContent = buf;
-                downloadBtn.disabled = false;
-                showStatus(`Successfully parsed pattern "${patternData.name || 'Index ' + patternIdx}"! Ready for export.`, "success");
+                selectEl.disabled = false;
+                document.getElementById('btn-convert').disabled = false;
+                showStatus(`Successfully indexed ${globalCachedDatabase.length} historic patterns. Select a groove above to process!`, "success");
             })
             .catch(err => {
                 console.error(err);
-                showStatus("Error gathering or converting configuration data: " + err.message, "error");
-                downloadBtn.disabled = true;
-                preview.textContent = "# Operation failed.";
+                showStatus("Failed to establish server index pipeline: " + err.message, "error");
+                const selectEl = document.getElementById('pattern-select');
+                selectEl.innerHTML = '<option>Failed to map headings from online resource.</option>';
             });
     });
 
+    // --- CONVERSION ENGINE INTERCEPTOR ---
+    document.getElementById('btn-convert').addEventListener('click', () => {
+        if (!globalCachedDatabase) return;
+
+        const patternIdx = parseInt(document.getElementById('pattern-select').value);
+        const bpm = document.getElementById('cfg-bpm').value;
+        const boxWidth = document.getElementById('cfg-boxwidth').value;
+        const boxHeight = document.getElementById('cfg-boxheight').value;
+        const preview = document.getElementById('output-preview');
+        const downloadBtn = document.getElementById('btn-download');
+
+        const patternData = globalCachedDatabase[patternIdx];
+        if (!patternData) return;
+
+        currentActivePatternName = (patternData.name || `pattern-${patternIdx}`).replace(/[\s\/]/g, '-').toLowerCase();
+        
+        // Initialize clean empty 16-step matrices across rows
+        const workingGrid = {};
+        baseKitConfig.forEach(drum => {
+            workingGrid[drum.id] = new Array(16).fill(0);
+        });
+
+        // Map notes vectors into our internal configurations grid block
+        if (patternData.notes && Array.isArray(patternData.notes)) {
+            patternData.notes.forEach(note => {
+                const targetId = instrumentMap[note.instrument];
+                const stepIndex = note.step; 
+                if (targetId && stepIndex >= 0 && stepIndex < 16) {
+                    workingGrid[targetId][stepIndex] = 1;
+                }
+            });
+        }
+
+        // Guarantee fallback execution structure if tracks return empty arrays
+        let totalHits = 0;
+        Object.values(workingGrid).forEach(arr => arr.forEach(val => totalHits += val));
+        if (totalHits === 0) {
+            workingGrid["mySound0"][0] = 1; workingGrid["mySound0"][8] = 1;
+            workingGrid["mySound4"][4] = 1; workingGrid["mySound4"][12] = 1;
+        }
+
+        // Construct standard file layout block headers 
+        let buf = "";
+        buf += `# ====================================================================\n`;
+        buf += `# Concentric Drum Loop Configuration - Automated Remote Import\n`;
+        buf += `# Source Asset: 200 Drum Machine Patterns Index [${patternIdx}]\n`;
+        buf += `# Style Designation: ${patternData.name || 'Unlabeled Grid'}\n`;
+        buf += `# ====================================================================\n\n`;
+        buf += `BPM : ${bpm}\n`;
+        buf += `Points : 256\n`;
+        buf += `Steps : 16\n`;
+        buf += `BeatMarkers : 4\n`;
+        buf += `Radius : 1.5\n`;
+        buf += `Spacing : 0.8\n`;
+        buf += `NoteHeight : 0.50\n`;
+        buf += `ExplosionHeight : 3.00\n`;
+        buf += `Decay : 6\n`;
+        buf += `Spread : 6\n`;
+        buf += `BoxWidth : ${boxWidth}\n`;
+        buf += `BoxHeight : ${boxHeight}\n\n`;
+        buf += `# Format: Audio_ID | Instrument Name | Hex Color | Step Pattern | Audio_Source\n`;
+
+        // Render string representations using the strict 4x4 group spaces rule
+        baseKitConfig.forEach(drum => {
+            const patternArray = workingGrid[drum.id];
+            let textPattern = "";
+            for (let i = 0; i < 16; i++) {
+                if (i > 0 && i % 4 === 0) textPattern += " ";
+                textPattern += patternArray[i];
+            }
+            buf += `${drum.id} | ${drum.name} | ${drum.color} | ${textPattern}\n`;
+        });
+
+        generatedBufferText = buf;
+        preview.textContent = buf;
+        downloadBtn.disabled = false;
+        showStatus(`Converted "${patternData.name || 'Index ' + patternIdx}" layout matrix values successfully. Click download to export!`, "success");
+    });
+
+    // --- DATA STREAM FILE DUMPER ---
     document.getElementById('btn-download').addEventListener('click', () => {
         if(!generatedBufferText) return;
         const blob = new Blob([generatedBufferText], { type: "text/plain;charset=utf-8" });
