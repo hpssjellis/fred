@@ -98,6 +98,14 @@
             white-space: nowrap;
         }
 
+        button.clear-all-btn {
+            background: #ff3b30;
+        }
+        button.clear-all-btn:hover {
+            background: #d62218;
+            transform: scale(1.02);
+        }
+
         /* ======== SECTION HEADERS ======== */
         .section-header {
             font-size: 0.65rem;
@@ -148,7 +156,7 @@
             display: flex;
             flex-direction: column;
             gap: 1px;
-            background: #ffffff;
+            background: #cbd5e1; /* Gray background allows the black/white structures to pop */
             border-radius: 6px;
             border: 1px solid #ffffff;
             padding: 5px;
@@ -159,7 +167,7 @@
             align-items: center;
             font-size: 0.75rem;
             font-weight: 700;
-            background: #ffffff;
+            background: transparent;
             padding: 0;
             height: 16px;
             white-space: nowrap;
@@ -167,7 +175,7 @@
         .pattern-mini-matrix {
             display: flex;
             flex-direction: row;
-            background: #ffffff;
+            background: transparent;
             padding: 0;
             margin-right: 8px;
         }
@@ -178,6 +186,7 @@
             margin-right: 1px;
             cursor: pointer;
             transition: transform 0.1s;
+            box-sizing: border-box;
         }
         .matrix-cell:hover { transform: scale(1.1); z-index: 2; }
         .matrix-cell.active-column { filter: brightness(0.8); outline: 1px solid #007aff; z-index: 3; }
@@ -185,7 +194,7 @@
         .matrix-cell:last-child { margin-right: 0; }
         .drum-label {
             white-space: nowrap;
-            background: #ffffff;
+            color: #ffffff;
             padding-left: 2px;
             cursor: pointer;
         }
@@ -369,7 +378,6 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
-    <!-- AUDIO ELEMENTS — order matches drumKitConfig display order -->
     <audio preload="auto" id="mySound5" data-title="Hi Hat"       src="https://hpssjellis.github.io/fred/public/drums/wav/hit-hat-tap2.wav"></audio>
     <audio preload="auto" id="mySound4" data-title="Snare Drum"   src="https://hpssjellis.github.io/fred/public/drums/wav/snare2.wav"></audio>
     <audio preload="auto" id="mySound6" data-title="Crash Cymbal" src="https://hpssjellis.github.io/fred/public/drums/wav/left-crash.wav"></audio>
@@ -382,7 +390,6 @@
 
     <div id="canvas-container"></div>
 
-    <!-- Rockstar falling notes overlay -->
     <div id="rockstar-overlay">
         <canvas id="rockstar-canvas"></canvas>
         <div class="rockstar-hit-line"></div>
@@ -392,7 +399,6 @@
         <div id="ui-content">
             <h1>Concentric Drums</h1>
 
-            <!-- Transport Controls -->
             <div class="sidebar-controls">
                 <button id="btn-playback">Start Loop Sequence</button>
                 <button id="btn-rockstar" class="rockstar-btn">🎸 Rockstar Follow Mode</button>
@@ -424,17 +430,15 @@
                 <input type="file" id="file-upload" accept=".txt">
 
                 <button id="btn-export" class="export-btn">Export Current Config</button>
+                <button id="btn-clear-all" class="clear-all-btn">Clear All Tracks</button>
             </div>
 
-            <!-- Drum Grid -->
-            <div class="section-header">Pattern Grid — click cell to toggle · hold to clear row · click name to edit</div>
+            <div class="section-header">Pattern Grid — click cell to toggle · hold to clear row · edit sounds below</div>
             <div class="legend-grid" id="legend-container"></div>
 
-            <!-- Sound Editor -->
             <div class="section-header">Sound Sources — load file, URL, or record mic</div>
             <div class="sound-editor-panel" id="sound-editor-panel"></div>
 
-            <!-- Config Sliders -->
             <div class="section-header">Visual & Timing Parameters</div>
             <div class="config-panel" id="config-panel"></div>
         </div>
@@ -457,6 +461,10 @@
     let myExplosionDecay         = 6.0;
     let myPointsPerBeatSpread    = 6;
 
+    // Custom repeating pattern layout box parameters
+    let myBoxWidth               = 8;
+    let myBoxHeight              = 3;
+
     // Drum order: left-to-right on a real kit
     let drumKitConfig = [
         { id: "mySound5", name: "Hi Hat",       color: 0x00ffb3, pattern: [1,1,0,1, 1,0,1,1, 1,1,0,1, 1,0,0,0], audioSrc: null },
@@ -469,8 +477,6 @@
         { id: "mySound1", name: "Low Tom",      color: 0xff5e00, pattern: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0], audioSrc: null },
         { id: "mySound8", name: "Tink Bell",    color: 0xff00ff, pattern: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], audioSrc: null }
     ];
-
-
 
     let visualBarMeshArray = [];
     let structuralRingArray = [];
@@ -615,19 +621,14 @@
 
     // =========================================================================
     // SHARED: create an editable drum label span
-    // dblclick → rename inline; single click → punch-in at current step
     // =========================================================================
     function makeDrumLabel(drum, drumIndex, hexColor) {
         const span = document.createElement('span');
         span.className = 'drum-label';
         span.style.color = hexColor;
         span.title = 'Click to punch-in at current step · rename in Sound Sources below';
-
-        // Keep text in sync with drum.name via a getter call each render
-        // (renderInteractiveMatrixUI recreates this each time so textContent is always fresh)
         span.textContent = drum.name;
 
-        // Single click only — punch-in the current step
         span.addEventListener('click', function(e) {
             const activeStep = currentSequenceStep;
             drum.pattern[activeStep] = 1;
@@ -672,6 +673,24 @@
                 if (drum.pattern && drum.pattern[step] === 1) {
                     cell.style.background = hexColor;
                     cell.style.boxShadow = `0 0 2px ${hexColor}88`;
+                }
+
+                // --- DYNAMIC REPEATING BLACK BLOCK LOGIC ---
+                // Left Border: First column of the repeating Box Width configuration segment
+                if (step % myBoxWidth === 0) {
+                    cell.style.borderLeft = '1px solid #000000';
+                }
+                // Right Border: Last column of the repeating Box Width configuration segment
+                if ((step + 1) % myBoxWidth === 0 || step === myTotalStepsInLoop - 1) {
+                    cell.style.borderRight = '1px solid #000000';
+                }
+                // Top Border: First instrument row of a repeating Box Height group
+                if (drumIndex % myBoxHeight === 0) {
+                    cell.style.borderTop = '1px solid #000000';
+                }
+                // Bottom Border: Last instrument row of a repeating Box Height group
+                if ((drumIndex + 1) % myBoxHeight === 0 || drumIndex === drumKitConfig.length - 1) {
+                    cell.style.borderBottom = '1px solid #000000';
                 }
 
                 let pressTimer = null;
@@ -725,6 +744,19 @@
     }
 
     // =========================================================================
+    // CLEAR ALL TRACKS
+    // =========================================================================
+    document.getElementById('btn-clear-all').addEventListener('click', () => {
+        if (confirm("Are you sure you want to clear all drum tracks?")) {
+            drumKitConfig.forEach(drum => {
+                drum.pattern = new Array(myTotalStepsInLoop).fill(0);
+            });
+            renderInteractiveMatrixUI();
+            myRockstarNotes = [];
+        }
+    });
+
+    // =========================================================================
     // SOUND EDITOR
     // =========================================================================
     function renderSoundEditor() {
@@ -739,7 +771,6 @@
             row.className = 'sound-row';
             row.id = 'srow-' + drum.id;
 
-            // Header — editable name field
             const header = document.createElement('div');
             header.className = 'sound-row-header';
 
@@ -747,7 +778,6 @@
             swatch.className = 'sound-swatch';
             swatch.style.background = hexColor;
 
-            // Inline editable name input (always visible, minimal style)
             const nameInput = document.createElement('input');
             nameInput.type = 'text';
             nameInput.className = 'sound-name-input';
@@ -759,8 +789,6 @@
                 const newName = nameInput.value.trim() || drum.name;
                 drum.name = newName;
                 nameInput.value = newName;
-                // Sync the grid label span text without full rebuild
-                // renderInteractiveMatrixUI recreates spans from drum.name so just update the live span
                 const gridLabel = document.querySelector(`#legend-container .legend-item:nth-child(${drumIndex + 1}) .drum-label`);
                 if (gridLabel) gridLabel.textContent = newName;
             });
@@ -773,7 +801,6 @@
             header.appendChild(nameInput);
             row.appendChild(header);
 
-            // Status line — shows current audio source path
             const statusEl = document.createElement('div');
             statusEl.className = 'sound-status';
             statusEl.id = 'sstatus-' + drum.id;
@@ -781,11 +808,9 @@
             statusEl.textContent = currentSrc ? shortenPath(currentSrc) : (audioEl ? shortenPath(audioEl.src) : 'default');
             row.appendChild(statusEl);
 
-            // Action buttons
             const actions = document.createElement('div');
             actions.className = 'sound-row-actions';
 
-            // -- Local File button
             const fileBtn = document.createElement('button');
             fileBtn.textContent = '📂 File';
             fileBtn.title = 'Load local audio file';
@@ -797,7 +822,6 @@
                     const f = e.target.files[0];
                     if (!f) return;
                     const blobUrl = URL.createObjectURL(f);
-                    // Store just the filename as the audioSrc reference
                     drum.audioSrc = f.name;
                     loadAudioSrc(drum.id, blobUrl);
                     updateSoundStatus(drum.id, '📂 ' + f.name);
@@ -806,7 +830,6 @@
             };
             actions.appendChild(fileBtn);
 
-            // -- URL button + expandable input
             const urlBtn = document.createElement('button');
             urlBtn.textContent = '🔗 URL';
             urlBtn.title = 'Load from URL';
@@ -832,7 +855,6 @@
             });
             actions.appendChild(urlBtn);
 
-            // -- Record button
             const recBtn = document.createElement('button');
             recBtn.textContent = '🎙 Rec';
             recBtn.title = 'Record from mic · click to start · click again to stop & save';
@@ -845,7 +867,6 @@
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                         myRecChunks = [];
-                        // Pick best available format
                         const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
                             ? 'audio/webm;codecs=opus'
                             : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
@@ -857,11 +878,9 @@
                             const blob = new Blob(myRecChunks, { type: myRecorder.mimeType || 'audio/webm' });
                             const suggestedName = drum.id + '-recording.' + ext;
 
-                            // 1. Play it immediately via blob URL
                             const blobUrl = URL.createObjectURL(blob);
                             loadAudioSrc(drum.id, blobUrl);
 
-                            // 2. Trigger download so user can save to disk
                             const a = document.createElement('a');
                             a.href = blobUrl;
                             a.download = suggestedName;
@@ -869,7 +888,6 @@
                             a.click();
                             document.body.removeChild(a);
 
-                            // 3. Show path textarea for user to confirm/edit saved path
                             showRecordingPathPrompt(drum, suggestedName, statusEl);
 
                             recBtn.textContent = '🎙 Rec';
@@ -890,7 +908,6 @@
             };
             actions.appendChild(recBtn);
 
-            // -- Test button
             const testBtn = document.createElement('button');
             testBtn.textContent = '▶ Test';
             testBtn.title = 'Preview this sound';
@@ -903,9 +920,7 @@
         });
     }
 
-    // Show a small textarea after recording so the user can type/confirm the saved file path
     function showRecordingPathPrompt(drum, suggestedName, statusEl) {
-        // Remove any existing prompt for this drum
         const existingPrompt = document.getElementById('recpath-' + drum.id);
         if (existingPrompt) existingPrompt.remove();
 
@@ -933,7 +948,6 @@
                 wrapper.remove();
             }
             if (e.key === 'Escape') {
-                // Use suggested name as fallback
                 drum.audioSrc = suggestedName;
                 updateSoundStatus(drum.id, '🎙 ' + suggestedName);
                 wrapper.remove();
@@ -942,7 +956,6 @@
 
         wrapper.appendChild(pathInput);
 
-        // Insert after the row's action buttons area
         const row = document.getElementById('srow-' + drum.id);
         if (row) {
             row.appendChild(wrapper);
@@ -957,7 +970,6 @@
 
     function shortenPath(src) {
         if (!src) return '';
-        // For long URLs/paths, trim from the left
         return src.length > 58 ? '…' + src.slice(-55) : src;
     }
 
@@ -980,6 +992,8 @@
         { key: 'explosionheight', label: 'Explosion Ht', min: 0.5, max: 10, step: 0.5, decimals: 1, getter: () => myHitExplosionHt,          setter: v => { myHitExplosionHt = v; } },
         { key: 'decay',      label: 'Decay',           min: 1,   max: 20,  step: 0.5,  decimals: 1, getter: () => myExplosionDecay,          setter: v => { myExplosionDecay = v; } },
         { key: 'spread',     label: 'Spread',          min: 1,   max: 20,  step: 1,    decimals: 0, getter: () => myPointsPerBeatSpread,     setter: v => { myPointsPerBeatSpread = v; } },
+        { key: 'boxwidth',   label: 'Box Width Beats', min: 1,   max: 32,  step: 1,    decimals: 0, getter: () => myBoxWidth,                setter: v => { myBoxWidth = parseInt(v); renderInteractiveMatrixUI(); } },
+        { key: 'boxheight',  label: 'Box Height Rows',  min: 1,   max: 16,  step: 1,    decimals: 0, getter: () => myBoxHeight,               setter: v => { myBoxHeight = parseInt(v); renderInteractiveMatrixUI(); } }
     ];
 
     let myNeedRebuild = false;
@@ -1048,7 +1062,6 @@
                     const v = parseFloat(override.value);
                     if (!isNaN(v)) {
                         def.setter(v);
-                        // Clamp slider display if within range
                         if (v >= def.min && v <= def.max) slider.value = v;
                         valueDisplay.textContent = v.toFixed(def.decimals);
                         override.value = '';
@@ -1064,7 +1077,6 @@
         });
     }
 
-    // Sync slider displays after external config load
     function syncConfigSliders() {
         myConfigDefs.forEach(def => {
             const slider = document.getElementById('cfg-slider-' + def.key);
@@ -1109,8 +1121,8 @@
         myRockstarCanvas.height = window.innerHeight;
     }
 
-    const ROCKSTAR_HIT_Y_FRAC = 0.82; // where the hit line sits (fraction of screen height)
-    const ROCKSTAR_FALL_SPEED = 220;   // px per second
+    const ROCKSTAR_HIT_Y_FRAC = 0.82;
+    const ROCKSTAR_FALL_SPEED = 220;
     const ROCKSTAR_SPAWN_Y = -30;
 
     function spawnRockstarNote(drumIdx) {
@@ -1134,18 +1146,15 @@
 
         myRockstarCtx.clearRect(0, 0, W, H);
 
-        // Lane dividers + labels
         myRockstarCtx.save();
         for (let i = 0; i < n; i++) {
             const laneX = margin + i * laneW;
             const centerX = laneX + laneW / 2;
             const color = "#" + drumKitConfig[i].color.toString(16).padStart(6, '0');
 
-            // Subtle lane tint
             myRockstarCtx.fillStyle = color + '0a';
             myRockstarCtx.fillRect(laneX, 0, laneW, H);
 
-            // Lane divider
             myRockstarCtx.strokeStyle = color + '22';
             myRockstarCtx.lineWidth = 1;
             myRockstarCtx.beginPath();
@@ -1153,7 +1162,6 @@
             myRockstarCtx.lineTo(laneX, H);
             myRockstarCtx.stroke();
 
-            // Hit pad at bottom
             myRockstarCtx.save();
             myRockstarCtx.shadowColor = color;
             myRockstarCtx.shadowBlur = 15;
@@ -1163,7 +1171,6 @@
             myRockstarCtx.fill();
             myRockstarCtx.restore();
 
-            // Label
             myRockstarCtx.fillStyle = color;
             myRockstarCtx.font = 'bold 10px Segoe UI, sans-serif';
             myRockstarCtx.textAlign = 'center';
@@ -1171,7 +1178,6 @@
         }
         myRockstarCtx.restore();
 
-        // Hit line
         myRockstarCtx.save();
         myRockstarCtx.strokeStyle = 'rgba(255,255,255,0.35)';
         myRockstarCtx.lineWidth = 2;
@@ -1183,13 +1189,11 @@
         myRockstarCtx.setLineDash([]);
         myRockstarCtx.restore();
 
-        // Update + draw notes
         const hitThreshold = 22;
         myRockstarNotes = myRockstarNotes.filter(note => note.alpha > 0.02);
         myRockstarNotes.forEach(note => {
             if (!note.hit) {
                 note.y += ROCKSTAR_FALL_SPEED * dt;
-                // Auto-hit at the line
                 if (note.y >= hitY - hitThreshold && note.y <= hitY + hitThreshold * 2) {
                     note.hit = true;
                     note.hitTimer = 0.25;
@@ -1208,7 +1212,6 @@
             myRockstarCtx.beginPath();
             myRockstarCtx.ellipse(note.x, note.y, note.size, note.size * 0.55, 0, 0, Math.PI * 2);
             myRockstarCtx.fill();
-            // Inner highlight
             myRockstarCtx.fillStyle = 'rgba(255,255,255,0.3)';
             myRockstarCtx.beginPath();
             myRockstarCtx.ellipse(note.x - note.size * 0.2, note.y - note.size * 0.15, note.size * 0.3, note.size * 0.2, -0.4, 0, Math.PI * 2);
@@ -1240,7 +1243,7 @@
     }
 
     // =========================================================================
-    // EXPORT
+    // EXPORT (Including Box Width & Height)
     // =========================================================================
     document.getElementById('btn-export').addEventListener('click', () => {
         let buf = "";
@@ -1256,9 +1259,10 @@
         buf += `NoteHeight : ${myPersistentNoteHt.toFixed(2)}\n`;
         buf += `ExplosionHeight : ${myHitExplosionHt.toFixed(2)}\n`;
         buf += `Decay : ${myExplosionDecay}\n`;
-        buf += `Spread : ${myPointsPerBeatSpread}\n\n`;
-        buf += `# Format: Audio_ID | Instrument Name | Hex Color | Step Pattern | Audio_Source (only if changed)\n`;
-        buf += `# Note: local file paths need re-selection via File button on reload (browser security restriction)\n`;
+        buf += `Spread : ${myPointsPerBeatSpread}\n`;
+        buf += `BoxWidth : ${myBoxWidth}\n`;
+        buf += `BoxHeight : ${myBoxHeight}\n\n`;
+        buf += `# Format: Audio_ID | Instrument Name | Hex Color | Step Pattern | Audio_Source\n`;
 
         drumKitConfig.forEach(drum => {
             const hexColorStr = "#" + drum.color.toString(16).padStart(6, '0');
@@ -1267,9 +1271,7 @@
                 if (i > 0 && i % 4 === 0) textPattern += " ";
                 textPattern += (drum.pattern[i] === 1) ? "1" : "0";
             }
-            // Only append audio source column if it was explicitly changed by the user
             const srcField = drum.audioSrc ? ` | ${drum.audioSrc}` : '';
-            // Use pipe with spaces and write name exactly as stored (no padding truncation)
             buf += `${drum.id} | ${drum.name} | ${hexColorStr} | ${textPattern}${srcField}\n`;
         });
 
@@ -1283,12 +1285,9 @@
     });
 
     // =========================================================================
-    // ROBUST TEXT FILE PARSER
-    // Two-pass: (1) extract all key:value params first so Steps/Points are
-    // known before drum rows are parsed; (2) parse drum rows with correct counts.
+    // ROBUST TEXT FILE PARSER (Two-pass)
     // =========================================================================
     function parseKV(k) {
-        // Normalise key: lowercase, strip spaces/underscores/hyphens
         return k.trim().toLowerCase().replace(/[\s_-]/g, '');
     }
 
@@ -1298,19 +1297,14 @@
         const lines = rawText.split(/\r?\n/);
         let parseErrors = 0;
 
-        // Strip inline comments: only strip # and everything after it
-        // IF the # appears before the first pipe (i.e. it's a real comment, not a hex color).
-        // Hex colors like #ff1e27 appear after pipes so they are safe.
         function stripComment(rawLine) {
             const pipeIdx = rawLine.indexOf('|');
             const hashIdx = rawLine.indexOf('#');
             if (hashIdx === -1) return rawLine.trim();
-            // If there's no pipe, or the hash comes before the first pipe → it's a comment
             if (pipeIdx === -1 || hashIdx < pipeIdx) return rawLine.slice(0, hashIdx).trim();
-            // Hash is inside/after pipe-delimited fields → keep the whole line
             return rawLine.trim();
         }
-        // This ensures Steps, Points etc. are set before we read drum patterns.
+
         lines.forEach((rawLine, lineNum) => {
             try {
                 const line = stripComment(rawLine);
@@ -1331,13 +1325,14 @@
                 else if (k === 'explosionheight' || k === 'explosion') myHitExplosionHt = Math.max(0, v);
                 else if (k === 'decay')                     myExplosionDecay         = Math.max(0,   v);
                 else if (k === 'spread')                    myPointsPerBeatSpread    = Math.max(0,   parseInt(v));
+                else if (k === 'boxwidth')                  myBoxWidth               = Math.max(1,   parseInt(v));
+                else if (k === 'boxheight')                 myBoxHeight              = Math.max(1,   parseInt(v));
             } catch (err) {
                 parseErrors++;
                 console.warn(`Pass-1 line ${lineNum + 1}:`, err.message);
             }
         });
 
-        // ---- PASS 2: drum rows — now myTotalStepsInLoop is correct ----
         const newDrums = [];
         lines.forEach((rawLine, lineNum) => {
             try {
@@ -1349,14 +1344,12 @@
                 const drumId   = tokens[0] || ('mySound' + newDrums.length);
                 const drumName = tokens[1] || ('Drum '   + newDrums.length);
 
-                // Color — accept #rrggbb, 0xrrggbb, rrggbb; fallback white
                 let colorInt = 0xffffff;
                 const rawColor = tokens[2].replace(/^#/, '').replace(/^0x/i, '').trim();
                 if (/^[0-9a-fA-F]{3,8}$/.test(rawColor)) {
                     colorInt = parseInt(rawColor.padStart(6, '0'), 16);
                 }
 
-                // Pattern — strip all whitespace then read exactly myTotalStepsInLoop chars
                 const rawPat = (tokens[3] || '').replace(/\s+/g, '');
                 const stepSeq = [];
                 for (let ci = 0; ci < myTotalStepsInLoop; ci++) {
@@ -1364,7 +1357,6 @@
                     stepSeq.push((ch === '1' || ch === 'x') ? 1 : 0);
                 }
 
-                // Optional audio source in column 5
                 const audioSrc = (tokens.length >= 5 && tokens[4]) ? tokens[4] : null;
 
                 newDrums.push({ id: drumId, name: drumName, color: colorInt, pattern: stepSeq, audioSrc });
@@ -1379,25 +1371,22 @@
             return;
         }
 
-        // Freeze the sequencer while we swap state, then resume in the same play/pause state
         const wasPlaying = isPlaying;
-        isPlaying = false;         // pause the render loop's firing logic during swap
+        isPlaying = false;
         lastFiredStep    = -1;
         currentSequenceStep = 0;
         timeAccumulator  = 0;
 
         drumKitConfig = newDrums;
 
-        rebuildVisualizationScene();   // rebuilds 3D + UI grids synchronously
+        rebuildVisualizationScene();
         syncConfigSliders();
 
-        // Resume in whatever state the user had (or start if paused — file load implies intent to play)
         isPlaying = true;
         const playbackBtn = document.getElementById('btn-playback');
         playbackBtn.textContent = "Pause Loop Sequence";
         playbackBtn.classList.add('toggle-active');
 
-        // Apply audio sources after DOM is ready
         setTimeout(() => {
             drumKitConfig.forEach(drum => {
                 if (!drum.audioSrc) return;
@@ -1408,7 +1397,6 @@
                     if (audEl) { audEl.src = src; audEl.load(); }
                     updateSoundStatus(drum.id, '🔗 ' + src);
                 } else {
-                    // Local filename — browser can't open by path; show re-select button
                     const statusEl = document.getElementById('sstatus-' + drum.id);
                     if (statusEl) {
                         statusEl.textContent = `⚠️ Needs re-upload: ${src}`;
@@ -1478,20 +1466,19 @@
         const canvasContainer = document.getElementById('canvas-container');
         if (myRockstarMode) {
             overlay.style.display = 'block';
-            canvasContainer.style.display = 'none';   // hide 3D view
+            canvasContainer.style.display = 'none';
             initRockstarCanvas();
             rockstarBtn.classList.add('toggle-active');
             rockstarBtn.textContent = '🎸 Exit Rockstar Mode';
         } else {
             overlay.style.display = 'none';
-            canvasContainer.style.display = 'block';  // restore 3D view
+            canvasContainer.style.display = 'block';
             rockstarBtn.classList.remove('toggle-active');
             rockstarBtn.textContent = '🎸 Rockstar Follow Mode';
             myRockstarNotes = [];
         }
     });
 
-    // Preset and local file loaders
     document.getElementById('preset-select').addEventListener('change', function(e) {
         const url = e.target.value;
         if (!url) return;
@@ -1507,7 +1494,7 @@
         const reader = new FileReader();
         reader.onload = evt => parseCustomTextConfiguration(evt.target.result);
         reader.readAsText(f);
-        e.target.value = ''; // allow re-loading same file
+        e.target.value = '';
     });
 
     // =========================================================================
