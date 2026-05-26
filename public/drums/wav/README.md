@@ -1,4 +1,23 @@
 
+## from left ot right
+
+
+https://hpssjellis.github.io/fred/public/drums/wav/hit-hat-tap2.wav  
+https://hpssjellis.github.io/fred/public/drums/wav/snare2.wav  
+https://hpssjellis.github.io/fred/public/drums/wav/left-crash.wav  
+https://hpssjellis.github.io/fred/public/drums/wav/left-tom.wav  
+https://hpssjellis.github.io/fred/public/drums/wav/bass.wav  
+https://hpssjellis.github.io/fred/public/drums/wav/right-tom.wav  
+https://hpssjellis.github.io/fred/public/drums/wav/right-crash.wav  
+https://hpssjellis.github.io/fred/public/drums/wav/low-tom.wav  
+
+https://hpssjellis.github.io/fred/public/drums/wav/hi-hat-foot.wav
+
+
+
+
+
+
 
 
 https://hpssjellis.github.io/fred/public/drums/wav/gretschDrumset_china_HiHatMic.wav
