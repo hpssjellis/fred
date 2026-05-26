@@ -15,6 +15,12 @@ https://hpssjellis.github.io/fred/public/drums/wav/hi-hat-foot.wav
 
 
 
+.
+
+.
+
+
+.
 
 
 
