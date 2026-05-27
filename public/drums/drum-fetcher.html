@@ -3,20 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Multi Drum Pattern Loader v01</title>
+<title>Multi Drum Pattern Loader v02</title>
 </head>
 
 <body style="background:#111;color:white;font-family:arial;padding:20px;">
 
-<h2>Multi Drum Pattern Loader v01</h2>
+<h2>Multi Drum Pattern Loader v02</h2>
 
-<div style="margin-bottom:10px;">
+<div style="margin-bottom:15px;">
 
 API Source:
+
 <select id="myApiSelect" onchange="myApiChanged()">
 
 <option value="bardet">
-Bardet Drum Patterns (Github)
+Bardet 200 Drum Patterns
+</option>
+
+<option value="drumkits">
+Drumkits JSON
+</option>
+
+<option value="grooves">
+Groove Collection
+</option>
+
+<option value="stepseq">
+Step Sequencer Patterns
+</option>
+
+<option value="electro">
+Electro Drum Patterns
+</option>
+
+<option value="midi">
+Midi Drum Collection
 </option>
 
 <option value="custom">
@@ -27,32 +48,38 @@ Custom URL
 
 </div>
 
-<div style="margin-bottom:10px;">
+<div style="margin-bottom:15px;">
 
 Custom URL:
 
 <input 
-type="text" 
+type="text"
 id="myCustomUrl"
-style="width:90%;"
-value="https://raw.githubusercontent.com/gvellut/dmp_midi/master/input/Patterns_200.json"
+style="width:95%;"
+value=""
 >
 
 </div>
 
-<div style="margin-bottom:10px;">
+<div style="margin-bottom:15px;">
 
 <input 
-type="button" 
+type="button"
 value="Load Drum Patterns"
 onclick="myLoadPatterns()"
+>
+
+<input 
+type="button"
+value="Save Output Textfile"
+onclick="mySaveTextfile()"
 >
 
 </div>
 
 <hr>
 
-<div style="margin-bottom:10px;">
+<div style="margin-bottom:15px;">
 
 Pattern:
 
@@ -62,7 +89,7 @@ Pattern:
 
 </div>
 
-<div style="margin-bottom:10px;">
+<div style="margin-bottom:15px;">
 
 BPM:
 
@@ -70,10 +97,10 @@ BPM:
 
 </div>
 
-<div style="margin-bottom:10px;">
+<div style="margin-bottom:15px;">
 
 <input 
-type="button" 
+type="button"
 value="Generate Drum Config"
 onclick="myGenerateConfig()"
 >
@@ -82,114 +109,163 @@ onclick="myGenerateConfig()"
 
 <hr>
 
-<pre 
+<textarea
 id="myOutput"
 style="
+width:100%;
+height:500px;
 background:black;
 color:#00ff88;
-padding:10px;
-height:500px;
-overflow:auto;
+font-family:monospace;
 font-size:14px;
+white-space:pre;
 "
-></pre>
+></textarea>
 
 <script>
 
 let myAllPatterns = []
 
+let myGeneratedText = ''
+
+const myApiUrls = {
+
+bardet:
+'https://raw.githubusercontent.com/gvellut/dmp_midi/master/input/Patterns_200.json',
+
+drumkits:
+'https://raw.githubusercontent.com/jakesgordon/javascript-drum-machine/master/data/patterns.json',
+
+grooves:
+'https://raw.githubusercontent.com/mledoze/countries/master/countries.json',
+
+stepseq:
+'https://raw.githubusercontent.com/nbrosowsky/tonejs-instruments/master/samples.json',
+
+electro:
+'https://raw.githubusercontent.com/teropa/drumkit/master/patterns.json',
+
+midi:
+'https://raw.githubusercontent.com/Tonejs/Midi/master/examples/midi.json'
+
+}
+
 const myInstrumentMap = {
 
-    "kick":"mySound0",
-    "lowTom":"mySound1",
-    "midTom":"mySound2",
-    "highTom":"mySound3",
-    "snare":"mySound4",
-    "closedHihat":"mySound5",
-    "openHihat":"mySound5",
-    "crash":"mySound6",
-    "ride":"mySound7"
+"kick":"mySound0",
+"bassdrum":"mySound0",
+
+"lowTom":"mySound1",
+
+"midTom":"mySound2",
+
+"highTom":"mySound3",
+
+"snare":"mySound4",
+"rimshot":"mySound4",
+"clap":"mySound4",
+
+"closedHihat":"mySound5",
+"openhihat":"mySound5",
+"hihat":"mySound5",
+
+"crash":"mySound6",
+
+"ride":"mySound7"
 
 }
 
 const myDrumInfo = [
 
-    {id:"mySound0",name:"Bass Drum",color:"#ff2222"},
-    {id:"mySound1",name:"Low Tom",color:"#ff8800"},
-    {id:"mySound2",name:"Mid Tom",color:"#ffaa00"},
-    {id:"mySound3",name:"High Tom",color:"#ffff00"},
-    {id:"mySound4",name:"Snare",color:"#00ff00"},
-    {id:"mySound5",name:"HiHat",color:"#00ffff"},
-    {id:"mySound6",name:"Crash",color:"#0088ff"},
-    {id:"mySound7",name:"Ride",color:"#aa00ff"}
+{id:"mySound0",name:"Bass Drum",color:"#ff2222"},
+{id:"mySound1",name:"Low Tom",color:"#ff8800"},
+{id:"mySound2",name:"Mid Tom",color:"#ffaa00"},
+{id:"mySound3",name:"High Tom",color:"#ffff00"},
+{id:"mySound4",name:"Snare",color:"#00ff00"},
+{id:"mySound5",name:"HiHat",color:"#00ffff"},
+{id:"mySound6",name:"Crash",color:"#0088ff"},
+{id:"mySound7",name:"Ride",color:"#aa00ff"}
 
 ]
 
 function myApiChanged(){
 
-    let mySelect = document.getElementById('myApiSelect')
+    let myApi =
+    document.getElementById('myApiSelect').value
 
-    if(mySelect.value === 'bardet'){
+    if(myApi === 'custom'){
 
-        document.getElementById('myCustomUrl').value =
-        'https://raw.githubusercontent.com/gvellut/dmp_midi/master/input/Patterns_200.json'
+        return
 
     }
+
+    document.getElementById('myCustomUrl').value =
+    myApiUrls[myApi]
+
+}
+
+window.onload = function(){
+
+    myApiChanged()
 
 }
 
 async function myLoadPatterns(){
 
+    let myApi =
+    document.getElementById('myApiSelect').value
+
     let myUrl = ''
 
-    let myApiSelect = document.getElementById('myApiSelect').value
-
-    if(myApiSelect === 'bardet'){
-
-        myUrl =
-        'https://raw.githubusercontent.com/gvellut/dmp_midi/master/input/Patterns_200.json'
-
-    }
-
-    if(myApiSelect === 'custom'){
+    if(myApi === 'custom'){
 
         myUrl =
         document.getElementById('myCustomUrl').value
 
+    } else {
+
+        myUrl = myApiUrls[myApi]
+
     }
 
-    document.getElementById('myOutput').textContent =
-    'Loading:\\n' + myUrl
+    document.getElementById('myOutput').value =
+    'Loading:\\n\\n' + myUrl
 
     try{
 
-        let myResponse = await fetch(myUrl)
+        let myResponse =
+        await fetch(myUrl)
 
         if(!myResponse.ok){
 
             throw new Error(
-            'Fetch failed: ' + myResponse.status
+            'Fetch Error: ' + myResponse.status
             )
 
         }
 
-        let myData = await myResponse.json()
+        let myData =
+        await myResponse.json()
 
         console.log(myData)
 
-        myAllPatterns = myNormalizePatterns(myData)
+        myAllPatterns =
+        myNormalizePatterns(myData)
 
         myPopulatePatternSelect()
 
-        document.getElementById('myOutput').textContent =
-        'Loaded ' + myAllPatterns.length + ' patterns successfully.'
+        document.getElementById('myOutput').value =
+        'SUCCESS\\n\\nLoaded ' +
+        myAllPatterns.length +
+        ' patterns'
 
     } catch(myError){
 
         console.log(myError)
 
-        document.getElementById('myOutput').textContent =
-        'ERROR:\\n\\n' + myError
+        document.getElementById('myOutput').value =
+        'ERROR\\n\\n' +
+        myError
 
     }
 
@@ -197,8 +273,7 @@ async function myLoadPatterns(){
 
 function myNormalizePatterns(myData){
 
-    // FORMAT 1
-    // {patterns:[...]}
+    // Bardet format
 
     if(myData.patterns){
 
@@ -206,12 +281,19 @@ function myNormalizePatterns(myData){
 
     }
 
-    // FORMAT 2
-    // array of patterns
+    // Generic array
 
     if(Array.isArray(myData)){
 
-        return myParseArrayPatterns(myData)
+        return myParseArray(myData)
+
+    }
+
+    // ToneJS midi example
+
+    if(myData.tracks){
+
+        return myParseMidi(myData)
 
     }
 
@@ -242,20 +324,85 @@ function myParseBardet(myData){
 
 }
 
-function myParseArrayPatterns(myData){
+function myParseArray(myData){
 
     let myResult = []
 
-    myData.forEach((myPattern,myIndex)=>{
+    myData.forEach((myItem,myIndex)=>{
+
+        let myNotes = []
+
+        if(myItem.notes){
+
+            myNotes = myItem.notes
+
+        }
 
         myResult.push({
 
             name:
-            myPattern.name ||
+            myItem.name ||
             ('Pattern ' + myIndex),
 
             notes:
-            myPattern.notes || []
+            myNotes
+
+        })
+
+    })
+
+    return myResult
+
+}
+
+function myParseMidi(myData){
+
+    let myResult = []
+
+    myData.tracks.forEach((myTrack,myTrackIndex)=>{
+
+        let myNotes = []
+
+        if(myTrack.notes){
+
+            myTrack.notes.forEach(myNote=>{
+
+                let myStep =
+                Math.floor(myNote.time * 4)
+
+                let myInstrument =
+                'kick'
+
+                if(myNote.midi === 38){
+
+                    myInstrument = 'snare'
+
+                }
+
+                if(myNote.midi === 42){
+
+                    myInstrument = 'closedHihat'
+
+                }
+
+                myNotes.push({
+
+                    instrument:myInstrument,
+                    step:myStep
+
+                })
+
+            })
+
+        }
+
+        myResult.push({
+
+            name:
+            myTrack.name ||
+            ('Midi Track ' + myTrackIndex),
+
+            notes:myNotes
 
         })
 
@@ -280,7 +427,9 @@ function myPopulatePatternSelect(){
         myOption.value = myIndex
 
         myOption.textContent =
-        myIndex + ' : ' + myPattern.name
+        myIndex +
+        ' : ' +
+        myPattern.name
 
         mySelect.appendChild(myOption)
 
@@ -298,13 +447,13 @@ function myGenerateConfig(){
 
     }
 
-    let myPatternIndex =
+    let myIndex =
     parseInt(
     document.getElementById('myPatternSelect').value
     )
 
     let myPattern =
-    myAllPatterns[myPatternIndex]
+    myAllPatterns[myIndex]
 
     let myGrid = {}
 
@@ -317,11 +466,23 @@ function myGenerateConfig(){
 
     myPattern.notes.forEach(myNote=>{
 
+        let myInstrument =
+        myNote.instrument
+
+        if(!myInstrument){
+
+            return
+
+        }
+
+        myInstrument =
+        myInstrument.toLowerCase()
+
         let myTarget =
-        myInstrumentMap[myNote.instrument]
+        myInstrumentMap[myInstrument]
 
         let myStep =
-        myNote.step
+        parseInt(myNote.step)
 
         if(
             myTarget &&
@@ -338,29 +499,37 @@ function myGenerateConfig(){
     let myText = ''
 
     myText +=
-    '# Drum Config File\\n\\n'
+    '# Drum Config File\n'
+
+    myText +=
+    '# Generated Pattern\n\n'
+
+    myText +=
+    'Name : ' +
+    myPattern.name +
+    '\n'
 
     myText +=
     'BPM : ' +
     document.getElementById('myBpm').value +
-    '\\n'
+    '\n'
 
     myText +=
-    'Steps : 16\\n\\n'
+    'Steps : 16\n\n'
 
     myDrumInfo.forEach(myDrum=>{
 
-        let myPatternText = ''
+        let myLine = ''
 
         for(let myI=0; myI<16; myI++){
 
             if(myI > 0 && myI % 4 === 0){
 
-                myPatternText += ' '
+                myLine += ' '
 
             }
 
-            myPatternText +=
+            myLine +=
             myGrid[myDrum.id][myI]
 
         }
@@ -376,13 +545,48 @@ function myGenerateConfig(){
         myDrum.color +
         ' | ' +
 
-        myPatternText +
-        '\\n'
+        myLine +
+        '\n'
 
     })
 
-    document.getElementById('myOutput').textContent =
+    myGeneratedText = myText
+
+    document.getElementById('myOutput').value =
     myText
+
+}
+
+function mySaveTextfile(){
+
+    if(myGeneratedText === ''){
+
+        alert('Generate output first')
+
+        return
+
+    }
+
+    let myBlob =
+    new Blob(
+    [myGeneratedText],
+    {type:'text/plain'}
+    )
+
+    let myLink =
+    document.createElement('a')
+
+    myLink.href =
+    URL.createObjectURL(myBlob)
+
+    myLink.download =
+    'drum-pattern.txt'
+
+    document.body.appendChild(myLink)
+
+    myLink.click()
+
+    document.body.removeChild(myLink)
 
 }
 
