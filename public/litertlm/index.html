@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign AI - On-Device Chat Sandbox</title>
+</head>
+<body style="margin: 0; padding: 20px; font-family: monospace; background-color: #121212; color: #e0e0e0;">
+
+    <div style="max-width: 800px; margin: 0 auto; border: 1px solid #333; padding: 20px; background-color: #1a1a1a; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+        <h2 style="margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; color: #4caf50;">
+            Local Edge LLM Sandbox (LiteRT-LM)
+        </h2>
+        
+        <p style="font-size: 0.9em; color: #aaa;">
+            This page runs a localized Large Language Model entirely within your browser using WebGPU acceleration. 
+            No cloud API keys required, no external server reporting.
+        </p>
+
+        <!-- Model Configuration Section -->
+        <div style="margin-bottom: 20px; padding: 10px; border: 1px dashed #444; background: #222;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Select Local Weights Model Target:</label>
+            <select id="myModelSelector" style="width: 100%; padding: 8px; background: #333; color: #fff; border: 1px solid #555; font-family: monospace;">
+                <option value="https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-web.litertlm">
+                    Gemma 4 E2B IT (Web Optimization via Hugging Face CDN)
+                </option>
+                <option value="https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it-web.litertlm">
+                    Gemma 4 E4B IT (Larger Footprint / Highly Accurate)
+                </option>
+            </select>
+            <button onclick="myInitializeEngine()" style="margin-top: 10px; padding: 8px 16px; background-color: #4caf50; color: #fff; border: none; font-weight: bold; cursor: pointer; font-family: monospace;">
+                Compile & Instantiate Local Engine
+            </button>
+        </div>
+
+        <!-- Terminal Output Log -->
+        <div id="myTerminalOutput" style="height: 350px; overflow-y: auto; border: 1px solid #333; padding: 15px; background-color: #0d0d0d; color: #00ff00; margin-bottom: 15px; white-space: pre-wrap; font-size: 0.95rem;">[System Log]: Engine uninitialized. Select a model target and compile to load hardware kernels...</div>
+
+        <!-- Input Interface Panel -->
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="myUserPrompt" placeholder="Enter prompt or token request here..." disabled style="flex-grow: 1; padding: 10px; background-color: #2b2b2b; color: #fff; border: 1px solid #444; font-family: monospace;" onkeydown="if(event.key === 'Enter') mySubmitPrompt()">
+            <button id="mySendBtn" onclick="mySubmitPrompt()" disabled style="padding: 10px 20px; background-color: #555; color: #fff; border: none; font-weight: bold; cursor: pointer; font-family: monospace;">
+                Stream Response
+            </button>
+        </div>
+    </div>
+
+    <!-- Core Pipeline Module Initialization -->
+    <script type="module">
+        import { Engine } from 'https://cdn.jsdelivr.net/npm/@litert-lm/core/+esm';
+
+        // Scoping isolated runtime instances globally for simple static functional entry points
+        let myCoreEngine = null;
+        let myActiveConversation = null;
+
+        // Binds module references to the window object to handle functional link activations seamlessly
+        window.myInitializeEngine = async () => {
+            const myTerminal = document.getElementById("myTerminalOutput");
+            const myUrlSelector = document.getElementById("myModelSelector");
+            const mySelectedModelUrl = myUrlSelector.value;
+
+            myTerminal.innerHTML = `[System Log]: Initiating runtime allocation...\n[System Log]: Retrieving model binaries from:\n${mySelectedModelUrl}\n[System Log]: Compiling WebGPU kernels... (This sequence can take up to several seconds depending on your hardware matrix)`;
+            
+            try {
+                // FIXED: Property changed to modelAsset to comply with library specification
+                myCoreEngine = await Engine.create({
+                    modelAsset: mySelectedModelUrl,
+                    mainExecutorSettings: {
+                        maxNumTokens: 4096 // Context allocation boundaries
+                    }
+                });
+
+                // Spawning a zero-dependency local isolated session sequence
+                myActiveConversation = await myCoreEngine.createConversation();
+
+                myTerminal.innerHTML += `\n[System Log]: Hardware pipeline validated. WebGPU bindings compiled successfully.\n[System Log]: Edge model sandbox online and running isolated. State ready.\n\n`;
+                
+                // Toggle application state elements directly
+                document.getElementById("myUserPrompt").disabled = false;
+                document.getElementById("mySendBtn").disabled = false;
+                document.getElementById("mySendBtn").style.backgroundColor = "#0056b3";
+                document.getElementById("myUserPrompt").focus();
+
+            } catch (myError) {
+                myTerminal.innerHTML += `\n\n[Hardware/API Error]: Execution pipeline compilation failure. Ensure your browser environment natively supports WebGPU flag permissions.\nDetails: ${myError.message}`;
+                console.error(myError);
+            }
+        };
+
+        window.mySubmitPrompt = async () => {
+            const myInputNode = document.getElementById("myUserPrompt");
+            const myTerminal = document.getElementById("myTerminalOutput");
+            const myTextPayload = myInputNode.value.trim();
+
+            if (!myTextPayload || !myActiveConversation) return;
+
+            // Immediately sanitize input view node state
+            myInputNode.value = '';
+            myTerminal.innerHTML += `\n\n>>> User Request: ${myTextPayload}\n\nAI Sovereign Node: `;
+            myTerminal.scrollTop = myTerminal.scrollHeight;
+
+            try {
+                // FIXED: Direct delta reading from the local stream wrapper interface
+                const myTokenStream = await myActiveConversation.sendMessageStreaming({ text: myTextPayload });
+                
+                for await (const myChunk of myTokenStream) {
+                    if (myChunk) {
+                        myTerminal.innerHTML += myChunk;
+                        myTerminal.scrollTop = myTerminal.scrollHeight;
+                    }
+                }
+            } catch (myExecutionError) {
+                myTerminal.innerHTML += `\n\n[Runtime Exception Encountered]: Unable to safely sample next token matrix.\nDetails: ${myExecutionError.message}`;
+                console.error(myExecutionError);
+            }
+        };
+    </script>
+</body>
+</html>
