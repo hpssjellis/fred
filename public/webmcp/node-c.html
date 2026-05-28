@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cross-Origin WebMCP Node C</title>
+</head>
+<body style="font-family: sans-serif; padding: 15px; background: #fffbf0; color: #333; margin: 0;">
+
+    <div style="border: 1px solid #ffeeba; background: #fff3cd; padding: 15px; border-radius: 4px;">
+        <h4 style="margin: 0 0 10px 0; color: #856404;">External Node C (Cross-Origin Logistics)</h4>
+        <label style="display: block; font-size: 13px; margin-bottom: 4px;">Live Value:</label>
+        <input type="text" id="myDataInputC" value="Inventory Count: 84" style="width: 100%; padding: 6px; box-sizing: border-box;">
+        <p id="myStatusDisplayC" style="font-size: 12px; margin: 5px 0 0 0; color: #666;">Initializing Cross-Origin Contract...</p>
+    </div>
+
+    <script>
+        async function myRegisterNodeCTool() {
+            const myStatusText = document.getElementById("myStatusDisplayC");
+            if (!navigator.modelContext) {
+                myStatusText.innerText = "❌ WebMCP API missing.";
+                return;
+            }
+            try {
+                await navigator.modelContext.registerTool({
+                    name: "fetch_node_c_data",
+                    description: "Returns secure, cross-origin warehouse inventory logs from Node C.",
+                    inputSchema: { type: "object", properties: {} },
+                    
+                    // CRITICAL: Expressly grant permission to your primary hub site origin
+                    exposedTo: ["https://<your-primary-username>.github.io"],
+                    
+                    execute: async () => {
+                        const myValue = document.getElementById("myDataInputC").value;
+                        return {
+                            content: [{ type: "text", text: JSON.stringify({ nodeCData: myValue }) }]
+                        };
+                    }
+                });
+                myStatusText.innerText = "✅ Registered & whitelisted for Hub access.";
+            } catch (myErr) {
+                myStatusText.innerText = "❌ Error: " + myErr.message;
+            }
+        }
+        myRegisterNodeCTool();
+    </script>
+</body>
+</html>
