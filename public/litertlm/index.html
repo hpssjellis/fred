@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign AI - On-Device Chat Sandbox</title>
+</head>
+<body style="margin: 0; padding: 20px; font-family: monospace; background-color: #121212; color: #e0e0e0;">
+
+    <div style="max-width: 800px; margin: 0 auto; border: 1px solid #333; padding: 20px; background-color: #1a1a1a; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+        <h2 style="margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; color: #4caf50;">
+            Local Edge LLM Sandbox (LiteRT-LM)
+        </h2>
+        
+        <p style="font-size: 0.9em; color: #aaa;">
+            This page runs a localized Large Language Model entirely within your browser using WebGPU acceleration. 
+            No cloud API keys required, no external server reporting.
+        </p>
+
+        <div style="margin-bottom: 20px; padding: 10px; border: 1px dashed #444; background: #222;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Select Local Weights Model Target:</label>
+            <select id="myModelSelector" style="width: 100%; padding: 8px; background: #333; color: #fff; border: 1px solid #555; font-family: monospace;">
+                <option value="https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-web.litertlm">
+                    Gemma 4 E2B IT (Web Optimization via Hugging Face CDN)
+                </option>
+                <option value="https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it-web.litertlm">
+                    Gemma 4 E4B IT (Larger Footprint / Highly Accurate)
+                </option>
+            </select>
+            <button onclick="myInitializeEngine()" style="margin-top: 10px; padding: 8px 16px; background-color: #4caf50; color: #fff; border: none; font-weight: bold; cursor: pointer; font-family: monospace;">
+                Compile & Instantiate Local Engine
+            </button>
+        </div>
+
+        <div id="myProgressContainer" style="margin-bottom: 15px; padding: 10px; background-color: #222; border: 1px solid #333; display: none;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem;">
+                <span id="myProgressStatusLabel" style="color: #4caf50;">Downloading Model Weights...</span>
+                <span id="myProgressPercentageLabel" style="color: #4caf50; font-weight: bold;">0%</span>
+            </div>
+            <div style="width: 100%; background-color: #333; height: 12px; border: 1px solid #444;">
+                <div id="myProgressBarFill" style="width: 0%; height: 100%; background-color: #4caf50; transition: width 0.1s linear;"></div>
+            </div>
+        </div>
+
+        <div id="myTerminalOutput" style="height: 350px; overflow-y: auto; border: 1px solid #333; padding: 15px; background-color: #0d0d0d; color: #00ff00; margin-bottom: 15px; white-space: pre-wrap; font-size: 0.95rem;">[System Log]: Engine uninitialized. Select a model target and compile to load hardware kernels...</div>
+
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="myUserPrompt" placeholder="Enter prompt or token request here..." style="flex-grow: 1; padding: 10px; background-color: #2b2b2b; color: #fff; border: 1px solid #444; font-family: monospace;" onkeydown="if(event.key === 'Enter') mySubmitPrompt()">
+            <button id="mySendBtn" onclick="mySubmitPrompt()" style="padding: 10px 20px; background-color: #0056b3; color: #fff; border: none; font-weight: bold; cursor: pointer; font-family: monospace;">
+                Stream Response
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Engine } from 'https://cdn.jsdelivr.net/npm/@litert-lm/core/+esm';
+
+        // Scoping isolated runtime instances globally for simple static functional entry points
+        let myCoreEngine = null;
+        let myActiveConversation = null;
+        let myIsCompiling = false;
+
+        // Binds module references to the window object to handle functional link activations seamlessly
+        window.myInitializeEngine = async () => {
+            if (myIsCompiling) return;
+            myIsCompiling = true;
+
+            const myTerminal = document.getElementById("myTerminalOutput");
+            const myUrlSelector = document.getElementById("myModelSelector");
+            const mySelectedModelUrl = myUrlSelector.value;
+            
+            // Progress elements references
+            const myProgressContainer = document.getElementById("myProgressContainer");
+            const myProgressBarFill = document.getElementById("myProgressBarFill");
+            const myProgressPercentageLabel = document.getElementById("myProgressPercentageLabel");
+            const myProgressStatusLabel = document.getElementById("myProgressStatusLabel");
+
+            // Reset and reveal the progress container
+            myProgressContainer.style.display = "block";
+            myProgressBarFill.style.width = "0%";
+            myProgressBarFill.style.backgroundColor = "#4caf50";
+            myProgressPercentageLabel.innerText = "0%";
+            myProgressStatusLabel.innerText = "Connecting to repository...";
+
+            myTerminal.innerHTML = `[System Log]: Initiating runtime allocation...\n[System Log]: Intercepting HTTP network streams for model tracking...\n`;
+            myTerminal.scrollTop = myTerminal.scrollHeight;
+            
+            try {
+                // Step 1: Intercept download natively using low-level fetch streams to get real-time progress
+                const myFetchResponse = await fetch(mySelectedModelUrl);
+                if (!myFetchResponse.ok) {
+                    throw new Error(`HTTP network error returned status code: ${myFetchResponse.status}`);
+                }
+
+                const myTotalBytesHeader = myFetchResponse.headers.get('content-length');
+                const myTotalBytes = myTotalBytesHeader ? parseInt(myTotalBytesHeader, 10) : 0;
+                
+                const myStreamReader = myFetchResponse.body.getReader();
+                let myBytesAccumulated = 0;
+                const myBinaryChunks = [];
+
+                myProgressStatusLabel.innerText = "Downloading Model Weights...";
+
+                // Continuous async stream inspection loop
+                while (true) {
+                    const { done: myStreamDone, value: myDataChunk } = await myStreamReader.read();
+                    
+                    if (myStreamDone) {
+                        break;
+                    }
+
+                    myBinaryChunks.push(myDataChunk);
+                    myBytesAccumulated += myDataChunk.length;
+
+                    const myMegaBytesLoaded = (myBytesAccumulated / (1024 * 1024)).toFixed(1);
+                    let myProgressStatusText = `[Serial Monitor Progress]: Fetched ${myMegaBytesLoaded} MB`;
+
+                    if (myTotalBytes > 0) {
+                        const myMegaBytesTotal = (myTotalBytes / (1024 * 1024)).toFixed(1);
+                        const myPercentage = Math.round((myBytesAccumulated / myTotalBytes) * 100);
+                        myProgressStatusText += ` / ${myMegaBytesTotal} MB (${myPercentage}%)`;
+
+                        // Dynamically scale visual elements in real-time
+                        myProgressBarFill.style.width = `${myPercentage}%`;
+                        myProgressPercentageLabel.innerText = `${myPercentage}%`;
+                        myProgressStatusLabel.innerText = `Downloading: ${myMegaBytesLoaded} / ${myMegaBytesTotal} MB`;
+                    } else {
+                        myProgressStatusLabel.innerText = `Downloading: ${myMegaBytesLoaded} MB (Unbounded Size)`;
+                    }
+
+                    myTerminal.innerHTML = `[System Log]: Allocating local model space...\nTarget: ${mySelectedModelUrl}\n${myProgressStatusText}`;
+                }
+
+                myTerminal.innerHTML += `\n[System Log]: Network array download complete. Merging binary parts...`;
+                myTerminal.scrollTop = myTerminal.scrollHeight;
+
+                // Step 2: Combine raw downloaded stream parts into a monolithic Binary Large Object (Blob)
+                const myCompleteModelBlob = new Blob(myBinaryChunks);
+
+                // Update progress components to signal local pipeline compilation state
+                myProgressStatusLabel.innerText = "Compiling WebGPU Hardware Shaders...";
+                myProgressBarFill.style.backgroundColor = "#0056b3"; // Shift bar color to indicate processing phase
+
+                myTerminal.innerHTML += `\n[System Log]: Model weight arrays successfully committed to browser memory storage.`;
+                myTerminal.innerHTML += `\n[System Log]: Allocating memory tables and compiling WebGPU hardware pipelines...`;
+                myTerminal.scrollTop = myTerminal.scrollHeight;
+
+                // Step 3: Instantiate the execution engine context using our verified locally cached Blob
+                myCoreEngine = await Engine.create({
+                    model: myCompleteModelBlob,
+                    mainExecutorSettings: {
+                        maxNumTokens: 4096 
+                    }
+                });
+
+                // Spawning zero-dependency local session sequence
+                myActiveConversation = await myCoreEngine.createConversation({
+                    preface: {
+                        messages: [
+                            { role: 'system', content: 'You are a highly efficient, minimal edge assistant running client-side.' }
+                        ]
+                    }
+                });
+
+                // Wrap up progress bar indicators
+                myProgressStatusLabel.innerText = "Engine Active & Sovereign";
+                myProgressBarFill.style.backgroundColor = "#4caf50";
+                myProgressBarFill.style.width = "100%";
+                myProgressPercentageLabel.innerText = "100%";
+
+                myTerminal.innerHTML += `\n[System Log]: Hardware pipeline validated. WebGPU bindings compiled successfully.\n[System Log]: Edge model sandbox online and running isolated. Ready for localized inference.\n\n`;
+                myTerminal.scrollTop = myTerminal.scrollHeight;
+                myIsCompiling = false;
+
+            } catch (myError) {
+                myProgressStatusLabel.innerText = "Engine Initialization Failed";
+                myProgressBarFill.style.backgroundColor = "#ff3333";
+                
+                myTerminal.innerHTML += `\n\n[Hardware/API Error]: Execution pipeline compilation failure. Ensure your browser environment natively supports WebGPU flag permissions.\nDetails: ${myError.message}`;
+                console.error(myError);
+                myIsCompiling = false;
+            }
+        };
+
+        window.mySubmitPrompt = async () => {
+            const myInputNode = document.getElementById("myUserPrompt");
+            const myTerminal = document.getElementById("myTerminalOutput");
+            const myTextPayload = myInputNode.value.trim();
+
+            if (!myTextPayload) return;
+
+            // Catch submissions when user tries to converse before weights are pulled
+            if (!myActiveConversation) {
+                myTerminal.innerHTML += `\n\n[Block Warning]: Cannot process inference request. The local pipeline engine has not finished initializing or compilation is still downloading model binaries. please tap "Compile & Instantiate Local Engine" first.`;
+                myTerminal.scrollTop = myTerminal.scrollHeight;
+                return;
+            }
+
+            // Immediately sanitize input view node state
+            myInputNode.value = '';
+            myTerminal.innerHTML += `\n\n>>> User Request: ${myTextPayload}\n\nAI Sovereign Node: `;
+            myTerminal.scrollTop = myTerminal.scrollHeight;
+
+            try {
+                // Intercepting tokens using structural hierarchy formats natively
+                const myTokenStream = await myActiveConversation.sendMessageStreaming(myTextPayload);
+                
+                for await (const myChunk of myTokenStream) {
+                    if (myChunk && myChunk.content) {
+                        for (const myItem of myChunk.content) {
+                            if (myItem.type === 'text') {
+                                myTerminal.innerHTML += myItem.text;
+                                myTerminal.scrollTop = myTerminal.scrollHeight;
+                            }
+                        }
+                    }
+                }
+            } catch (myExecutionError) {
+                myTerminal.innerHTML += `\n\n[Runtime Exception Encountered]: Unable to safely sample next token matrix.\nDetails: ${myExecutionError.message}`;
+                console.error(myExecutionError);
+            }
+        };
+    </script>
+</body>
+</html>
