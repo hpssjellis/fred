@@ -17,7 +17,6 @@
             No cloud API keys required, no external server reporting.
         </p>
 
-        <!-- Model Configuration Section -->
         <div style="margin-bottom: 20px; padding: 10px; border: 1px dashed #444; background: #222;">
             <label style="display: block; margin-bottom: 5px; font-weight: bold;">Select Local Weights Model Target:</label>
             <select id="myModelSelector" style="width: 100%; padding: 8px; background: #333; color: #fff; border: 1px solid #555; font-family: monospace;">
@@ -33,10 +32,8 @@
             </button>
         </div>
 
-        <!-- Terminal Output Log -->
         <div id="myTerminalOutput" style="height: 350px; overflow-y: auto; border: 1px solid #333; padding: 15px; background-color: #0d0d0d; color: #00ff00; margin-bottom: 15px; white-space: pre-wrap; font-size: 0.95rem;">[System Log]: Engine uninitialized. Select a model target and compile to load hardware kernels...</div>
 
-        <!-- Input Interface Panel -->
         <div style="display: flex; gap: 10px;">
             <input type="text" id="myUserPrompt" placeholder="Enter prompt or token request here..." disabled style="flex-grow: 1; padding: 10px; background-color: #2b2b2b; color: #fff; border: 1px solid #444; font-family: monospace;" onkeydown="if(event.key === 'Enter') mySubmitPrompt()">
             <button id="mySendBtn" onclick="mySubmitPrompt()" disabled style="padding: 10px 20px; background-color: #555; color: #fff; border: none; font-weight: bold; cursor: pointer; font-family: monospace;">
@@ -45,7 +42,6 @@
         </div>
     </div>
 
-    <!-- Core Pipeline Module Initialization -->
     <script type="module">
         import { Engine } from 'https://cdn.jsdelivr.net/npm/@litert-lm/core/+esm';
 
@@ -59,23 +55,29 @@
             const myUrlSelector = document.getElementById("myModelSelector");
             const mySelectedModelUrl = myUrlSelector.value;
 
-            myTerminal.innerHTML = `[System Log]: Initiating runtime allocation...\n[System Log]: Retrieving model binaries from:\n${mySelectedModelUrl}\n[System Log]: Compiling WebGPU kernels... (This sequence can take up to several seconds depending on your hardware matrix)`;
+            myTerminal.innerHTML = `[System Log]: Initiating runtime allocation...\n[System Log]: Retrieving model binaries from:\n${mySelectedModelUrl}\n[System Log]: Compiling WebGPU kernels... (Downloading several GBs can take time depending on network throughput)`;
             
             try {
-                // FIXED: Property changed to modelAsset to comply with library specification
+                // FIXED: Reset property name back to 'model' to match framework specifications
                 myCoreEngine = await Engine.create({
-                    modelAsset: mySelectedModelUrl,
+                    model: mySelectedModelUrl,
                     mainExecutorSettings: {
-                        maxNumTokens: 4096 // Context allocation boundaries
+                        maxNumTokens: 4096 
                     }
                 });
 
                 // Spawning a zero-dependency local isolated session sequence
-                myActiveConversation = await myCoreEngine.createConversation();
+                myActiveConversation = await myCoreEngine.createConversation({
+                    preface: {
+                        messages: [
+                            { role: 'system', content: 'You are a highly efficient, minimal edge assistant running client-side.' }
+                        ]
+                    }
+                });
 
                 myTerminal.innerHTML += `\n[System Log]: Hardware pipeline validated. WebGPU bindings compiled successfully.\n[System Log]: Edge model sandbox online and running isolated. State ready.\n\n`;
                 
-                // Toggle application state elements directly
+                // Toggle application state elements directly to allow inputs
                 document.getElementById("myUserPrompt").disabled = false;
                 document.getElementById("mySendBtn").disabled = false;
                 document.getElementById("mySendBtn").style.backgroundColor = "#0056b3";
@@ -100,13 +102,17 @@
             myTerminal.scrollTop = myTerminal.scrollHeight;
 
             try {
-                // FIXED: Direct delta reading from the local stream wrapper interface
-                const myTokenStream = await myActiveConversation.sendMessageStreaming({ text: myTextPayload });
+                // Intercepting tokens using correct structural hierarchy format loops
+                const myTokenStream = await myActiveConversation.sendMessageStreaming(myTextPayload);
                 
                 for await (const myChunk of myTokenStream) {
-                    if (myChunk) {
-                        myTerminal.innerHTML += myChunk;
-                        myTerminal.scrollTop = myTerminal.scrollHeight;
+                    if (myChunk && myChunk.content) {
+                        for (const myItem of myChunk.content) {
+                            if (myItem.type === 'text') {
+                                myTerminal.innerHTML += myItem.text;
+                                myTerminal.scrollTop = myTerminal.scrollHeight;
+                            }
+                        }
                     }
                 }
             } catch (myExecutionError) {
