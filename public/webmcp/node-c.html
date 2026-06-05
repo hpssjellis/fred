@@ -26,8 +26,8 @@
                     description: "Returns secure, cross-origin warehouse inventory logs from Node C.",
                     inputSchema: { type: "object", properties: {} },
                     
-                    // CRITICAL: Expressly grant permission to your primary hub site origin
-                    exposedTo: ["https://<your-primary-username>.github.io"],
+                    // Whitelisting your verified origin framework explicitly
+                    exposedTo: ["https://hpssjellis.github.io"],
                     
                     execute: async () => {
                         const myValue = document.getElementById("myDataInputC").value;
