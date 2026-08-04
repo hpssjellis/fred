@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mini VCF Parser</title>
+</head>
+<body style="font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #333;">
+
+    <h2>Client-Side Mini VCF Analyzer</h2>
+    <p>Parses a small public VCF file dataset directly in the browser.</p>
+    
+    <!-- Attribution Banner -->
+    <div style="padding: 12px; background: #eef2f7; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 20px; font-size: 14px;">
+        <strong>Source Information:</strong><br>
+        • <strong>Lab / Location:</strong> Strug Lab, The Hospital for Sick Children (SickKids) & University of Toronto, Toronto, Canada.<br>
+        • <strong>Method Inspiration:</strong> Statistical genetics methodology and open tools (such as <a href="https://lab.research.sickkids.ca/strug/" target="_blank" style="color: #0066cc;">Strug Lab Research</a>).
+    </div>
+
+    <div style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; border-radius: 4px;">
+        <label for="vcfUrlInput" style="display: block; font-weight: bold; margin-bottom: 5px;">VCF File URL:</label>
+        <input type="text" id="vcfUrlInput" value="https://raw.githubusercontent.com/vcflib/vcflib/master/samples/sample.vcf" style="width: 70%; padding: 8px; margin-right: 10px; border: 1px solid #cbd5e1; border-radius: 4px;">
+        <button id="loadVcfButton" style="padding: 9px 16px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer;">Load & Parse VCF</button>
+    </div>
+
+    <div id="statusOutput" style="padding: 10px; background: #f4f4f4; border-left: 4px solid #0066cc; margin-bottom: 20px;">
+        Status: Waiting to load VCF...
+    </div>
+
+    <h3>Variant Records</h3>
+    <div style="overflow-x: auto;">
+        <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+            <thead>
+                <tr id="vcfHeaderRow" style="background: #fafafa;">
+                    <th>#CHROM</th>
+                    <th>POS</th>
+                    <th>ID</th>
+                    <th>REF</th>
+                    <th>ALT</th>
+                    <th>QUAL</th>
+                    <th>FILTER</th>
+                </tr>
+            </thead>
+            <tbody id="vcfTableBody">
+                <tr><td colspan="7" style="text-align: center;">No VCF data loaded yet.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function runVcfParser() {
+            const myStatusOutput = document.getElementById("statusOutput");
+            const myVcfTableBody = document.getElementById("vcfTableBody");
+            const myVcfUrl = document.getElementById("vcfUrlInput").value.trim();
+
+            if (!myVcfUrl) {
+                myStatusOutput.textContent = "Status Error: Please enter a valid VCF URL.";
+                return;
+            }
+
+            try {
+                myStatusOutput.textContent = "Status: Fetching VCF file from URL...";
+                
+                const myResponse = await fetch(myVcfUrl);
+                if (!myResponse.ok) {
+                    throw new Error("Network response failed with status: " + myResponse.status);
+                }
+
+                const myText = await myResponse.text();
+                myStatusOutput.textContent = "Status: Filtering headers and extracting variant records...";
+
+                const myLines = myText.split("\n");
+                let myVariantCount = 0;
+                
+                myVcfTableBody.innerHTML = "";
+
+                for (let i = 0; i < myLines.length; i++) {
+                    let myLine = myLines[i].trim();
+                    if (!myLine) continue;
+
+                    // VCF metadata lines start with '#'
+                    if (myLine.startsWith("##")) {
+                        continue;
+                    }
+                    
+                    // Column name mapping line starts with single '#'
+                    if (myLine.startsWith("#CHROM")) {
+                        continue;
+                    }
+
+                    // Process standard variant data lines
+                    let myCols = myLine.split(/\s+/);
+                    if (myCols.length >= 7) {
+                        myVariantCount++;
+                        let myRow = document.createElement("tr");
+                        
+                        // Extract standard key VCF columns: CHROM, POS, ID, REF, ALT, QUAL, FILTER
+                        for (let c = 0; c < 7; c++) {
+                            let myTd = document.createElement("td");
+                            myTd.textContent = myCols[c] || "";
+                            myRow.appendChild(myTd);
+                        }
+                        myVcfTableBody.appendChild(myRow);
+                    }
+                }
+
+                myStatusOutput.textContent = "Status: Parsing complete. Found " + myVariantCount + " variant records.";
+
+            } catch (myError) {
+                myStatusOutput.textContent = "Status Error: " + myError.message + " (Check CORS permissions for the URL).";
+            }
+        }
+
+        // Static link trigger
+        document.getElementById("loadVcfButton").onclick = runVcfParser;
+    </script>
+</body>
+</html>
