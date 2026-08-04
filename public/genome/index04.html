@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic Genomic Dataset Analyzer</title>
+</head>
+<body style="font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #333;">
+
+    <h2>Dynamic Multi-Omics / Trait Association Viewer</h2>
+    <p>Enter a public CSV dataset URL (such as a raw GitHub CSV link) to dynamically read headers and compute metrics locally.</p>
+    
+    <!-- Model Attribution Banner -->
+    <div style="padding: 12px; background: #eef2f7; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 20px; font-size: 14px;">
+        <strong>Source Information:</strong><br>
+        • <strong>Lab / Location:</strong> Strug Lab, The Hospital for Sick Children (SickKids) & University of Toronto, Toronto, Canada.<br>
+        • <strong>Method Inspiration:</strong> Statistical genetics methodology and web tools (such as <a href="https://lab.research.sickkids.ca/strug/" target="_blank" style="color: #0066cc;">Strug Lab Research</a> and <a href="https://github.com/strug-hub" target="_blank" style="color: #0066cc;">Strug Lab GitHub</a>).
+    </div>
+
+    <!-- Dynamic URL Input Form -->
+    <div style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; border-radius: 4px;">
+        <label for="datasetUrlInput" style="display: block; font-weight: bold; margin-bottom: 5px;">Dataset CSV URL:</label>
+        <input type="text" id="datasetUrlInput" value="https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv" style="width: 70%; padding: 8px; margin-right: 10px; border: 1px solid #cbd5e1; border-radius: 4px;">
+        <button id="loadButton" style="padding: 9px 16px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer;">Load & Analyze</button>
+        <p style="font-size: 12px; color: #64748b; margin-top: 6px;">Note: Ensure the target server allows cross-origin requests (CORS), like raw GitHub user content links.</p>
+    </div>
+
+    <div id="statusOutput" style="padding: 10px; background: #f4f4f4; border-left: 4px solid #0066cc; margin-bottom: 20px;">
+        Status: Waiting for input...
+    </div>
+
+    <h3>Detected Headings & Structure</h3>
+    <div id="headingsOutput" style="margin-bottom: 20px; font-family: monospace; background: #fff; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px;">
+        No dataset loaded yet.
+    </div>
+
+    <h3>Analysis Results</h3>
+    <div style="overflow-x: auto;">
+        <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+            <thead>
+                <tr id="tableHeaderRow" style="background: #fafafa;">
+                    <th>Row Index</th>
+                    <th>Data Preview / Computed Metric</th>
+                </tr>
+            </thead>
+            <tbody id="resultsTableBody">
+                <tr><td colspan="2" style="text-align: center;">Awaiting dataset loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function runDynamicAnalysis() {
+            const myStatusOutput = document.getElementById("statusOutput");
+            const myHeadingsOutput = document.getElementById("headingsOutput");
+            const myTableHeaderRow = document.getElementById("tableHeaderRow");
+            const myResultsTableBody = document.getElementById("resultsTableBody");
+            const myDatasetUrl = document.getElementById("datasetUrlInput").value.trim();
+
+            if (!myDatasetUrl) {
+                myStatusOutput.textContent = "Status Error: Please enter a valid URL.";
+                return;
+            }
+
+            try {
+                myStatusOutput.textContent = "Status: Fetching dataset from URL...";
+                
+                const myResponse = await fetch(myDatasetUrl);
+                if (!myResponse.ok) {
+                    throw new Error("Network response was not ok (Status: " + myResponse.status + ")");
+                }
+
+                const myCsvText = await myResponse.text();
+                myStatusOutput.textContent = "Status: Parsing CSV rows and headers...";
+
+                // Simple CSV line parser
+                const myLines = myCsvText.trim().split("\n");
+                if (myLines.length === 0) {
+                    throw new Error("The fetched dataset is empty.");
+                }
+
+                const myHeaders = myLines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+                myHeadingsOutput.textContent = "Columns detected (" + myHeaders.length + "): " + myHeaders.join(", ");
+
+                // Render dynamic table headers
+                myTableHeaderRow.innerHTML = "<th>Index</th>";
+                myHeaders.forEach(header => {
+                    const myTh = document.createElement("th");
+                    myTh.textContent = header;
+                    myTableHeaderRow.appendChild(myTh);
+                });
+
+                myStatusOutput.textContent = "Status: Running local statistical parsing...";
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                myResultsTableBody.innerHTML = "";
+                
+                // Parse up to the first 15 data rows for preview/analysis
+                const myRowLimit = Math.min(myLines.length, 16);
+                for (let i = 1; i < myRowLimit; i++) {
+                    const myColumns = myLines[i].split(",").map(c => c.trim().replace(/^"|"$/g, ""));
+                    
+                    const myRowElement = document.createElement("tr");
+                    
+                    const myIndexTd = document.createElement("td");
+                    myIndexTd.textContent = i;
+                    myRowElement.appendChild(myIndexTd);
+
+                    myColumns.forEach(col => {
+                        const myTd = document.createElement("td");
+                        myTd.textContent = col;
+                        myRowElement.appendChild(myTd);
+                    });
+
+                    myResultsTableBody.appendChild(myRowElement);
+                }
+
+                myStatusOutput.textContent = "Status: Analysis complete. Showing first " + (myRowLimit - 1) + " rows.";
+
+            } catch (myError) {
+                myStatusOutput.textContent = "Status Error: " + myError.message + " (Check CORS policy or URL validity).";
+            }
+        }
+
+        // Static link trigger instead of addEventListener
+        document.getElementById("loadButton").onclick = runDynamicAnalysis;
+    </script>
+</body>
+</html>
