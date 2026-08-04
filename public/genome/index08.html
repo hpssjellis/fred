@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mini VCF Parser with Verified Presets</title>
+</head>
+<body style="font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #333;">
+
+    <h2>Client-Side Mini VCF Analyzer</h2>
+    <p>Select a verified test dataset or enter a custom URL, parse it in the browser, and inspect the raw file below.</p>
+    
+    <!-- Attribution Banner -->
+    <div style="padding: 12px; background: #eef2f7; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 20px; font-size: 14px;">
+        <strong>Source Information:</strong><br>
+        • <strong>Lab / Location:</strong> Strug Lab, The Hospital for Sick Children (SickKids) & University of Toronto, Toronto, Canada.<br>
+        • <strong>Method Inspiration:</strong> Statistical genetics methodology and open tools (such as <a href="https://lab.research.sickkids.ca/strug/" target="_blank" style="color: #0066cc;">Strug Lab Research</a>).
+    </div>
+
+    <!-- Controls Form -->
+    <div style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; border-radius: 4px;">
+        
+        <!-- Verified Preset Selector -->
+        <div style="margin-bottom: 12px;">
+            <label for="presetUrlSelect" style="display: block; font-weight: bold; margin-bottom: 5px;">Choose a Verified VCF Dataset:</label>
+            <select id="presetUrlSelect" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: white;">
+                <option value="https://raw.githubusercontent.com/vcflib/vcflib/master/samples/sample.vcf">VCFLib Standard Sample VCF</option>
+                <option value="https://raw.githubusercontent.com/freebayes/freebayes/master/test/1.vcf">FreeBayes Unit Test VCF (1.vcf)</option>
+                <option value="https://raw.githubusercontent.com/vcflib/vcflib/master/samples/complex.vcf">VCFLib Complex Structural Variants VCF</option>
+                <option value="https://raw.githubusercontent.com/freebayes/freebayes/master/test/ceutrio.vcf">FreeBayes CEU Trio Family VCF</option>
+            </select>
+        </div>
+
+        <!-- Custom URL Input & Button -->
+        <div>
+            <label for="vcfUrlInput" style="display: block; font-weight: bold; margin-bottom: 5px;">Or Custom VCF File URL:</label>
+            <input type="text" id="vcfUrlInput" value="https://raw.githubusercontent.com/vcflib/vcflib/master/samples/sample.vcf" style="width: 70%; padding: 8px; margin-right: 10px; border: 1px solid #cbd5e1; border-radius: 4px;">
+            <button id="loadVcfButton" style="padding: 9px 16px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer;">Load & Parse VCF</button>
+        </div>
+    </div>
+
+    <div id="statusOutput" style="padding: 10px; background: #f4f4f4; border-left: 4px solid #0066cc; margin-bottom: 20px;">
+        Status: Waiting to load VCF...
+    </div>
+
+    <h3>Variant Records</h3>
+    <div style="overflow-x: auto; margin-bottom: 30px;">
+        <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+            <thead>
+                <tr id="vcfHeaderRow" style="background: #fafafa;">
+                    <th>#CHROM</th>
+                    <th>POS</th>
+                    <th>ID</th>
+                    <th>REF</th>
+                    <th>ALT</th>
+                    <th>QUAL</th>
+                    <th>FILTER</th>
+                </tr>
+            </thead>
+            <tbody id="vcfTableBody">
+                <tr><td colspan="7" style="text-align: center;">No VCF data loaded yet.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Raw File Contents</h3>
+    <p style="font-size: 14px; color: #64748b;">The complete raw text retrieved from the VCF endpoint:</p>
+    <textarea id="rawFileTextarea" rows="12" style="width: 100%; font-family: monospace; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc;" placeholder="Raw VCF content will appear here..."></textarea>
+
+    <script>
+        async function runVcfParser() {
+            const myStatusOutput = document.getElementById("statusOutput");
+            const myVcfTableBody = document.getElementById("vcfTableBody");
+            const myRawFileTextarea = document.getElementById("rawFileTextarea");
+            const myVcfUrl = document.getElementById("vcfUrlInput").value.trim();
+
+            if (!myVcfUrl) {
+                myStatusOutput.textContent = "Status Error: Please enter a valid VCF URL.";
+                return;
+            }
+
+            try {
+                myStatusOutput.textContent = "Status: Fetching VCF file from URL...";
+                
+                const myResponse = await fetch(myVcfUrl);
+                if (!myResponse.ok) {
+                    throw new Error("Network response failed with status: " + myResponse.status);
+                }
+
+                const myText = await myResponse.text();
+                myRawFileTextarea.value = myText;
+
+                myStatusOutput.textContent = "Status: Filtering headers and extracting variant records...";
+
+                const myLines = myText.split("\n");
+                let myVariantCount = 0;
+                
+                myVcfTableBody.innerHTML = "";
+
+                for (let i = 0; i < myLines.length; i++) {
+                    let myLine = myLines[i].trim();
+                    if (!myLine) continue;
+
+                    if (myLine.startsWith("##")) {
+                        continue;
+                    }
+                    
+                    if (myLine.startsWith("#CHROM")) {
+                        continue;
+                    }
+
+                    let myCols = myLine.split(/\s+/);
+                    if (myCols.length >= 7) {
+                        myVariantCount++;
+                        let myRow = document.createElement("tr");
+                        
+                        for (let c = 0; c < 7; c++) {
+                            let myTd = document.createElement("td");
+                            myTd.textContent = myCols[c] || "";
+                            myRow.appendChild(myTd);
+                        }
+                        myVcfTableBody.appendChild(myRow);
+                    }
+                }
+
+                myStatusOutput.textContent = "Status: Parsing complete. Found " + myVariantCount + " variant records.";
+
+            } catch (myError) {
+                myStatusOutput.textContent = "Status Error: " + myError.message + " (Check CORS permissions for the URL).";
+            }
+        }
+
+        document.getElementById("presetUrlSelect").onchange = function() {
+            document.getElementById("vcfUrlInput").value = this.value;
+            runVcfParser();
+        };
+
+        document.getElementById("loadVcfButton").onclick = runVcfParser;
+
+        runVcfParser();
+    </script>
+</body>
+</html>
