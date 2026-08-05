@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Motor Node WebBLE Hub</title>
+</head>
+<body style="font-family: monospace; margin: 20px; max-width: 700px;">
+
+<h2>Motor Node WebBLE Hub</h2>
+<p>Connect directly to one XIAO motor node over Bluetooth. Works in Chrome or Edge on desktop or Android (not iOS Safari - no Web Bluetooth support there).</p>
+
+<!-- ============================================================ -->
+<!-- These MUST exactly match the #define UUIDs in the .ino file  -->
+<!-- ============================================================ -->
+<script>
+var mySERVICE_UUID     = "6e400001-a1b2-4c3d-9e5f-8a2b6c7d9e1f";
+var myCONTROL_CHAR_UUID = "6e400002-a1b2-4c3d-9e5f-8a2b6c7d9e1f"; // Write:  browser -> node commands
+var myDATA_CHAR_UUID    = "6e400003-a1b2-4c3d-9e5f-8a2b6c7d9e1f"; // Notify: node -> browser
+var myBINARY_CHAR_UUID  = "6e400004-a1b2-4c3d-9e5f-8a2b6c7d9e1f"; // Write:  browser -> node, model upload
+
+var myDevice = null;
+var myServer = null;
+var myControlChar = null;
+var myDataChar = null;
+var myBinaryChar = null;
+
+// Buffers used while reassembling a multi-chunk Notify send from the node.
+// Both text (JSON: status/list/stream/ack/error) and binary (CSV/model
+// pull) messages use the same raw-byte accumulation, only decoded to
+// text at the very end - this avoids any risk of a multi-byte UTF-8
+// character getting split across a chunk boundary and decoded incorrectly.
+var myRawChunks = [];
+var myPullInProgress = false;
+var myPullFilename = "";
+
+// Safety net: if a file pull never completes (dropped connection,
+// missed <<END>>, etc.) myPullInProgress could otherwise get stuck
+// true forever, silently misrouting every later notification -
+// including stream messages - into the file-download path. This
+// timer force-clears it after a generous timeout.
+var myPullTimeoutHandle = null;
+var MY_PULL_TIMEOUT_MS = 15000;
+
+// Live counters so it's always obvious from the page itself whether
+// notifications are arriving at all, independent of the message log.
+var myNotifyCount = 0;
+var myStreamMsgCount = 0;
+</script>
+
+<!-- ============================================================ -->
+<!-- Connect / disconnect                                         -->
+<!-- ============================================================ -->
+<p>
+<button onclick="myConnect()">Connect to Motor Node</button>
+<button onclick="myDisconnect()">Disconnect</button>
+<span id="myConnStatus" style="margin-left: 10px; font-weight: bold;">Not connected</span>
+</p>
+<p style="color: #555;">
+Notifications received: <span id="myNotifyCountDisplay">0</span> &nbsp;|&nbsp;
+Stream messages received: <span id="myStreamCountDisplay">0</span>
+</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<!-- Basic status / mode control                                  -->
+<!-- ============================================================ -->
+<h3>Status &amp; Mode Control</h3>
+<table style="border-collapse: collapse;">
+<tr>
+<td style="vertical-align: top; padding-right: 20px;">
+<p>
+<button onclick="mySendCommand('STATUS')">Get Status</button>
+<button onclick="mySendCommand('LIST')">List Sample Counts</button><br><br>
+<button onclick="mySendCommand('CMD_STOP')">Stop Current Mode (same as serial "L")</button>
+</p>
+<p>
+<button onclick="mySendCommand('CMD_START_TRAIN')">Start Train</button>
+<button onclick="mySendCommand('CMD_START_INFER')">Start Infer</button>
+</p>
+<p>
+Collect class index (0 or 1):
+<input type="number" id="myCollectIndex" value="0" min="0" max="1" style="width: 50px;" onchange="myUpdatePullPathFromClass()">
+<button onclick="myStartCollect()">Start Collect</button>
+<button onclick="mySendCommand('CMD_CAPTURE')">Capture Sample (same as serial "T")</button>
+</p>
+</td>
+<td style="vertical-align: top; border-left: 2px solid #999; padding-left: 20px;">
+<b>Last action result:</b>
+<pre id="myModeFeedback" style="background: #f0f0f0; padding: 8px; min-height: 120px; width: 280px; white-space: pre-wrap;">(no action yet)</pre>
+</td>
+</tr>
+</table>
+
+<hr>
+
+<!-- ============================================================ -->
+<!-- Live stream (aggregated inference summary)                   -->
+<!-- ============================================================ -->
+<h3>Live Stream</h3>
+<p>
+Interval (seconds, min 10):
+<input type="number" id="myIntervalSeconds" value="15" style="width: 70px;">
+<button onclick="mySetInterval()">Set Interval</button>
+</p>
+<p>
+<button onclick="mySendCommand('STREAM_ON')">Stream On</button>
+<button onclick="mySendCommand('STREAM_OFF')">Stream Off</button>
+</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<!-- CSV pull                                                      -->
+<!-- ============================================================ -->
+<h3>Pull CSV File</h3>
+<p>Path auto-fills from the class index selected above, since each class's samples live in <code>/motion/&lt;classLabel&gt;/</code> on the node's SD card. Edit the filename (e.g. <code>s2.csv</code>) if you want a different sample number.</p>
+<p>
+Path on node's SD card:
+<input type="text" id="myPullPath" value="/motion/0off/s1.csv" style="width: 250px;">
+<button onclick="myPullFile()">Pull &amp; Download</button>
+</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<!-- Binary model file - two-way transfer                         -->
+<!-- ============================================================ -->
+<h3>Model &amp; Calibration File Transfer (Download / Upload)</h3>
+<p>Same file path on the node's SD card either way. Download reads it off SD and saves it to your computer/phone. Upload sends a file from your computer/phone to the node - the node auto-loads it as soon as the transfer completes (auto-load only applies to the model weights file below; other files are just read/written as-is).</p>
+<p>The node keeps three separate binary files under <code>/header/</code>:</p>
+<ul>
+<li><code>/header/myAnomalyMLWeights.bin</code> - trained model weights (Upload auto-loads this one)</li>
+<li><code>/header/myCalib.bin</code> - IMU calibration (accel mean/std), saved once at first boot</li>
+<li><code>/header/myFeatureBaseline.bin</code> - secondary per-axis RMS/P2P/ZCR baseline, built during Train</li>
+</ul>
+<p>
+Path on node's SD card:
+<input type="text" id="myModelPath" value="/header/myAnomalyMLWeights.bin" style="width: 280px;">
+</p>
+<p>
+<b>Download from node:</b>
+<button onclick="myDownloadModel()">Download Model File</button>
+</p>
+<p>
+<b>Upload to node:</b>
+<input type="file" id="myModelFile">
+<button onclick="myPushModel()">Upload Model File</button>
+</p>
+<p id="myUploadProgress"></p>
+
+<hr>
+
+<!-- ============================================================ -->
+<!-- Raw message log                                               -->
+<!-- ============================================================ -->
+<h3>Message Log</h3>
+<button onclick="myClearLog()">Clear Log</button>
+<pre id="myLog" style="background: #f0f0f0; padding: 10px; height: 300px; overflow-y: scroll; border: 1px solid #999;"></pre>
+
+<script>
+
+function myLogLine(text) {
+  var logBox = document.getElementById("myLog");
+  var timestamp = new Date().toLocaleTimeString();
+  logBox.textContent += "[" + timestamp + "] " + text + "\n";
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function myClearLog() {
+  document.getElementById("myLog").textContent = "";
+}
+
+function mySetConnStatus(text, connected) {
+  var el = document.getElementById("myConnStatus");
+  el.textContent = text;
+  el.style.color = connected ? "green" : "red";
+}
+
+// ============================================================
+// Connect / disconnect
+// ============================================================
+async function myConnect() {
+  try {
+    myLogLine("Requesting device (filter: service " + mySERVICE_UUID + ")...");
+    myDevice = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [mySERVICE_UUID] }]
+    });
+
+    myDevice.addEventListener("gattserverdisconnected", myOnDisconnected);
+
+    myLogLine("Connecting to GATT server on " + myDevice.name + "...");
+    myServer = await myDevice.gatt.connect();
+
+    var service = await myServer.getPrimaryService(mySERVICE_UUID);
+
+    myControlChar = await service.getCharacteristic(myCONTROL_CHAR_UUID);
+    myDataChar = await service.getCharacteristic(myDATA_CHAR_UUID);
+    myBinaryChar = await service.getCharacteristic(myBINARY_CHAR_UUID);
+
+    await myDataChar.startNotifications();
+    myDataChar.addEventListener("characteristicvaluechanged", myOnDataNotify);
+
+    mySetConnStatus("Connected: " + myDevice.name, true);
+    myLogLine("Connected and subscribed to notifications.");
+  } catch (err) {
+    myLogLine("Connect failed: " + err);
+    mySetConnStatus("Not connected", false);
+  }
+}
+
+function myDisconnect() {
+  if (myDevice && myDevice.gatt.connected) {
+    myDevice.gatt.disconnect();
+  }
+}
+
+function myOnDisconnected() {
+  mySetConnStatus("Not connected", false);
+  myLogLine("Device disconnected.");
+}
+
+// ============================================================
+// Sending commands (Control characteristic, Write)
+// ============================================================
+async function mySendCommand(cmd) {
+  if (!myControlChar) {
+    myLogLine("Not connected - cannot send: " + cmd);
+    return;
+  }
+  try {
+    myLogLine("-> " + cmd);
+    var encoder = new TextEncoder();
+    await myControlChar.writeValue(encoder.encode(cmd));
+  } catch (err) {
+    myLogLine("Send failed: " + err);
+  }
+}
+
+// Class folder names MUST exactly match myClassLabels[] in the .ino -
+// currently {"0off", "1normal"}. Update this array if you change the
+// class labels in the firmware.
+var myClassFolderNames = ["0off", "1normal"];
+
+function myStartCollect() {
+  var idx = document.getElementById("myCollectIndex").value;
+  mySendCommand("CMD_START_COLLECT:" + idx);
+}
+
+function myUpdatePullPathFromClass() {
+  var idxInput = document.getElementById("myCollectIndex");
+  var idx = parseInt(idxInput.value, 10);
+  if (isNaN(idx) || idx < 0) idx = 0;
+  if (idx > 1) idx = 1;
+  idxInput.value = idx;   // clamp the box itself, in case of typed-in values outside 0-1
+
+  var folder = myClassFolderNames[idx];
+  document.getElementById("myPullPath").value = "/motion/" + folder + "/s1.csv";
+}
+
+function mySetInterval() {
+  var secs = document.getElementById("myIntervalSeconds").value;
+  mySendCommand("SET_INTERVAL:" + secs);
+}
+
+// Sync the CSV path field to the default class index (0) as soon
+// as the page loads, so it's already correct before any button click.
+window.addEventListener("load", myUpdatePullPathFromClass);
+
+// ============================================================
+// Receiving (Data characteristic, Notify)
+//
+// Two kinds of incoming data share this one characteristic:
+//   - Text/JSON messages (status, list, stream, ack, error) which
+//     always end with the literal marker "<<END>>"
+//   - Raw CSV bytes during a PULL, terminated the same way, but
+//     must NOT be decoded as text until the transfer is complete
+//     (CSV bytes are not guaranteed valid UTF-8 mid-chunk).
+// ============================================================
+function myOnDataNotify(event) {
+  myNotifyCount++;
+  document.getElementById("myNotifyCountDisplay").textContent = myNotifyCount;
+
+  var value = event.target.value; // DataView
+  var bytes = new Uint8Array(value.buffer);
+
+  // Check whether this chunk IS exactly the end marker "<<END>>" -
+  // the marker itself is always sent as its own separate Notify by
+  // the firmware, so a plain byte-length + byte-value check is safe
+  // and avoids decoding partial/accumulated data as text early.
+  if (myIsEndMarker(bytes)) {
+    if (myPullInProgress) {
+      myFinishFilePull();
+    } else {
+      myFinishTextMessage();
+    }
+    return;
+  }
+
+  myRawChunks.push(bytes);
+}
+
+function myIsEndMarker(bytes) {
+  var marker = "<<END>>";
+  if (bytes.length !== marker.length) return false;
+  for (var i = 0; i < marker.length; i++) {
+    if (bytes[i] !== marker.charCodeAt(i)) return false;
+  }
+  return true;
+}
+
+function myCombineRawChunks() {
+  var totalLen = 0;
+  for (var i = 0; i < myRawChunks.length; i++) totalLen += myRawChunks[i].length;
+  var combined = new Uint8Array(totalLen);
+  var offset = 0;
+  for (var i = 0; i < myRawChunks.length; i++) {
+    combined.set(myRawChunks[i], offset);
+    offset += myRawChunks[i].length;
+  }
+  myRawChunks = [];
+  return combined;
+}
+
+function myFinishTextMessage() {
+  var combined = myCombineRawChunks();
+  var decoder = new TextDecoder("utf-8");
+  var msg = decoder.decode(combined);
+  myLogLine("<- " + msg);
+
+  // Try to parse as JSON for nicer output; if it fails, it's still
+  // fully logged above as raw text.
+  try {
+    var obj = JSON.parse(msg);
+    if (obj.type === "stream") {
+      myStreamMsgCount++;
+      document.getElementById("myStreamCountDisplay").textContent = myStreamMsgCount;
+      myLogLine("   Stream summary: avgML=" + obj.avgMLpct + "% peakML=" + obj.peakMLpct +
+                 "% windows=" + obj.windows + " anomalies=" + obj.anomalyWindows);
+    } else {
+      // status / list / ack / error - these are all direct results of
+      // a Status & Mode Control button, so mirror them into that
+      // section's own feedback box rather than only the shared log.
+      myShowModeFeedback(obj);
+    }
+  } catch (e) {
+    myLogLine("   (not valid JSON - parse error: " + e.message + ")");
+  }
+}
+
+// Pretty-print a parsed JSON response into the Status & Mode Control
+// feedback box, so the effect of the last button pressed there is
+// visible right next to the buttons instead of only in the log below.
+function myShowModeFeedback(obj) {
+  var box = document.getElementById("myModeFeedback");
+  var timestamp = new Date().toLocaleTimeString();
+  box.textContent = "[" + timestamp + "]\n" + JSON.stringify(obj, null, 2);
+}
+
+// ============================================================
+// Generic file pull (used for both CSV sample files and the
+// model .bin file - same PULL:<path> command on the node either
+// way, since myBLEHandlePull() just reads raw bytes off SD).
+// ============================================================
+function myPullFile() {
+  var path = document.getElementById("myPullPath").value;
+  myStartPull(path);
+}
+
+function myDownloadModel() {
+  var path = document.getElementById("myModelPath").value;
+  myStartPull(path);
+}
+
+function myStartPull(path) {
+  myPullFilename = path.split("/").pop() || "download.bin";
+  myPullInProgress = true;
+  myRawChunks = [];
+
+  // Safety net: force-clear myPullInProgress if <<END>> never arrives,
+  // so a dropped/incomplete transfer can never permanently misroute
+  // later notifications (see comment near the variable declaration).
+  if (myPullTimeoutHandle) clearTimeout(myPullTimeoutHandle);
+  myPullTimeoutHandle = setTimeout(function() {
+    if (myPullInProgress) {
+      myLogLine("WARNING: file pull for " + myPullFilename + " timed out - clearing pull state so notifications aren't stuck misrouted.");
+      myPullInProgress = false;
+      myRawChunks = [];
+    }
+  }, MY_PULL_TIMEOUT_MS);
+
+  mySendCommand("PULL:" + path);
+}
+
+function myFinishFilePull() {
+  myPullInProgress = false;
+  if (myPullTimeoutHandle) { clearTimeout(myPullTimeoutHandle); myPullTimeoutHandle = null; }
+  var combined = myCombineRawChunks();
+
+  myLogLine("File pull complete: " + myPullFilename + " (" + combined.length + " bytes)");
+
+  // .csv gets a text MIME type for nicer OS handling, everything
+  // else (e.g. .bin) is saved as generic binary - either way the
+  // bytes themselves are untouched.
+  var mimeType = myPullFilename.toLowerCase().endsWith(".csv") ? "text/csv" : "application/octet-stream";
+  var blob = new Blob([combined], { type: mimeType });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = myPullFilename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// Model upload (Binary characteristic, Write)
+//
+// Protocol (must match MyBLEBinaryCallbacks::onWrite in the .ino):
+//   1. First write: exactly 4 bytes, little-endian uint32 total size
+//   2. Following writes: raw file bytes, in order, chunked to fit
+//      comfortably under the negotiated MTU
+// The node auto-loads the model the instant byte count matches the
+// size header - no separate confirm step.
+//
+// NOTE: the Binary characteristic's upload path is fixed in the
+// firmware itself (always /header/myAnomalyMLWeights.bin) - the
+// myModelPath field above is used for Download (which goes through
+// the general-purpose PULL:<path> command and can read any file)
+// but Upload always writes to that one fixed firmware path.
+// ============================================================
+async function myPushModel() {
+  if (!myBinaryChar) {
+    myLogLine("Not connected - cannot push model");
+    return;
+  }
+  var fileInput = document.getElementById("myModelFile");
+  if (!fileInput.files || fileInput.files.length === 0) {
+    myLogLine("No model file selected");
+    return;
+  }
+  var file = fileInput.files[0];
+  var progressEl = document.getElementById("myUploadProgress");
+
+  try {
+    var arrayBuffer = await file.arrayBuffer();
+    var fileBytes = new Uint8Array(arrayBuffer);
+    var totalSize = fileBytes.length;
+
+    myLogLine("Pushing model: " + file.name + " (" + totalSize + " bytes)");
+
+    // Step 1: 4-byte little-endian size header
+    var header = new Uint8Array(4);
+    header[0] = totalSize & 0xFF;
+    header[1] = (totalSize >> 8) & 0xFF;
+    header[2] = (totalSize >> 16) & 0xFF;
+    header[3] = (totalSize >> 24) & 0xFF;
+    await myBinaryChar.writeValue(header);
+
+    // Step 2: file bytes, chunked. Match the firmware's expected
+    // Notify chunk size for consistency with the rest of the protocol.
+    // A small delay between writes avoids outrunning the node's BLE
+    // write queue, same pacing idea as the firmware uses on its side.
+    var CHUNK_SIZE = 180;
+    var sent = 0;
+    for (var offset = 0; offset < totalSize; offset += CHUNK_SIZE) {
+      var end = Math.min(offset + CHUNK_SIZE, totalSize);
+      var chunk = fileBytes.slice(offset, end);
+      await myBinaryChar.writeValue(chunk);
+      await new Promise(function(resolve) { setTimeout(resolve, 15); });
+      sent = end;
+      progressEl.textContent = "Uploading: " + sent + " / " + totalSize + " bytes (" +
+                                Math.round(100 * sent / totalSize) + "%)";
+    }
+
+    myLogLine("Model upload complete - waiting for node to confirm load...");
+    progressEl.textContent = "Upload complete - waiting for node confirmation.";
+  } catch (err) {
+    myLogLine("Model push failed: " + err);
+    progressEl.textContent = "Upload failed: " + err;
+  }
+}
+
+</script>
+
+</body>
+</html>
