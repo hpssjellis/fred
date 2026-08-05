@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Motor Node WebBLE Hub</title>
+</head>
+<body style="font-family: monospace; margin: 20px; max-width: 900px;">
+
+<h2>Motor Node WebBLE Hub - v011</h2>
+<p>Connects to MULTIPLE XIAO motor nodes at once over Bluetooth (v010 only supported one connection at a time).
+Works in Chrome or Edge on desktop or Android (not iOS Safari - no Web Bluetooth support there).</p>
+<p style="color:#555;">
+<b>v011 changes:</b> each node gets its own concurrent GATT connection instead of sharing one global
+connection slot, so the Dashboard below can show live readings from every node in range at the same
+time instead of round-robin polling. Each node also gets an editable text label (stored in this
+browser's <code>localStorage</code>, keyed by the node's Bluetooth device id) so you can rename
+"XIAO-Anomaly-02" to something like "Line 3 Conveyor Motor" - the rename persists across page reloads
+on this browser/computer. Train / Collect / Capture / Model-upload remain single "active device"
+actions, since those are physical stand-at-the-machine tasks anyway.
+</p>
+
+<!-- ============================================================ -->
+<!-- These MUST exactly match the #define UUIDs in the .ino file  -->
+<!-- ============================================================ -->
+<script>
+var mySERVICE_UUID     = "6e400001-a1b2-4c3d-9e5f-8a2b6c7d9e1f";
+var myCONTROL_CHAR_UUID = "6e400002-a1b2-4c3d-9e5f-8a2b6c7d9e1f"; // Write:  browser -> node commands
+var myDATA_CHAR_UUID    = "6e400003-a1b2-4c3d-9e5f-8a2b6c7d9e1f"; // Notify: node -> browser
+var myBINARY_CHAR_UUID  = "6e400004-a1b2-4c3d-9e5f-8a2b6c7d9e1f"; // Write:  browser -> node, model upload
+
+// ------------------------------------------------------------
+// Multi-device state. v010 had one global myDevice/myServer/etc.
+// v011 keeps one record per connected node, keyed by the Web
+// Bluetooth device.id (stable per-origin across sessions once
+// permission is granted, which is also what makes the label
+// localStorage lookup and the getDevices() reconnect path work).
+// ------------------------------------------------------------
+var myDevices = {};          // id -> device record (see myConnectDevice)
+var myActiveDeviceId = null; // which device the single-device panels below act on
+
+var MY_PULL_TIMEOUT_MS = 15000;
+var MY_MAX_RETRIES     = 3;      // auto-reconnect attempts before giving up on a dropped node
+var MY_RETRY_BASE_MS   = 4000;   // retry delay grows: 4s, 8s, 12s
+
+// ------------------------------------------------------------
+// Per-device labels, persisted in localStorage so renames survive
+// page reloads. Loaded once at script start (not just on window
+// load) so it's ready before the first connect happens.
+// ------------------------------------------------------------
+var MY_LABEL_STORAGE_KEY = "myXiaoAnomalyDeviceLabels";
+var myLabels = {};
+var myLocalStorageOk = true;
+
+function myLoadLabels() {
+  try {
+    var raw = localStorage.getItem(MY_LABEL_STORAGE_KEY);
+    myLabels = raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    myLocalStorageOk = false;
+    myLabels = {};
+  }
+}
+myLoadLabels();
+
+function mySaveLabel(id, label) {
+  var trimmed = (label || "").trim();
+  if (trimmed.length === 0) {
+    delete myLabels[id];
+  } else {
+    myLabels[id] = trimmed;
+  }
+  if (!myLocalStorageOk) return;
+  try {
+    localStorage.setItem(MY_LABEL_STORAGE_KEY, JSON.stringify(myLabels));
+  } catch (err) {
+    myLocalStorageOk = false;
+    myLogLine("WARNING: localStorage write failed (" + err + ") - labels won't persist this session.");
+  }
+}
+</script>
+
+<!-- ============================================================ -->
+<!-- Device Dashboard - the v011 concurrent multi-node view       -->
+<!-- ============================================================ -->
+<h3>Device Dashboard</h3>
+<p>
+<button onclick="myScanAndAddDevice()">Scan &amp; Add Device</button>
+<button onclick="myReconnectKnownDevices()">Reconnect Known Devices</button>
+&nbsp;|&nbsp;
+Connected: <span id="myConnectedCountDisplay">0 / 0</span> &nbsp;
+Notifications: <span id="myNotifyCountDisplay">0</span> &nbsp;
+Stream msgs: <span id="myStreamCountDisplay">0</span>
+</p>
+<p style="color:#555;">
+"Scan &amp; Add Device" opens the browser's device picker - repeat it once per physical node (BLE only
+lets one device be chosen per picker call). "Reconnect Known Devices" silently reconnects every
+node you've already granted permission to, without reopening the picker - use this on a page reload.
+A row highlighted red means that node's ML anomaly score (avg or peak) is at/above 50%. A node that
+drops out of range auto-retries reconnecting up to 3 times before its row is marked as given up.
+</p>
+<table id="myDashboardTable" style="border-collapse:collapse;width:100%;">
+<thead>
+<tr style="border-bottom:2px solid #999;text-align:left;">
+<th style="padding:4px 10px;">Label (edit &amp; saved to this browser)</th>
+<th style="padding:4px 10px;">BLE Name</th>
+<th style="padding:4px 10px;">Status</th>
+<th style="padding:4px 10px;text-align:right;">Avg ML%</th>
+<th style="padding:4px 10px;text-align:right;">Peak ML%</th>
+<th style="padding:4px 10px;text-align:right;">Anomaly Windows</th>
+<th style="padding:4px 10px;">Last Update</th>
+<th style="padding:4px 10px;">Actions</th>
+</tr>
+</thead>
+<tbody id="myDashboardBody">
+<!-- rows built/patched in place by myCreateDeviceRow / myUpdateDeviceRow -->
+</tbody>
+</table>
+
+<hr>
+
+<p>
+Active device (used by Status/Mode Control, CSV Pull, and Model Transfer below):
+<b id="myActiveDeviceLabel" style="color:#999;">(none selected - click Select on a row above)</b>
+</p>
+
+<!-- ============================================================ -->
+<!-- Basic status / mode control (acts on the ACTIVE device)      -->
+<!-- ============================================================ -->
+<h3>Status &amp; Mode Control</h3>
+<table style="border-collapse: collapse;">
+<tr>
+<td style="vertical-align: top; padding-right: 20px;">
+<p>
+<button onclick="mySendCommandActive('STATUS')">Get Status</button>
+<button onclick="mySendCommandActive('LIST')">List Sample Counts</button><br><br>
+<button onclick="mySendCommandActive('CMD_STOP')">Stop Current Mode (same as serial "L")</button>
+</p>
+<p>
+<button onclick="mySendCommandActive('CMD_START_TRAIN')">Start Train</button>
+<button onclick="mySendCommandActive('CMD_START_INFER')">Start Infer</button>
+</p>
+<p>
+Collect class index (0 or 1):
+<input type="number" id="myCollectIndex" value="0" min="0" max="1" style="width: 50px;" onchange="myUpdatePullPathFromClass()">
+<button onclick="myStartCollect()">Start Collect</button>
+<button onclick="mySendCommandActive('CMD_CAPTURE')">Capture Sample (same as serial "T")</button>
+</p>
+</td>
+<td style="vertical-align: top; border-left: 2px solid #999; padding-left: 20px;">
+<b>Last action result (active device):</b>
+<pre id="myModeFeedback" style="background: #f0f0f0; padding: 8px; min-height: 120px; width: 280px; white-space: pre-wrap;">(no action yet)</pre>
+</td>
+</tr>
+</table>
+
+<hr>
+
+<!-- ============================================================ -->
+<!-- Live stream (aggregated inference summary)                   -->
+<!-- ============================================================ -->
+<h3>Live Stream</h3>
+<p>
+Interval (seconds, min 10) - applied to a newly-connected node automatically, or push to devices below:
+<input type="number" id="myIntervalSeconds" value="15" style="width: 70px;">
+<button onclick="mySetIntervalActive()">Set Interval (active device)</button>
+<button onclick="myApplyIntervalToAll()">Set Interval (ALL connected)</button>
+</p>
+<p>
+<button onclick="mySendCommandActive('STREAM_ON')">Stream On (active device)</button>
+<button onclick="mySendCommandActive('STREAM_OFF')">Stream Off (active device)</button>
+&nbsp;|&nbsp;
+<button onclick="myStreamOnAll()">Stream On (ALL connected)</button>
+<button onclick="myStreamOffAll()">Stream Off (ALL connected)</button>
+</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<!-- CSV pull (acts on the ACTIVE device)                         -->
+<!-- ============================================================ -->
+<h3>Pull CSV File (active device)</h3>
+<p>Path auto-fills from the class index selected above, since each class's samples live in <code>/motion/&lt;classLabel&gt;/</code> on the node's SD card. Edit the filename (e.g. <code>s2.csv</code>) if you want a different sample number.</p>
+<p>
+Path on node's SD card:
+<input type="text" id="myPullPath" value="/motion/0off/s1.csv" style="width: 250px;">
+<button onclick="myPullFile()">Pull &amp; Download</button>
+</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<!-- Binary model file - two-way transfer (ACTIVE device)         -->
+<!-- ============================================================ -->
+<h3>Model &amp; Calibration File Transfer (active device)</h3>
+<p>Same file path on the node's SD card either way. Download reads it off SD and saves it to your computer/phone. Upload sends a file from your computer/phone to the node - the node auto-loads it as soon as the transfer completes (auto-load only applies to the model weights file below; other files are just read/written as-is).</p>
+<p>The node keeps three separate binary files under <code>/header/</code>:</p>
+<ul>
+<li><code>/header/myAnomalyMLWeights.bin</code> - trained model weights (Upload auto-loads this one)</li>
+<li><code>/header/myCalib.bin</code> - IMU calibration (accel mean/std), saved once at first boot</li>
+<li><code>/header/myFeatureBaseline.bin</code> - secondary per-axis RMS/P2P/ZCR baseline, built during Train</li>
+</ul>
+<p>
+Path on node's SD card:
+<input type="text" id="myModelPath" value="/header/myAnomalyMLWeights.bin" style="width: 280px;">
+</p>
+<p>
+<b>Download from node:</b>
+<button onclick="myDownloadModel()">Download Model File</button>
+</p>
+<p>
+<b>Upload to node:</b>
+<input type="file" id="myModelFile">
+<button onclick="myPushModel()">Upload Model File</button>
+</p>
+<p id="myUploadProgress"></p>
+
+<hr>
+
+<!-- ============================================================ -->
+<!-- Raw message log                                               -->
+<!-- ============================================================ -->
+<h3>Message Log</h3>
+<button onclick="myClearLog()">Clear Log</button>
+<pre id="myLog" style="background: #f0f0f0; padding: 10px; height: 300px; overflow-y: scroll; border: 1px solid #999;"></pre>
+
+<script>
+
+function myLogLine(text) {
+  var logBox = document.getElementById("myLog");
+  var timestamp = new Date().toLocaleTimeString();
+  logBox.textContent += "[" + timestamp + "] " + text + "\n";
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function myClearLog() {
+  document.getElementById("myLog").textContent = "";
+}
+
+function myEscapeHtml(text) {
+  var div = document.createElement("div");
+  div.textContent = text == null ? "" : String(text);
+  return div.innerHTML;
+}
+
+// ============================================================
+// Connect / disconnect (now per-device, concurrent)
+// ============================================================
+async function myScanAndAddDevice() {
+  try {
+    myLogLine("Requesting device (filter: service " + mySERVICE_UUID + ")...");
+    var device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [mySERVICE_UUID] }]
+    });
+    await myConnectDevice(device);
+  } catch (err) {
+    myLogLine("Scan/add failed: " + err);
+  }
+}
+
+// navigator.bluetooth.getDevices() returns every device this origin
+// has previously been granted permission for, WITHOUT reopening the
+// picker - lets the dashboard silently reconnect to all known nodes
+// on page load. Support varies by browser/flag, hence the feature
+// check and graceful fallback message.
+async function myReconnectKnownDevices() {
+  if (!navigator.bluetooth.getDevices) {
+    myLogLine("This browser doesn't support navigator.bluetooth.getDevices() (persistent permissions) - use 'Scan & Add Device' instead.");
+    return;
+  }
+  try {
+    var known = await navigator.bluetooth.getDevices();
+    myLogLine("Found " + known.length + " previously-granted device(s). Reconnecting...");
+    for (var i = 0; i < known.length; i++) {
+      var d = known[i];
+      if (myDevices[d.id] && myDevices[d.id].connected) continue;
+      myConnectDevice(d); // intentionally not awaited - connect concurrently, not one at a time
+    }
+  } catch (err) {
+    myLogLine("getDevices() failed: " + err);
+  }
+}
+
+async function myConnectDevice(device) {
+  var id = device.id;
+  var rec = myDevices[id];
+  if (!rec) {
+    rec = {
+      id: id,
+      device: device,
+      server: null, controlChar: null, dataChar: null, binaryChar: null,
+      bleName: device.name || "(unnamed)",
+      label: myLabels[id] || "",     // custom label from localStorage, if any
+      connected: false,
+      rawChunks: [], pullInProgress: false, pullFilename: "", pullTimeoutHandle: null,
+      notifyCount: 0, streamMsgCount: 0,
+      avgMLpct: null, peakMLpct: null, windows: null, anomalyWindows: null,
+      lastUpdate: null,
+      retryCount: 0, retryTimer: null,
+      // DOM refs, filled in by myCreateDeviceRow - cached so later
+      // updates patch specific cells instead of rebuilding the row's
+      // innerHTML, which would otherwise wipe out the label textbox
+      // mid-edit every time a stream update lands.
+      rowEl: null, labelInput: null, bleNameCell: null, statusCell: null,
+      avgCell: null, peakCell: null, anomalyCell: null, updateCell: null
+    };
+    myDevices[id] = rec;
+  }
+  rec.device = device;
+  rec.bleName = device.name || rec.bleName;
+
+  device.addEventListener("gattserverdisconnected", function() { myOnGattDisconnected(id); });
+
+  myCreateDeviceRow(id);
+
+  try {
+    myLogLine("[" + myDisplayName(rec) + "] Connecting to GATT server...");
+    rec.server = await device.gatt.connect();
+    var service = await rec.server.getPrimaryService(mySERVICE_UUID);
+    rec.controlChar = await service.getCharacteristic(myCONTROL_CHAR_UUID);
+    rec.dataChar    = await service.getCharacteristic(myDATA_CHAR_UUID);
+    rec.binaryChar  = await service.getCharacteristic(myBINARY_CHAR_UUID);
+
+    await rec.dataChar.startNotifications();
+    rec.dataChar.addEventListener("characteristicvaluechanged", function(event) { myOnDataNotify(id, event); });
+
+    rec.connected = true;
+    rec.retryCount = 0;
+    myLogLine("[" + myDisplayName(rec) + "] Connected and subscribed.");
+
+    if (!myActiveDeviceId) mySetActiveDevice(id);
+
+    // Kick off continuous streaming immediately on connect so the
+    // dashboard fills in with no manual per-device polling - this is
+    // the whole point of the v011 concurrent-connect design.
+    var secs = document.getElementById("myIntervalSeconds").value || "15";
+    await mySendCommandTo(id, "SET_INTERVAL:" + secs);
+    await mySendCommandTo(id, "STREAM_ON");
+
+    myUpdateDeviceRow(id);
+  } catch (err) {
+    myLogLine("[" + myDisplayName(rec) + "] Connect failed: " + err);
+    rec.connected = false;
+    myUpdateDeviceRow(id);
+    myScheduleReconnect(id);
+  }
+}
+
+function myOnGattDisconnected(id) {
+  var rec = myDevices[id];
+  if (!rec) return;
+  rec.connected = false;
+  myLogLine("[" + myDisplayName(rec) + "] Disconnected.");
+  myUpdateDeviceRow(id);
+  myScheduleReconnect(id);
+}
+
+function myScheduleReconnect(id) {
+  var rec = myDevices[id];
+  if (!rec) return;
+  if (rec.retryCount >= MY_MAX_RETRIES) {
+    myLogLine("[" + myDisplayName(rec) + "] Giving up after " + MY_MAX_RETRIES + " reconnect attempts (out of range?).");
+    return;
+  }
+  rec.retryCount++;
+  var delay = MY_RETRY_BASE_MS * rec.retryCount;
+  myLogLine("[" + myDisplayName(rec) + "] Will retry connect in " + Math.round(delay / 1000) + "s (attempt " + rec.retryCount + "/" + MY_MAX_RETRIES + ")...");
+  if (rec.retryTimer) clearTimeout(rec.retryTimer);
+  rec.retryTimer = setTimeout(function() { myConnectDevice(rec.device); }, delay);
+}
+
+function myDisconnectDevice(id) {
+  var rec = myDevices[id];
+  if (!rec) return;
+  if (rec.retryTimer) { clearTimeout(rec.retryTimer); rec.retryTimer = null; }
+  rec.retryCount = MY_MAX_RETRIES; // manual disconnect should NOT trigger auto-reconnect
+  if (rec.device && rec.device.gatt.connected) rec.device.gatt.disconnect();
+}
+
+// Reconnect known devices automatically as soon as the page loads.
+window.addEventListener("load", function() {
+  myUpdatePullPathFromClass();
+  myReconnectKnownDevices();
+});
+
+// ============================================================
+// Sending commands (Control characteristic, Write)
+// ============================================================
+async function mySendCommandTo(id, cmd) {
+  var rec = myDevices[id];
+  if (!rec || !rec.controlChar) {
+    myLogLine("[" + (rec ? myDisplayName(rec) : id) + "] Not connected - cannot send: " + cmd);
+    return;
+  }
+  try {
+    myLogLine("[" + myDisplayName(rec) + "] -> " + cmd);
+    var encoder = new TextEncoder();
+    await rec.controlChar.writeValue(encoder.encode(cmd));
+  } catch (err) {
+    myLogLine("[" + myDisplayName(rec) + "] Send failed: " + err);
+  }
+}
+
+function mySendCommandActive(cmd) {
+  if (!myActiveDeviceId) { myLogLine("No active device selected - click Select on a dashboard row first."); return; }
+  mySendCommandTo(myActiveDeviceId, cmd);
+}
+
+async function myApplyToAllConnected(cmd) {
+  var ids = Object.keys(myDevices);
+  for (var i = 0; i < ids.length; i++) {
+    if (myDevices[ids[i]].connected) await mySendCommandTo(ids[i], cmd);
+  }
+}
+
+function myApplyIntervalToAll() {
+  var secs = document.getElementById("myIntervalSeconds").value;
+  myApplyToAllConnected("SET_INTERVAL:" + secs);
+}
+function myStreamOnAll()  { myApplyToAllConnected("STREAM_ON"); }
+function myStreamOffAll() { myApplyToAllConnected("STREAM_OFF"); }
+
+function mySetIntervalActive() {
+  var secs = document.getElementById("myIntervalSeconds").value;
+  mySendCommandActive("SET_INTERVAL:" + secs);
+}
+
+// Class folder names MUST exactly match myClassLabels[] in the .ino -
+// currently {"0off", "1normal"}. Update this array if you change the
+// class labels in the firmware.
+var myClassFolderNames = ["0off", "1normal"];
+
+function myStartCollect() {
+  var idx = document.getElementById("myCollectIndex").value;
+  mySendCommandActive("CMD_START_COLLECT:" + idx);
+}
+
+function myUpdatePullPathFromClass() {
+  var idxInput = document.getElementById("myCollectIndex");
+  var idx = parseInt(idxInput.value, 10);
+  if (isNaN(idx) || idx < 0) idx = 0;
+  if (idx > 1) idx = 1;
+  idxInput.value = idx;
+
+  var folder = myClassFolderNames[idx];
+  document.getElementById("myPullPath").value = "/motion/" + folder + "/s1.csv";
+}
+
+// ============================================================
+// Receiving (Data characteristic, Notify) - now dispatched per
+// device id instead of assuming a single global connection.
+// ============================================================
+function myOnDataNotify(id, event) {
+  var rec = myDevices[id];
+  if (!rec) return;
+  rec.notifyCount++;
+  myUpdateGlobalCounters();
+
+  var value = event.target.value; // DataView
+  var bytes = new Uint8Array(value.buffer);
+
+  if (myIsEndMarker(bytes)) {
+    if (rec.pullInProgress) {
+      myFinishFilePull(id);
+    } else {
+      myFinishTextMessage(id);
+    }
+    return;
+  }
+  rec.rawChunks.push(bytes);
+}
+
+function myIsEndMarker(bytes) {
+  var marker = "<<END>>";
+  if (bytes.length !== marker.length) return false;
+  for (var i = 0; i < marker.length; i++) {
+    if (bytes[i] !== marker.charCodeAt(i)) return false;
+  }
+  return true;
+}
+
+function myCombineRawChunks(id) {
+  var rec = myDevices[id];
+  var totalLen = 0;
+  for (var i = 0; i < rec.rawChunks.length; i++) totalLen += rec.rawChunks[i].length;
+  var combined = new Uint8Array(totalLen);
+  var offset = 0;
+  for (var i = 0; i < rec.rawChunks.length; i++) {
+    combined.set(rec.rawChunks[i], offset);
+    offset += rec.rawChunks[i].length;
+  }
+  rec.rawChunks = [];
+  return combined;
+}
+
+function myFinishTextMessage(id) {
+  var rec = myDevices[id];
+  var combined = myCombineRawChunks(id);
+  var decoder = new TextDecoder("utf-8");
+  var msg = decoder.decode(combined);
+  myLogLine("[" + myDisplayName(rec) + "] <- " + msg);
+
+  try {
+    var obj = JSON.parse(msg);
+    if (obj.type === "stream") {
+      rec.streamMsgCount++;
+      rec.avgMLpct       = obj.avgMLpct;
+      rec.peakMLpct      = obj.peakMLpct;
+      rec.windows        = obj.windows;
+      rec.anomalyWindows = obj.anomalyWindows;
+      rec.lastUpdate      = new Date();
+      myUpdateDeviceRow(id);
+      myUpdateGlobalCounters();
+    } else {
+      // status / list / ack / error - only worth showing in the
+      // Status & Mode Control feedback box if this is the device
+      // those buttons currently target.
+      if (id === myActiveDeviceId) myShowModeFeedback(obj);
+    }
+  } catch (e) {
+    myLogLine("[" + myDisplayName(rec) + "]    (not valid JSON - parse error: " + e.message + ")");
+  }
+}
+
+function myShowModeFeedback(obj) {
+  var box = document.getElementById("myModeFeedback");
+  var timestamp = new Date().toLocaleTimeString();
+  box.textContent = "[" + timestamp + "]\n" + JSON.stringify(obj, null, 2);
+}
+
+// ============================================================
+// Dashboard rendering
+//
+// myCreateDeviceRow builds the row's DOM ONCE (including the label
+// <input>) and caches cell references on the record. myUpdateDeviceRow
+// only ever patches those cached cells afterward - it never touches
+// innerHTML of the whole row - specifically so a stream update landing
+// while someone is mid-edit in the label box can't wipe out their typing.
+// ============================================================
+function myDisplayName(rec) {
+  return rec.label && rec.label.length > 0 ? rec.label : rec.bleName;
+}
+
+function myCreateDeviceRow(id) {
+  var rec = myDevices[id];
+  if (rec.rowEl) { myUpdateDeviceRow(id); return; } // already built, just refresh values
+
+  var tr = document.createElement("tr");
+
+  var labelTd = document.createElement("td");
+  labelTd.style.padding = "4px 10px";
+  var labelInput = document.createElement("input");
+  labelInput.type = "text";
+  labelInput.value = rec.label;
+  labelInput.placeholder = rec.bleName;
+  labelInput.style.width = "180px";
+  labelInput.title = "Custom name for this node, saved in this browser's localStorage.";
+  labelInput.addEventListener("change", function() { myOnLabelChange(id, labelInput.value); });
+  labelTd.appendChild(labelInput);
+  tr.appendChild(labelTd);
+
+  var bleNameTd = document.createElement("td");
+  bleNameTd.style.padding = "4px 10px";
+  bleNameTd.style.color = "#777";
+  bleNameTd.textContent = rec.bleName;
+  tr.appendChild(bleNameTd);
+
+  var statusTd = document.createElement("td");
+  statusTd.style.padding = "4px 10px";
+  tr.appendChild(statusTd);
+
+  var avgTd = document.createElement("td");
+  avgTd.style.padding = "4px 10px";
+  avgTd.style.textAlign = "right";
+  tr.appendChild(avgTd);
+
+  var peakTd = document.createElement("td");
+  peakTd.style.padding = "4px 10px";
+  peakTd.style.textAlign = "right";
+  tr.appendChild(peakTd);
+
+  var anomalyTd = document.createElement("td");
+  anomalyTd.style.padding = "4px 10px";
+  anomalyTd.style.textAlign = "right";
+  tr.appendChild(anomalyTd);
+
+  var updateTd = document.createElement("td");
+  updateTd.style.padding = "4px 10px";
+  tr.appendChild(updateTd);
+
+  var actionsTd = document.createElement("td");
+  actionsTd.style.padding = "4px 10px";
+  var selectBtn = document.createElement("button");
+  selectBtn.textContent = "Select";
+  selectBtn.onclick = function() { mySetActiveDevice(id); };
+  var disconnectBtn = document.createElement("button");
+  disconnectBtn.textContent = "Disconnect";
+  disconnectBtn.style.marginLeft = "4px";
+  disconnectBtn.onclick = function() { myDisconnectDevice(id); };
+  actionsTd.appendChild(selectBtn);
+  actionsTd.appendChild(disconnectBtn);
+  tr.appendChild(actionsTd);
+
+  document.getElementById("myDashboardBody").appendChild(tr);
+
+  rec.rowEl        = tr;
+  rec.labelInput   = labelInput;
+  rec.bleNameCell  = bleNameTd;
+  rec.statusCell   = statusTd;
+  rec.avgCell      = avgTd;
+  rec.peakCell     = peakTd;
+  rec.anomalyCell  = anomalyTd;
+  rec.updateCell   = updateTd;
+
+  myUpdateDeviceRow(id);
+  myUpdateGlobalCounters();
+}
+
+function myUpdateDeviceRow(id) {
+  var rec = myDevices[id];
+  if (!rec || !rec.rowEl) return;
+
+  var isActive = (id === myActiveDeviceId);
+  rec.bleNameCell.textContent = rec.bleName;
+
+  rec.statusCell.textContent = rec.connected ? "Connected" : "Disconnected";
+  rec.statusCell.style.color = rec.connected ? "green" : "#999";
+  rec.statusCell.style.fontWeight = isActive ? "bold" : "normal";
+
+  rec.avgCell.textContent  = (rec.avgMLpct  === null || rec.avgMLpct  === undefined) ? "-" : rec.avgMLpct  + "%";
+  rec.peakCell.textContent = (rec.peakMLpct === null || rec.peakMLpct === undefined) ? "-" : rec.peakMLpct + "%";
+
+  var anomalyTxt = (rec.anomalyWindows === null || rec.anomalyWindows === undefined) ? "-" : rec.anomalyWindows;
+  var windowsTxt = (rec.windows === null || rec.windows === undefined) ? "-" : rec.windows;
+  rec.anomalyCell.textContent = anomalyTxt + " / " + windowsTxt;
+
+  rec.updateCell.textContent = rec.lastUpdate ? rec.lastUpdate.toLocaleTimeString() : "(no reading yet)";
+
+  var flagged = (rec.avgMLpct >= 50) || (rec.peakMLpct >= 50);
+  rec.rowEl.style.background = flagged ? "#ffe0e0" : (isActive ? "#eef6ff" : "transparent");
+
+  // Only touch the label input's own styling (border), never its
+  // value, so we never fight the user's cursor while they're typing.
+  rec.labelInput.style.borderColor = isActive ? "#3366cc" : "";
+}
+
+function myUpdateGlobalCounters() {
+  var ids = Object.keys(myDevices);
+  var totalNotify = 0, totalStream = 0, connectedCount = 0;
+  for (var i = 0; i < ids.length; i++) {
+    totalNotify += myDevices[ids[i]].notifyCount;
+    totalStream += myDevices[ids[i]].streamMsgCount;
+    if (myDevices[ids[i]].connected) connectedCount++;
+  }
+  document.getElementById("myNotifyCountDisplay").textContent = totalNotify;
+  document.getElementById("myStreamCountDisplay").textContent = totalStream;
+  document.getElementById("myConnectedCountDisplay").textContent = connectedCount + " / " + ids.length;
+}
+
+function myOnLabelChange(id, newLabel) {
+  var rec = myDevices[id];
+  if (!rec) return;
+  rec.label = (newLabel || "").trim();
+  mySaveLabel(id, rec.label);
+  myLogLine("[" + rec.bleName + "] Label set to: " + (rec.label.length > 0 ? rec.label : "(cleared - back to BLE name)"));
+  if (id === myActiveDeviceId) myRenderActiveDeviceLabel();
+}
+
+function mySetActiveDevice(id) {
+  var previous = myActiveDeviceId;
+  myActiveDeviceId = id;
+  if (previous) myUpdateDeviceRow(previous);
+  myUpdateDeviceRow(id);
+  myRenderActiveDeviceLabel();
+  myLogLine("Active device set to: " + myDisplayName(myDevices[id]));
+}
+
+function myRenderActiveDeviceLabel() {
+  var el = document.getElementById("myActiveDeviceLabel");
+  var rec = myActiveDeviceId ? myDevices[myActiveDeviceId] : null;
+  if (rec) {
+    el.textContent = myDisplayName(rec);
+    el.style.color = rec.connected ? "green" : "red";
+  } else {
+    el.textContent = "(none selected - click Select on a row above)";
+    el.style.color = "#999";
+  }
+}
+
+// ============================================================
+// Generic file pull (active device) - same PULL:<path> command
+// used for both CSV sample files and the model .bin file.
+// ============================================================
+function myPullFile() {
+  if (!myActiveDeviceId) { myLogLine("No active device selected."); return; }
+  var path = document.getElementById("myPullPath").value;
+  myStartPull(myActiveDeviceId, path);
+}
+
+function myDownloadModel() {
+  if (!myActiveDeviceId) { myLogLine("No active device selected."); return; }
+  var path = document.getElementById("myModelPath").value;
+  myStartPull(myActiveDeviceId, path);
+}
+
+function myStartPull(id, path) {
+  var rec = myDevices[id];
+  if (!rec) return;
+  rec.pullFilename = path.split("/").pop() || "download.bin";
+  rec.pullInProgress = true;
+  rec.rawChunks = [];
+
+  if (rec.pullTimeoutHandle) clearTimeout(rec.pullTimeoutHandle);
+  rec.pullTimeoutHandle = setTimeout(function() {
+    if (rec.pullInProgress) {
+      myLogLine("[" + myDisplayName(rec) + "] WARNING: file pull for " + rec.pullFilename + " timed out - clearing pull state.");
+      rec.pullInProgress = false;
+      rec.rawChunks = [];
+    }
+  }, MY_PULL_TIMEOUT_MS);
+
+  mySendCommandTo(id, "PULL:" + path);
+}
+
+function myFinishFilePull(id) {
+  var rec = myDevices[id];
+  rec.pullInProgress = false;
+  if (rec.pullTimeoutHandle) { clearTimeout(rec.pullTimeoutHandle); rec.pullTimeoutHandle = null; }
+  var combined = myCombineRawChunks(id);
+
+  myLogLine("[" + myDisplayName(rec) + "] File pull complete: " + rec.pullFilename + " (" + combined.length + " bytes)");
+
+  var mimeType = rec.pullFilename.toLowerCase().endsWith(".csv") ? "text/csv" : "application/octet-stream";
+  var blob = new Blob([combined], { type: mimeType });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = rec.pullFilename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// Model upload (Binary characteristic, Write) - active device
+// ============================================================
+async function myPushModel() {
+  if (!myActiveDeviceId) { myLogLine("No active device selected - cannot push model"); return; }
+  var rec = myDevices[myActiveDeviceId];
+  if (!rec || !rec.binaryChar) {
+    myLogLine("Active device not connected - cannot push model");
+    return;
+  }
+  var fileInput = document.getElementById("myModelFile");
+  if (!fileInput.files || fileInput.files.length === 0) {
+    myLogLine("No model file selected");
+    return;
+  }
+  var file = fileInput.files[0];
+  var progressEl = document.getElementById("myUploadProgress");
+
+  try {
+    var arrayBuffer = await file.arrayBuffer();
+    var fileBytes = new Uint8Array(arrayBuffer);
+    var totalSize = fileBytes.length;
+
+    myLogLine("[" + myDisplayName(rec) + "] Pushing model: " + file.name + " (" + totalSize + " bytes)");
+
+    var header = new Uint8Array(4);
+    header[0] = totalSize & 0xFF;
+    header[1] = (totalSize >> 8) & 0xFF;
+    header[2] = (totalSize >> 16) & 0xFF;
+    header[3] = (totalSize >> 24) & 0xFF;
+    await rec.binaryChar.writeValue(header);
+
+    var CHUNK_SIZE = 180;
+    var sent = 0;
+    for (var offset = 0; offset < totalSize; offset += CHUNK_SIZE) {
+      var end = Math.min(offset + CHUNK_SIZE, totalSize);
+      var chunk = fileBytes.slice(offset, end);
+      await rec.binaryChar.writeValue(chunk);
+      await new Promise(function(resolve) { setTimeout(resolve, 15); });
+      sent = end;
+      progressEl.textContent = "Uploading to " + myDisplayName(rec) + ": " + sent + " / " + totalSize + " bytes (" +
+                                Math.round(100 * sent / totalSize) + "%)";
+    }
+
+    myLogLine("[" + myDisplayName(rec) + "] Model upload complete - waiting for node to confirm load...");
+    progressEl.textContent = "Upload complete - waiting for node confirmation.";
+  } catch (err) {
+    myLogLine("[" + myDisplayName(rec) + "] Model push failed: " + err);
+    progressEl.textContent = "Upload failed: " + err;
+  }
+}
+
+</script>
+
+</body>
+</html>
