@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CNN Neural Activation Flow Visualizer</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- TensorFlow.js and MobileNet CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
+
+  <!-- Google Fonts & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #030308;
+      color: #e2e8f0;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    canvas {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+    }
+    .hud-glass {
+      background: rgba(8, 10, 24, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 243, 255, 0.18);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.67),
+                  inset 0 0 15px rgba(0, 243, 255, 0.05);
+    }
+    .glow-text-cyan {
+      text-shadow: 0 0 12px rgba(0, 243, 255, 0.75);
+    }
+    .glow-text-pink {
+      text-shadow: 0 0 12px rgba(255, 0, 127, 0.75);
+    }
+    .glow-box {
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.25);
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Hide scrollbar for HUD elements */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="w-screen h-screen overflow-hidden select-none bg-slate-950">
+
+  <!-- Main Rendering Canvas -->
+  <canvas id="neural-canvas"></canvas>
+
+  <!-- Hidden Video Element for Webcam Stream -->
+  <video id="webcam" playsinline autoplay muted class="hidden"></video>
+  <!-- Offscreen canvas for frame pixel extraction -->
+  <canvas id="sample-canvas" class="hidden"></canvas>
+
+  <!-- Futuristic Top HUD Overlay -->
+  <header class="fixed top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-4 pointer-events-none">
+    
+    <!-- Title & Status -->
+    <div class="hud-glass rounded-2xl px-5 py-3 pointer-events-auto flex items-center gap-4 border-cyan-500/30">
+      <div class="relative flex items-center justify-center">
+        <div id="status-pulse" class="w-3.5 h-3.5 rounded-full bg-cyan-400 animate-ping absolute opacity-75"></div>
+        <div id="status-dot" class="w-3 h-3 rounded-full bg-cyan-400 relative z-10"></div>
+      </div>
+      <div>
+        <h1 class="text-lg md:text-xl font-bold tracking-wider text-cyan-300 glow-text-cyan flex items-center gap-2">
+          ISLAND-CNN <span class="text-xs px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-500/40">FLOW v2.0</span>
+        </h1>
+        <p id="model-status" class="text-xs text-slate-400 font-mono-code mt-0.5">Initializing TensorFlow.js MobileNet...</p>
+      </div>
+    </div>
+
+    <!-- Live Prediction HUD Display -->
+    <div class="hud-glass rounded-2xl px-5 py-3 pointer-events-auto flex-1 max-w-md hidden sm:block">
+      <div class="text-xs font-mono-code text-cyan-400/80 mb-1 flex justify-between">
+        <span>TOP CLASSIFICATION ACTIVATION</span>
+        <span id="fps-counter" class="text-slate-400">0 FPS</span>
+      </div>
+      <div id="top-prediction-container" class="flex items-center justify-between gap-3">
+        <span id="top-class-name" class="font-bold text-slate-200 text-sm md:text-base truncate">Awaiting Vision Stream...</span>
+        <span id="top-class-prob" class="font-mono-code font-bold text-cyan-400 text-sm md:text-base">00.0%</span>
+      </div>
+      <div class="w-full bg-slate-900/80 h-1.5 rounded-full mt-2 overflow-hidden border border-slate-800">
+        <div id="top-class-bar" class="bg-gradient-to-r from-cyan-500 to-fuchsia-500 h-full w-0 transition-all duration-300"></div>
+      </div>
+    </div>
+
+    <!-- Controls Panel -->
+    <div class="hud-glass rounded-2xl p-2 pointer-events-auto flex items-center gap-2">
+      <button id="btn-toggle-cam" title="Start/Pause Camera" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-cyan-950 hover:text-cyan-300 text-slate-200 border border-slate-700 hover:border-cyan-500/50 transition-all flex items-center gap-2 text-xs font-medium">
+        <i data-lucide="video" class="w-4 h-4 text-cyan-400"></i>
+        <span class="hidden md:inline" id="cam-btn-text">Pause Cam</span>
+      </button>
+
+      <button id="btn-flip-cam" title="Switch Camera" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-cyan-950 hover:text-cyan-300 text-slate-200 border border-slate-700 hover:border-cyan-500/50 transition-all flex items-center gap-2 text-xs font-medium">
+        <i data-lucide="camera-reverse" class="w-4 h-4 text-fuchsia-400"></i>
+        <span class="hidden md:inline">Flip Cam</span>
+      </button>
+
+      <button id="btn-toggle-pip" title="Toggle Camera Feed" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-cyan-950 hover:text-cyan-300 text-slate-200 border border-slate-700 hover:border-cyan-500/50 transition-all">
+        <i data-lucide="eye" class="w-4 h-4 text-cyan-400"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Floating Camera Preview PIP Widget -->
+  <div id="pip-widget" class="fixed bottom-6 left-6 z-20 hud-glass p-2 rounded-2xl border-cyan-500/30 shadow-2xl transition-all duration-300 w-44 md:w-56">
+    <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+      <canvas id="pip-canvas" class="w-full h-full object-cover"></canvas>
+      <div class="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-slate-950/80 text-[10px] font-mono-code text-cyan-400 border border-cyan-500/30 flex items-center gap-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span> SENSOR FEED
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Visual Legend & Flow Hints -->
+  <div class="fixed bottom-6 right-6 z-20 hud-glass px-4 py-3 rounded-2xl hidden md:flex items-center gap-6 border-slate-800 text-xs">
+    <div class="flex items-center gap-2">
+      <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#00f3ff]"></span>
+      <span class="text-slate-300 font-mono-code">L0: Pixel Activation</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]"></span>
+      <span class="text-slate-300 font-mono-code">L1: Conv Features</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="w-2.5 h-2.5 rounded-full bg-fuchsia-400 shadow-[0_0_8px_#e879f9]"></span>
+      <span class="text-slate-300 font-mono-code">L2: Dense Funnel</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+      <span class="text-slate-300 font-mono-code">L3: Picked Classes</span>
+    </div>
+  </div>
+
+  <!-- Main Visualization Logic -->
+  <script>
+    // System State Variables
+    let videoElement, sampleCanvas, sampleCtx, pipCanvas, pipCtx;
+    let mainCanvas, ctx;
+    let model = null;
+    let isModelLoading = true;
+    let isWebcamActive = false;
+    let currentFacingMode = 'user'; // 'user' or 'environment'
+    let lastPredictions = [];
+    let currentTopConfidence = 0.5;
+    let frameCount = 0;
+    let lastFpsCalc = performance.now();
+    let fps = 0;
+    let pipVisible = true;
+    let syntheticFeed = false;
+    let synthAngle = 0;
+
+    // CNN Graph Structure & Nodes
+    const layers = [
+      { name: 'Input Sensor', nodes: [], color: '#00f3ff', glow: 'rgba(0, 243, 255, 0.8)' },
+      { name: 'Conv Feature Maps', nodes: [], color: '#818cf8', glow: 'rgba(129, 140, 248, 0.8)' },
+      { name: 'Dense Latent Space', nodes: [], color: '#e879f9', glow: 'rgba(232, 121, 249, 0.8)' },
+      { name: 'Output Softmax', nodes: [], color: '#34d399', glow: 'rgba(52, 211, 153, 0.8)' }
+    ];
+
+    let connections = [];
+    let energyParticles = [];
+
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      initCanvases();
+      setupEventListeners();
+      
+      // Load MobileNet model in parallel with camera init
+      loadMobileNet();
+      
+      // Attempt camera startup
+      await startWebcam();
+
+      // Begin animation loop
+      requestAnimationFrame(renderLoop);
+      
+      // Start continuous classification pipeline loop
+      setInterval(runInference, 120);
+    });
+
+    function initCanvases() {
+      mainCanvas = document.getElementById('neural-canvas');
+      ctx = mainCanvas.getContext('2d');
+
+      videoElement = document.getElementById('webcam');
+      
+      sampleCanvas = document.getElementById('sample-canvas');
+      sampleCtx = sampleCanvas.getContext('2d', { willReadFrequently: true });
+      sampleCanvas.width = 64;
+      sampleCanvas.height = 64;
+
+      pipCanvas = document.getElementById('pip-canvas');
+      pipCtx = pipCanvas.getContext('2d');
+
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+    }
+
+    function resizeCanvas() {
+      mainCanvas.width = window.innerWidth;
+      mainCanvas.height = window.innerHeight;
+      pipCanvas.width = 224;
+      pipCanvas.height = 126;
+      buildGraphNodes();
+    }
+
+    // Build neural layer architecture geometry
+    function buildGraphNodes() {
+      const w = mainCanvas.width;
+      const h = mainCanvas.height;
+
+      // Layer X layout coordinates (0 to 3)
+      const layerX = [
+        w * 0.15, // Input Vision
+        w * 0.38, // Conv Features
+        w * 0.62, // Dense Bottleneck
+        w * 0.85  // Output Classes
+      ];
+
+      // Reset nodes
+      layers.forEach(l => l.nodes = []);
+      connections = [];
+
+      // Layer 0: Input Sensor Grid (4x4 matrix = 16 nodes)
+      const l0Rows = 4, l0Cols = 4;
+      const gridWidth = Math.min(180, w * 0.12);
+      const startX0 = layerX[0] - gridWidth / 2;
+      const startY0 = h / 2 - gridWidth / 2;
+      for (let r = 0; r < l0Rows; r++) {
+        for (let c = 0; c < l0Cols; c++) {
+          layers[0].nodes.push({
+            x: startX0 + (c / (l0Cols - 1)) * gridWidth,
+            y: startY0 + (r / (l0Rows - 1)) * gridWidth,
+            activation: Math.random(),
+            baseRadius: 4,
+            label: `P[${r},${c}]`
+          });
+        }
+      }
+
+      // Layer 1: Feature Maps / Conv Filters (12 nodes arranged vertically)
+      const l1Count = 12;
+      const l1Height = h * 0.65;
+      for (let i = 0; i < l1Count; i++) {
+        layers[1].nodes.push({
+          x: layerX[1] + (Math.sin(i * 0.5) * 15),
+          y: (h / 2 - l1Height / 2) + (i / (l1Count - 1)) * l1Height,
+          activation: 0.2 + Math.random() * 0.5,
+          baseRadius: 6,
+          label: `Conv2D_${i+1}`
+        });
+      }
+
+      // Layer 2: Deep Representational Funnel (6 nodes)
+      const l2Count = 6;
+      const l2Height = h * 0.45;
+      for (let i = 0; i < l2Count; i++) {
+        layers[2].nodes.push({
+          x: layerX[2],
+          y: (h / 2 - l2Height / 2) + (i / (l2Count - 1)) * l2Height,
+          activation: 0.3 + Math.random() * 0.4,
+          baseRadius: 8,
+          label: `Dense_${i+1}`
+        });
+      }
+
+      // Layer 3: Top Softmax Classes (3 main classification targets)
+      const l3Count = 3;
+      const l3Height = h * 0.35;
+      for (let i = 0; i < l3Count; i++) {
+        layers[3].nodes.push({
+          x: layerX[3],
+          y: (h / 2 - l3Height / 2) + (i / (l3Count - 1)) * l3Height,
+          activation: i === 0 ? 0.8 : 0.1,
+          baseRadius: 10,
+          label: `Class_${i+1}`,
+          className: 'Detecting...'
+        });
+      }
+
+      // Build Synaptic Connections between adjacent layers
+      for (let l = 0; l < layers.length - 1; l++) {
+        const currentLayer = layers[l];
+        const nextLayer = layers[l + 1];
+
+        currentLayer.nodes.forEach((sourceNode, srcIdx) => {
+          nextLayer.nodes.forEach((targetNode, tgtIdx) => {
+            // Create dense or semi-sparse connections
+            if (l === 0 && (srcIdx + tgtIdx) % 2 !== 0) return; // Sparse L0->L1
+            
+            connections.push({
+              source: sourceNode,
+              target: targetNode,
+              layerIndex: l,
+              weight: 0.2 + Math.random() * 0.8,
+              activePulse: 0
+            });
+          });
+        });
+      }
+    }
+
+    // Load MobileNet via CDN
+    async function loadMobileNet() {
+      const statusEl = document.getElementById('model-status');
+      try {
+        statusEl.textContent = 'Loading TensorFlow.js MobileNet...';
+        model = await mobilenet.load({ version: 2, alpha: 1.0 });
+        isModelLoading = false;
+        statusEl.textContent = 'MobileNet Ready · Real-time Inference Active';
+        statusEl.classList.add('text-cyan-400');
+      } catch (err) {
+        console.error('Error loading MobileNet:', err);
+        statusEl.textContent = 'MobileNet Load Error. Running visual simulation.';
+        statusEl.classList.add('text-pink-500');
+      }
+    }
+
+    // Setup Video Camera Feed
+    async function startWebcam() {
+      const statusPulse = document.getElementById('status-pulse');
+      const statusDot = document.getElementById('status-dot');
+
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const constraints = {
+            video: {
+              facingMode: currentFacingMode,
+              width: { ideal: 640 },
+              height: { ideal: 480 }
+            },
+            audio: false
+          };
+
+          const stream = await navigator.mediaDevices.getUserMedia(constraints);
+          videoElement.srcObject = stream;
+          await videoElement.play();
+          isWebcamActive = true;
+          syntheticFeed = false;
+
+          statusPulse.className = 'w-3.5 h-3.5 rounded-full bg-cyan-400 animate-ping absolute opacity-75';
+          statusDot.className = 'w-3 h-3 rounded-full bg-cyan-400 relative z-10';
+        } catch (err) {
+          console.warn('Webcam permission denied or unavailable. Fallback to synthetic feed.', err);
+          setupSyntheticFeed();
+        }
+      } else {
+        setupSyntheticFeed();
+      }
+    }
+
+    function setupSyntheticFeed() {
+      isWebcamActive = false;
+      syntheticFeed = true;
+      const statusPulse = document.getElementById('status-pulse');
+      const statusDot = document.getElementById('status-dot');
+      const statusEl = document.getElementById('model-status');
+
+      statusPulse.className = 'w-3.5 h-3.5 rounded-full bg-fuchsia-400 animate-ping absolute opacity-75';
+      statusDot.className = 'w-3 h-3 rounded-full bg-fuchsia-400 relative z-10';
+      if (!isModelLoading) {
+        statusEl.textContent = 'Simulated Camera Feed · Neural Engine Active';
+      }
+    }
+
+    function setupEventListeners() {
+      // Toggle Camera On/Off
+      document.getElementById('btn-toggle-cam').addEventListener('click', () => {
+        const textSpan = document.getElementById('cam-btn-text');
+        if (isWebcamActive) {
+          if (videoElement.srcObject) {
+            videoElement.srcObject.getTracks().forEach(t => t.stop());
+          }
+          isWebcamActive = false;
+          textSpan.textContent = 'Start Cam';
+          setupSyntheticFeed();
+        } else {
+          startWebcam();
+          textSpan.textContent = 'Pause Cam';
+        }
+      });
+
+      // Flip Front/Back Camera
+      document.getElementById('btn-flip-cam').addEventListener('click', async () => {
+        currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+        if (isWebcamActive) {
+          if (videoElement.srcObject) {
+            videoElement.srcObject.getTracks().forEach(t => t.stop());
+          }
+          await startWebcam();
+        }
+      });
+
+      // Toggle PIP Window
+      document.getElementById('btn-toggle-pip').addEventListener('click', () => {
+        pipVisible = !pipVisible;
+        const pipWidget = document.getElementById('pip-widget');
+        if (pipVisible) {
+          pipWidget.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+        } else {
+          pipWidget.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+        }
+      });
+    }
+
+    // Run TensorFlow.js Inference & Extract Feature Activations
+    async function runInference() {
+      // Sample video frames for Layer 0 pixel activations
+      sampleVideoPixels();
+
+      if (model && (isWebcamActive || syntheticFeed)) {
+        try {
+          let predictions = [];
+          if (isWebcamActive && videoElement.readyState >= 2) {
+            predictions = await model.classify(videoElement, 3);
+          } else if (syntheticFeed) {
+            // Generate dynamic simulated classification targets
+            predictions = generateSyntheticPredictions();
+          }
+
+          if (predictions && predictions.length > 0) {
+            lastPredictions = predictions;
+            currentTopConfidence = predictions[0].probability;
+            updateClassificationHUD(predictions);
+            propagateActivationsThroughGraph(predictions);
+          }
+        } catch (e) {
+          console.warn('Inference frame dropped:', e);
+        }
+      }
+    }
+
+    function generateSyntheticPredictions() {
+      const mockClasses = [
+        ['cellular telephone', 'digital clock', 'laptop'],
+        ['coffee mug', 'water bottle', 'cup'],
+        ['desk', 'space heater', 'keyboard'],
+        ['potted plant', 'flowerpot', 'daisy']
+      ];
+      const cycle = Math.floor(Date.now() / 3000) % mockClasses.length;
+      const set = mockClasses[cycle];
+
+      return [
+        { className: set[0], probability: 0.72 + Math.sin(Date.now() / 500) * 0.15 },
+        { className: set[1], probability: 0.18 },
+        { className: set[2], probability: 0.10 }
+      ];
+    }
+
+    // Extract low-res pixel luminance to light up Input Grid nodes (Layer 0)
+    function sampleVideoPixels() {
+      if (isWebcamActive && videoElement.readyState >= 2) {
+        sampleCtx.drawImage(videoElement, 0, 0, 64, 64);
+        pipCtx.drawImage(videoElement, 0, 0, pipCanvas.width, pipCanvas.height);
+      } else {
+        // Draw synthetic generative plasma preview on PIP canvas
+        synthAngle += 0.03;
+        pipCtx.fillStyle = '#050714';
+        pipCtx.fillRect(0, 0, pipCanvas.width, pipCanvas.height);
+
+        const gradient = pipCtx.createRadialGradient(
+          pipCanvas.width / 2 + Math.cos(synthAngle) * 40,
+          pipCanvas.height / 2 + Math.sin(synthAngle) * 20,
+          10,
+          pipCanvas.width / 2,
+          pipCanvas.height / 2,
+          100
+        );
+        gradient.addColorStop(0, '#00f3ff');
+        gradient.addColorStop(0.5, '#e879f9');
+        gradient.addColorStop(1, '#050714');
+        pipCtx.fillStyle = gradient;
+        pipCtx.fillRect(0, 0, pipCanvas.width, pipCanvas.height);
+
+        sampleCtx.drawImage(pipCanvas, 0, 0, 64, 64);
+      }
+
+      // Sample 16 region luminance values for Layer 0 nodes
+      const frameData = sampleCtx.getImageData(0, 0, 64, 64).data;
+      const l0Nodes = layers[0].nodes;
+      for (let i = 0; i < l0Nodes.length; i++) {
+        const sampleX = Math.floor((i % 4) * 16 + 8);
+        const sampleY = Math.floor(Math.floor(i / 4) * 16 + 8);
+        const pixelIdx = (sampleY * 64 + sampleX) * 4;
+
+        const r = frameData[pixelIdx];
+        const g = frameData[pixelIdx + 1];
+        const b = frameData[pixelIdx + 2];
+        const brightness = (r + g + b) / (3 * 255);
+
+        l0Nodes[i].activation = Math.min(1, Math.max(0.1, brightness * 1.3));
+      }
+    }
+
+    // Pass neural activations downstream through Conv & Dense layers
+    function propagateActivationsThroughGraph(preds) {
+      // Layer 1: Conv filters react to movement & L0 activation patterns
+      const l1Nodes = layers[1].nodes;
+      const time = Date.now() * 0.003;
+      l1Nodes.forEach((node, i) => {
+        const sourceSum = layers[0].nodes.reduce((acc, n) => acc + n.activation, 0) / 16;
+        node.activation = 0.3 * Math.sin(time + i) + sourceSum * 0.7;
+      });
+
+      // Layer 2: Dense Funnel collapses feature representations
+      const l2Nodes = layers[2].nodes;
+      l2Nodes.forEach((node, i) => {
+        node.activation = 0.2 + currentTopConfidence * 0.8 * (0.6 + 0.4 * Math.cos(time * 1.5 + i));
+      });
+
+      // Layer 3: Output Classes map directly to top MobileNet predictions
+      const l3Nodes = layers[3].nodes;
+      for (let i = 0; i < l3Nodes.length; i++) {
+        if (preds[i]) {
+          l3Nodes[i].activation = preds[i].probability;
+          l3Nodes[i].className = preds[i].className.split(',')[0]; // Clean up class title
+        }
+      }
+
+      // Spawn energetic pulse particles along connections proportional to confidence
+      spawnEnergyPulses();
+    }
+
+    function spawnEnergyPulses() {
+      const pulseCount = Math.floor(3 + currentTopConfidence * 8);
+      for (let i = 0; i < pulseCount; i++) {
+        const conn = connections[Math.floor(Math.random() * connections.length)];
+        energyParticles.push({
+          connection: conn,
+          progress: 0,
+          speed: 0.015 + Math.random() * 0.025 + (currentTopConfidence * 0.02),
+          size: 2 + Math.random() * 3,
+          color: layers[conn.layerIndex].color
+        });
+      }
+    }
+
+    function updateClassificationHUD(preds) {
+      if (!preds || preds.length === 0) return;
+
+      const top = preds[0];
+      const topNameEl = document.getElementById('top-class-name');
+      const topProbEl = document.getElementById('top-class-prob');
+      const topBarEl = document.getElementById('top-class-bar');
+
+      const formattedName = top.className.split(',')[0].toUpperCase();
+      const formattedProb = (top.probability * 100).toFixed(1) + '%';
+
+      topNameEl.textContent = formattedName;
+      topProbEl.textContent = formattedProb;
+      topBarEl.style.width = `${top.probability * 100}%`;
+    }
+
+    // Main Canvas Render Loop (60 FPS Visualizer Engine)
+    function renderLoop(timestamp) {
+      // Calculate FPS
+      frameCount++;
+      if (timestamp - lastFpsCalc >= 1000) {
+        fps = Math.round((frameCount * 1000) / (timestamp - lastFpsCalc));
+        document.getElementById('fps-counter').textContent = `${fps} FPS`;
+        frameCount = 0;
+        lastFpsCalc = timestamp;
+      }
+
+      // Dark translucent trails clear
+      ctx.fillStyle = 'rgba(3, 3, 10, 0.28)';
+      ctx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+
+      // Render Layer Background Grid Lines
+      drawBackgroundGrid();
+
+      // 1. Draw Synaptic Connection Lines
+      connections.forEach(conn => {
+        const src = conn.source;
+        const tgt = conn.target;
+
+        const avgActivation = (src.activation + tgt.activation) / 2;
+        const layerColor = layers[conn.layerIndex].color;
+
+        ctx.beginPath();
+        ctx.moveTo(src.x, src.y);
+        
+        // Curved cubic bezier connections for fluid modern feel
+        const cp1x = src.x + (tgt.x - src.x) * 0.5;
+        const cp1y = src.y;
+        const cp2x = src.x + (tgt.x - src.x) * 0.5;
+        const cp2y = tgt.y;
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, tgt.x, tgt.y);
+
+        ctx.strokeStyle = layerColor;
+        ctx.globalAlpha = 0.05 + avgActivation * 0.35;
+        ctx.lineWidth = 0.8 + avgActivation * 1.5;
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+      });
+
+      // 2. Animate and Draw Energy Data Pulses
+      for (let i = energyParticles.length - 1; i >= 0; i--) {
+        const p = energyParticles[i];
+        p.progress += p.speed;
+
+        if (p.progress >= 1) {
+          energyParticles.splice(i, 1);
+          continue;
+        }
+
+        const src = p.connection.source;
+        const tgt = p.connection.target;
+
+        // Bezier interpolation
+        const t = p.progress;
+        const cp1x = src.x + (tgt.x - src.x) * 0.5;
+        const cp1y = src.y;
+        const cp2x = src.x + (tgt.x - src.x) * 0.5;
+        const cp2y = tgt.y;
+
+        // Cubic Bezier formula
+        const cx = Math.pow(1-t, 3)*src.x + 3*Math.pow(1-t, 2)*t*cp1x + 3*(1-t)*Math.pow(t, 2)*cp2x + Math.pow(t, 3)*tgt.x;
+        const cy = Math.pow(1-t, 3)*src.y + 3*Math.pow(1-t, 2)*t*cp1y + 3*(1-t)*Math.pow(t, 2)*cp2y + Math.pow(t, 3)*tgt.y;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = p.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // 3. Render Neural Nodes per Layer
+      layers.forEach((layer, layerIdx) => {
+        // Draw Layer Headers
+        if (layer.nodes.length > 0) {
+          const firstNode = layer.nodes[0];
+          ctx.fillStyle = layer.color;
+          ctx.font = '600 11px "JetBrains Mono", monospace';
+          ctx.globalAlpha = 0.7;
+          ctx.fillText(layer.name.toUpperCase(), firstNode.x - 40, 45);
+          ctx.globalAlpha = 1.0;
+        }
+
+        layer.nodes.forEach((node) => {
+          const radius = node.baseRadius + node.activation * 6;
+
+          // Outer glowing halo
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, radius * 1.8, 0, Math.PI * 2);
+          ctx.fillStyle = layer.color;
+          ctx.globalAlpha = node.activation * 0.25;
+          ctx.fill();
+          ctx.globalAlpha = 1.0;
+
+          // Inner solid node core
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+          ctx.fillStyle = '#080a18';
+          ctx.strokeStyle = layer.color;
+          ctx.lineWidth = 1.5 + node.activation * 2;
+          ctx.fill();
+          ctx.stroke();
+
+          // Node core bright center
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, radius * 0.4, 0, Math.PI * 2);
+          ctx.fillStyle = layer.color;
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = layer.color;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          // Output Layer Text Callouts
+          if (layerIdx === 3 && node.className) {
+            ctx.fillStyle = node.activation > 0.4 ? '#00f3ff' : '#94a3b8';
+            ctx.font = '600 12px "Space Grotesk", sans-serif';
+            const labelText = `${node.className.toUpperCase()} (${(node.activation * 100).toFixed(0)}%)`;
+            ctx.fillText(labelText, node.x + 22, node.y + 4);
+
+            // Active prediction glowing line target indicator
+            if (node.activation > 0.4) {
+              ctx.beginPath();
+              ctx.moveTo(node.x + 12, node.y);
+              ctx.lineTo(node.x + 18, node.y);
+              ctx.strokeStyle = '#00f3ff';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          }
+        });
+      });
+
+      requestAnimationFrame(renderLoop);
+    }
+
+    // Subtle cyberpunk background accent grid
+    function drawBackgroundGrid() {
+      const w = mainCanvas.width;
+      const h = mainCanvas.height;
+      const step = 60;
+
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.02)';
+      ctx.lineWidth = 1;
+
+      for (let x = 0; x < w; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+    }
+  </script>
+</body>
+</html>
